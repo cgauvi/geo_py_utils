@@ -1,0 +1,72 @@
+
+## Automatically added (default .gitignore) ##
+
+# History files
+.Rhistory
+.Rapp.history
+
+# Session Data files
+*.[rR][dD][aA][tT][aA] 
+
+# Example code in package build process
+*-Ex.R
+
+# Output files from R CMD build
+/*.tar.gz
+
+# Output files from R CMD check
+/*.Rcheck/
+
+# RStudio files
+.Rproj.user/
+
+# produced vignettes
+vignettes/*.html
+vignettes/*.pdf
+
+# OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
+.httr-oauth
+
+# knitr and R markdown default cache directories
+/*_cache/
+/cache/
+
+# Temporary files created by R markdown
+*.utf8.md
+*.knit.md
+
+#Archives and old stuff
+
+[aA]rchive
+[oO]ld
+
+#Backups
+[bB]ackups
+
+#Tests
+#NO! keep the unit tests in packages like tests : don't ignore this [tT]est[s]?
+[eE]xperiment[s]?
+
+
+#Shapefiles and all that heavy stuff
+/[gG]eo[dD]ata/**
+
+
+
+# Data and figures
+[dD]ata
+[fF]igures
+
+
+# Python notebooks
+.ipynb_checkpoints
+
+# Python cache
+/__pycache__/**/
+
+
+data/
+
+*.pyc
+*.parquet
+

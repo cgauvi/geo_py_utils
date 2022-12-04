@@ -1,0 +1,12 @@
+# conda environments:
+#
+base                     /home/charles/anaconda3
+ben_py_utils             /home/charles/anaconda3/envs/ben_py_utils
+dashboard37              /home/charles/anaconda3/envs/dashboard37
+demographics_py          /home/charles/anaconda3/envs/demographics_py
+geo_py_utils          *  /home/charles/anaconda3/envs/geo_py_utils
+geopy37                  /home/charles/anaconda3/envs/geopy37
+py_utils                 /home/charles/anaconda3/envs/py_utils
+solver_env               /home/charles/anaconda3/envs/solver_env
+survEnv                  /home/charles/anaconda3/envs/survEnv
+
