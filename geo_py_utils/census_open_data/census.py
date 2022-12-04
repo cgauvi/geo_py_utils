@@ -9,8 +9,8 @@ import logging
 import numpy as np
 
 from ben_py_utils.misc.cache import Cache_wrapper
-from ben_py_utils.misc.download_zip import download_zip_shp
 
+from geo_py_utils.etl.download_zip import download_zip_shp
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import download_qc_city_neighborhoods
 

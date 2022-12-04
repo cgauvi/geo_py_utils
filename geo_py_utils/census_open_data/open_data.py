@@ -3,8 +3,7 @@ import geopandas as gpd
 from os.path import join
 
 from ben_py_utils.misc.cache import Cache_wrapper
-from ben_py_utils.misc.constants import DATA_DIR
-
+ 
 from geo_py_utils.misc.constants import DATA_DIR
 
 @Cache_wrapper(path_cache=join(DATA_DIR, "cache", "qc_neighborhoods.parquet"))
