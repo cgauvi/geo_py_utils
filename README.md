@@ -8,27 +8,26 @@
 
 # Contents 
 
-### Geo functions
+### Generic geospatial functions
 
 - computing a buffer with geodf
 - compute 2D KDE estimates
+- bounding box computation, centroid addition
+- h3 and geohash utils
+- inverse distance weighted interpolation
+- etc.
 
 ### Census and open data download
 
 - download geo bundaries for census (e.g. FSAs, DA, CSD)
 - download ad-hoc datasets from open data portal
 
+### Basic ETL 
 
-### Misc
+- downloading zipped shp files to disk
+- downloading an uploading zipped shp files to:
+    - postGIS
+    - spatialite
 
-- Download and unzip files
-- Cache files 
-
-
----
----
-
-
-# Tests
-
-Write unit tests in `tests` and run `pytest` 
+ 
+ 
