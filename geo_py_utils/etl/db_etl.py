@@ -2,7 +2,8 @@
 
 
  
-from os.path import isfile, isdir, join, exists
+from os.path import isfile, isdir, join, exists, abspath
+from os import listdir
 import subprocess
 from abc import ABC
 from pathlib import Path
@@ -61,7 +62,7 @@ class Url_to_db(ABC):
             if self.delete_download_destination:
                 shutil.rmtree(self.download_destination)
         except Exception as e:
-            logger.warn(f"Warning, failed to delete temp directories up at cleanup")
+            logger.warning(f"Warning, failed to delete temp directories up at cleanup")
 
 
     def _curl(self):
@@ -70,9 +71,10 @@ class Url_to_db(ABC):
 
         if not exists(self.curl_download) or self.force_download:
             cmd =f"""curl {self.download_url} --output {self.curl_download}"""
-            print(cmd)
-            p = subprocess.Popen(cmd, shell=True)
-            p.wait()
+            logger.info(cmd)
+            p = subprocess.call(cmd, shell=True)
+            subprocess.check_call(cmd, shell=True)
+ 
 
     def _try_unzip(self):
 
@@ -80,16 +82,17 @@ class Url_to_db(ABC):
             self.unzip_tmp_path = tempfile.mkdtemp()
             self.path_src_to_upload = join(self.download_destination, self.unzip_tmp_path)
 
-            if not exists(self.path_src_to_upload):
+            if not exists(self.path_src_to_upload) or len(listdir(self.path_src_to_upload)) == 0:
                 cmd = f"unzip -o {self.curl_download} -d {self.path_src_to_upload}"
-                print(cmd)
-                p = subprocess.Popen(cmd, shell=True)
-                p.wait()
+                logger.info(cmd)
+                p = subprocess.call(cmd, shell=True)
+                subprocess.check_call(cmd, shell=True)
+       
 
         except Exception as e:
-            logger.info("{self.curl_download} does nt seem to be a zipped file: {e} .. ")
+            logger.info("{self.curl_download} does not seem to be a zipped file: {e} .. ")
             self.unzip_tmp_path = tempfile.mkstemp()
-            self.path_src_to_upload = join(self.download_destination, self.unzip_tmp_path)
+            self.path_src_to_upload = self.curl_download
 
 
     def upload_url_to_database(self):
@@ -121,29 +124,24 @@ class Url_to_spatialite(Url_to_db):
 
     def _ogr2gr(self):
 
-        source = self.curl_download
-        dest = self.db_name
+        source = abspath(self.path_src_to_upload)
+        dest = abspath(self.db_name)
 
-        cmd = f"""ogr2ogr 
-        -progress 
-        -f 'SQLite' 
-        -dsco SPATIALITE=YES
-        -nlt PROMOTE_TO_MULTI 
-        {dest} {source}
-        -nln {self.table_name} """
+        cmd = f"ogr2ogr  -progress  -f 'SQLite' -dsco SPATIALITE=YES  {dest} {source}  -nlt PROMOTE_TO_MULTI  -nln {self.table_name}"
 
         if self.overwrite:
-            cmd = cmd + "-overwrite"
+            cmd = cmd + " -overwrite"
         else:
-            cmd = cmd + "-append"
+            cmd = cmd + " -append"
 
         if self.target_projection is not None:
             cmd = cmd + "-t_srs 'EPSG:{self.target_projection}'" 
 
 
-        print(cmd)
-        p = subprocess.Popen(cmd, shell=True)
-        p.wait()
+        logger.info(cmd)
+        p = subprocess.call(cmd, shell=True)
+        subprocess.check_call(cmd, shell=True)
+ 
 
 
 
@@ -179,30 +177,30 @@ class Url_to_postgis(Url_to_db):
     
     def _ogr2gr(self):
 
-        source = self.curl_download
+        source = self.path_src_to_upload
         dest = self.db_name
 
         cmd = f"""ogr2ogr 
         -progress 
          -f "PostgreSQL" PG:"host='{self.host}' port='{self.port}' dbname='{self.db_name}' user='{self.user}' password='{self.password}'" -lco SCHEMA={self.schema}
-           
         -dsco SPATIALITE=YES
-        -nlt PROMOTE_TO_MULTI 
         {dest} {source}
+        -nlt PROMOTE_TO_MULTI 
         -nln {self.table_name} """
 
         if self.overwrite:
-            cmd = cmd + "-overwrite"
+            cmd = cmd + "- overwrite"
         else:
-            cmd = cmd + "-append"
+            cmd = cmd + " -append"
 
         if self.target_projection is not None:
             cmd = cmd + "-t_srs 'EPSG:{self.target_projection}'" 
 
 
-        print(cmd)
-        p = subprocess.Popen(cmd, shell=True)
-        p.wait()
+        logger.info(cmd)
+        p = subprocess.call(cmd, shell=True)
+        subprocess.check_call(cmd, shell=True)
+ 
 
 
     def upload_url_to_database(self):
@@ -220,8 +218,10 @@ if __name__ == '__main__':
     table_name = "qc_city_test_tbl"
     download_url = QC_CITY_NEIGH_URL
 
-    Url_to_spatialite(
+    uploader = Url_to_spatialite(
         db_name = spatialite_db_path, 
         table_name = table_name,
         download_url = download_url,
         download_destination = DATA_DIR)
+
+    uploader.upload_url_to_database()

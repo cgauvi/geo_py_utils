@@ -18,8 +18,10 @@ download_url = QC_CITY_NEIGH_URL
 
 def test_spatialite():
 
-    Url_to_spatialite(
+    uploader = Url_to_spatialite(
         db_name = spatialite_db_path, 
         table_name = table_name,
         download_url = download_url,
         download_destination = DATA_DIR)
+
+    uploader.upload_url_to_database()
