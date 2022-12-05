@@ -19,6 +19,7 @@ logger = logging.getLogger(__file__)
 
 # Cartographic is very precise (hence very heavy) whereas digital is coarser and faster to retrieve and process
 USE_CARTOGRAPHIC = False
+FSA_2016_URL = "https://www12.statcan.gc.ca/census-recensement/2011/geo/bound-limit/files-fichiers/2016/lfsa000b16a_e.zip"
 
 @Cache_wrapper(path_cache = join(DATA_DIR, "cache", "canada_water.parquet"))
 def download_water(year = 2011, new_crs = None):
