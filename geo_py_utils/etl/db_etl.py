@@ -110,7 +110,16 @@ class Url_to_db(ABC):
                 logger.info(cmd)
                 p = subprocess.call(cmd, shell=True)
                 subprocess.check_call(cmd, shell=True)
-       
+
+                # We might have unzipped a new folder xxx to self.path_src_to_upload/xxx
+                # Need to point to self.path_src_to_upload/xxx
+                # This only works for 2 use cases, but seems impossibly complex to code in general if there are more than 1 level of nested directories
+                sub_dirs = listdir(self.path_src_to_upload)
+                if len(sub_dirs) == 1:
+                    self.path_src_to_upload = join(self.path_src_to_upload, sub_dirs[0])
+                    logger.debug(f"unzipping.. {self.path_src_to_upload} contains a single sub dir -> point to {sub_dirs[0]}")
+                elif len(sub_dirs) > 1:
+                    logger.debug(f"unzipping.. {self.path_src_to_upload} contains many directories -> point to {self.path_src_to_upload}")
 
         except Exception as e:
             logger.info("{self.curl_download} does not seem to be a zipped file: {e} .. ")
@@ -293,6 +302,27 @@ if __name__ == '__main__':
 
     from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
     from geo_py_utils.misc.constants import DATA_DIR
+    from geo_py_utils.census_open_data.census import FSA_2016_URL
+
+    with Url_to_spatialite(
+        db_name = join(DATA_DIR, "test_fsa.db"), 
+        table_name = 'geo_fsa_tbl',
+        download_url = FSA_2016_URL,
+        download_destination = DATA_DIR) as uploader:
+
+        uploader.upload_url_to_database()
+
+
+    # ----
+
+
+    with Url_to_spatialite(
+        db_name = join(DATA_DIR, "test_role_eval.db"), 
+        table_name = 'geo_role_tbl',
+        download_url = "https://donneesouvertes.affmunqc.net/role/ROLE2020_SHP.zip",
+        download_destination = DATA_DIR) as uploader:
+
+        uploader.upload_url_to_database()
 
     # -----
 
