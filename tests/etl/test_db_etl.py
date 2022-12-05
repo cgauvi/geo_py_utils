@@ -7,6 +7,7 @@ import os
 
 from geo_py_utils.etl.db_etl import  Url_to_spatialite, Url_to_postgis   
 from geo_py_utils.etl.gdf_load import spatialite_db_to_gdf
+from geo_py_utils.etl.db_utils import list_tables
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
 from geo_py_utils.census_open_data.census import FSA_2016_URL
@@ -50,9 +51,18 @@ def test_read_gdf_spatialite_qc ():
     assert df.shape[0] == 10
 
 
+def test_spatialite_list_tables():
+
+    if not os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH):
+        upload_qc_neigh_db()
+
+    existing_tables = list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)
+
+    assert Qc_city_data.SPATIAL_LITE_TBL_QC in existing_tables
+
+
 def test_spatialite_zip():
 
- 
     with Url_to_spatialite(
         db_name = join(DATA_DIR, "test_fsa.db"), 
         table_name = 'geo_fsa_tbl',
