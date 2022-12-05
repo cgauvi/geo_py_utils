@@ -3,7 +3,7 @@
 
  
 from os.path import isfile, isdir, join, exists, abspath
-from os import listdir
+from os import listdir, environ
 import subprocess
 from abc import ABC
 from pathlib import Path
@@ -11,6 +11,8 @@ import tempfile
 import shutil
 import atexit
 import logging
+import psycopg2
+import pandas as pd
 
 logger = logging.getLogger(__file__)
 
@@ -127,7 +129,13 @@ class Url_to_spatialite(Url_to_db):
         source = abspath(self.path_src_to_upload)
         dest = abspath(self.db_name)
 
-        cmd = f"ogr2ogr  -progress  -f 'SQLite' -dsco SPATIALITE=YES  {dest} {source}  -nlt PROMOTE_TO_MULTI  -nln {self.table_name}"
+        cmd = f"ogr2ogr " \
+            " -progress " \
+            " -f 'SQLite' " \
+            " -dsco SPATIALITE=YES " \
+            f" {dest} {source} "\
+            f" -nlt PROMOTE_TO_MULTI "\
+            f" -nln {self.table_name}"
 
         if self.overwrite:
             cmd = cmd + " -overwrite"
@@ -177,16 +185,17 @@ class Url_to_postgis(Url_to_db):
     
     def _ogr2gr(self):
 
-        source = self.path_src_to_upload
-        dest = self.db_name
+        source = abspath(self.path_src_to_upload)
+        dest = abspath(self.db_name)
+        
+        # Make sure db exists
+        self._create_db()
 
-        cmd = f"""ogr2ogr 
-        -progress 
-         -f "PostgreSQL" PG:"host='{self.host}' port='{self.port}' dbname='{self.db_name}' user='{self.user}' password='{self.password}'" -lco SCHEMA={self.schema}
-        -dsco SPATIALITE=YES
-        {dest} {source}
-        -nlt PROMOTE_TO_MULTI 
-        -nln {self.table_name} """
+        cmd = f"ogr2ogr  " \
+            " -progress "\
+            f" -f 'PostgreSQL' PG:'host={self.host} port={self.port} dbname={self.db_name} user={self.user} password={self.password}'" \
+            f" -lco SCHEMA={self.schema} {source}" \
+            f" -nlt PROMOTE_TO_MULTI  -nln {self.table_name} "
 
         if self.overwrite:
             cmd = cmd + "- overwrite"
@@ -202,6 +211,40 @@ class Url_to_postgis(Url_to_db):
         subprocess.check_call(cmd, shell=True)
  
 
+    def _create_db(self):
+
+        # Inspect all DBs
+        with psycopg2.connect(
+            database = "postgres", 
+            user = self.user, 
+            password = self.password , 
+            host = self.host, 
+            port = self.port
+        ) as conn: 
+            df_existing_dbs = pd.read_sql("SELECT datname FROM pg_database;", conn)
+            
+        # Db does not exist
+        if self.db_name not in df_existing_dbs.datname.values:
+            conn =  psycopg2.connect(
+                database="postgres", 
+                user = self.user, 
+                password = self.password , 
+                host = self.host, 
+                port = self.port)
+
+            conn.autocommit = True
+
+            #Creating a cursor object using the cursor() method
+            cursor = conn.cursor()
+
+            #Preparing query to create a database - make sure it is a POSTGIS DB
+            cursor.execute(f"CREATE database {self.db_name};")
+            cursor.execute("CREATE EXTENSION postgis;")
+
+            conn.close()
+
+            logger.info(f"Successfully created postgis db {self.db_name}")
+
 
     def upload_url_to_database(self):
         self._curl()
@@ -214,6 +257,8 @@ if __name__ == '__main__':
     from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
     from geo_py_utils.misc.constants import DATA_DIR
 
+    # -----
+
     spatialite_db_path = join(DATA_DIR, "test.db")
     table_name = "qc_city_test_tbl"
     download_url = QC_CITY_NEIGH_URL
@@ -223,5 +268,26 @@ if __name__ == '__main__':
         table_name = table_name,
         download_url = download_url,
         download_destination = DATA_DIR)
+
+    uploader.upload_url_to_database()
+
+
+    # -----
+
+    user = environ['PG_LOCAL_USER']
+    password = environ['PG_LOCAL_PASSWORD']
+    postgis_db_path = 'qc_city_db'
+
+    uploader = Url_to_postgis(
+            db_name = postgis_db_path, 
+            table_name = table_name,
+            download_url = download_url,
+            download_destination = DATA_DIR, 
+            host = "localhost",
+            port = 5432,
+            user = user, 
+            password = password,
+            schema = "public",
+            )
 
     uploader.upload_url_to_database()

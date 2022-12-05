@@ -1,5 +1,6 @@
 
 
+from asyncio import subprocess
 from os.path import join
 import geopandas as gpd
 import os
@@ -34,23 +35,34 @@ def test_spatialite():
 
 def test_postgis():
 
-    user = os.environ['PG_LOCAL_USER']
-    password = os.environ['PG_LOCAL_PASSWORD']
-    postgis_db_path = 'qc_city_db'
+    import subprocess
+    import logging
 
-    uploader = Url_to_postgis(
-        db_name = postgis_db_path, 
-        table_name = table_name,
-        download_url = download_url,
-        download_destination = DATA_DIR, 
-        host = "localhost",
-        port = 5432,
-        user = user, 
-        password = password,
-        schema = "public",
-        )
+    logger = logging.getLogger(__name__)
 
-    uploader.upload_url_to_database()
+    psql_exists_results = subprocess.run(["which","psql"], stdout=subprocess.PIPE)
+    if len(psql_exists_results.stdout) > 0:
+
+        user = os.environ['PG_LOCAL_USER']
+        password = os.environ['PG_LOCAL_PASSWORD']
+        postgis_db_path = 'qc_city_db'
+
+        uploader = Url_to_postgis(
+            db_name = postgis_db_path, 
+            table_name = table_name,
+            download_url = download_url,
+            download_destination = DATA_DIR, 
+            host = "localhost",
+            port = 5432,
+            user = user, 
+            password = password,
+            schema = "public",
+            )
+
+        uploader.upload_url_to_database()
+    else:
+        logger.warn("Skipping test_postgis: did not find psql on system")
+
 
 if __name__ == "__main__":
     test_postgis()
