@@ -13,6 +13,7 @@ import atexit
 import logging
 import psycopg2
 import pandas as pd
+import socket
 
 logger = logging.getLogger(__file__)
 
@@ -54,18 +55,39 @@ class Url_to_db(ABC):
         self.curl_download = None
         self.unzip_tmp_path = None
 
-        atexit.register(self._cleanup)
+ 
 
 
-    def _cleanup(self):
+    @staticmethod
+    def _safe_delete(f):
+         if exists(f) :
+            try:
+                Path(f).unlink(missing_ok = True) #os.remove gives some weird errors
+            except Exception:
+                try:
+                    shutil.rmtree(f)
+                except Exception as e:
+                    raise e(f"Fatal error trying to delete {f}")
+
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+
+        files_always_delete = [self.unzip_tmp_path, self.curl_download]
+        for f in files_always_delete:
+            try:
+                Url_to_db._safe_delete(f)
+            except Exception as e:
+                logger.warning(f"Warning, failed to delete temp directories {f} up at cleanup - {e}")
+                pass 
 
         try:
-            shutil.rmtree(self.unzip_tmp_path)
-            if self.delete_download_destination:
-                shutil.rmtree(self.download_destination)
+            if self.delete_download_destination and exists(self.download_destination):
+                Url_to_db._safe_delete(self.download_destination)
         except Exception as e:
-            logger.warning(f"Warning, failed to delete temp directories up at cleanup")
-
+            logger.warning(f"Warning, failed to delete temp download dir up at cleanup - {e}")
 
     def _curl(self):
 
@@ -81,8 +103,7 @@ class Url_to_db(ABC):
     def _try_unzip(self):
 
         try:
-            self.unzip_tmp_path = tempfile.mkdtemp()
-            self.path_src_to_upload = join(self.download_destination, self.unzip_tmp_path)
+            self.path_src_to_upload =  tempfile.mkdtemp() # point to dir where we will extract the data
 
             if not exists(self.path_src_to_upload) or len(listdir(self.path_src_to_upload)) == 0:
                 cmd = f"unzip -o {self.curl_download} -d {self.path_src_to_upload}"
@@ -93,8 +114,7 @@ class Url_to_db(ABC):
 
         except Exception as e:
             logger.info("{self.curl_download} does not seem to be a zipped file: {e} .. ")
-            self.unzip_tmp_path = tempfile.mkstemp()
-            self.path_src_to_upload = self.curl_download
+            self.path_src_to_upload = self.curl_download # point to the file we just downloaded with curl
 
 
     def upload_url_to_database(self):
@@ -246,6 +266,23 @@ class Url_to_postgis(Url_to_db):
             logger.info(f"Successfully created postgis db {self.db_name}")
 
 
+    def _port_is_open(self):
+
+        a_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        location = ("127.0.0.1", self.port)
+        result_of_check = a_socket.connect_ex(location)
+
+        if result_of_check == 0:
+            logger.info("Port is open")
+        else:
+            logger.info("Port is closed")
+ 
+        a_socket.close()
+
+        return result_of_check == 0
+
+
     def upload_url_to_database(self):
         self._curl()
         self._try_unzip()
@@ -263,13 +300,13 @@ if __name__ == '__main__':
     table_name = "qc_city_test_tbl"
     download_url = QC_CITY_NEIGH_URL
 
-    uploader = Url_to_spatialite(
+    with Url_to_spatialite(
         db_name = spatialite_db_path, 
         table_name = table_name,
         download_url = download_url,
-        download_destination = DATA_DIR)
+        download_destination = DATA_DIR) as uploader:
 
-    uploader.upload_url_to_database()
+        uploader.upload_url_to_database()
 
 
     # -----
@@ -278,7 +315,7 @@ if __name__ == '__main__':
     password = environ['PG_LOCAL_PASSWORD']
     postgis_db_path = 'qc_city_db'
 
-    uploader = Url_to_postgis(
+    with Url_to_postgis(
             db_name = postgis_db_path, 
             table_name = table_name,
             download_url = download_url,
@@ -288,6 +325,7 @@ if __name__ == '__main__':
             user = user, 
             password = password,
             schema = "public",
-            )
+            ) as uploader:
 
-    uploader.upload_url_to_database()
+
+        uploader.upload_url_to_database()

@@ -22,13 +22,13 @@ def test_spatialite():
 
     spatialite_db_path = join(DATA_DIR, "test.db")
 
-    uploader = Url_to_spatialite(
+    with Url_to_spatialite(
         db_name = spatialite_db_path, 
         table_name = table_name,
         download_url = download_url,
-        download_destination = DATA_DIR)
+        download_destination = DATA_DIR) as uploader:
 
-    uploader.upload_url_to_database()
+        uploader.upload_url_to_database()
 
 
 
@@ -43,11 +43,11 @@ def test_postgis():
     psql_exists_results = subprocess.run(["which","psql"], stdout=subprocess.PIPE)
     if len(psql_exists_results.stdout) > 0:
 
-        user = os.environ['PG_LOCAL_USER']
-        password = os.environ['PG_LOCAL_PASSWORD']
+        user = os.getenv('PG_LOCAL_USER')
+        password = os.getenv('PG_LOCAL_PASSWORD')
         postgis_db_path = 'qc_city_db'
 
-        uploader = Url_to_postgis(
+        with Url_to_postgis(
             db_name = postgis_db_path, 
             table_name = table_name,
             download_url = download_url,
@@ -57,11 +57,14 @@ def test_postgis():
             user = user, 
             password = password,
             schema = "public",
-            )
+            ) as uploader:
 
-        uploader.upload_url_to_database()
+            if uploader._port_is_open():
+                uploader.upload_url_to_database()
+            else:
+                logger.warning("Skipping test_postgis: port seems closed")
     else:
-        logger.warn("Skipping test_postgis: did not find psql on system")
+        logger.warning("Skipping test_postgis: did not find psql on system")
 
 
 if __name__ == "__main__":
