@@ -91,7 +91,7 @@ def test_postgis_qc():
     psql_exists_results = subprocess.run(["which","psql"], stdout=subprocess.PIPE)
     if len(psql_exists_results.stdout) > 0:
 
-        user = os.getenv('PG_LOCAL_USER')
+        user = os.getenv('PG_LOCAL_USER') # defaults to None if not set
         password = os.getenv('PG_LOCAL_PASSWORD')
         postgis_db_path = 'qc_city_db'
 
@@ -114,6 +114,4 @@ def test_postgis_qc():
     else:
         logger.warning("Skipping test_postgis: did not find psql on system")
 
-
-if __name__ == "__main__":
-    test_postgis()
+ 
