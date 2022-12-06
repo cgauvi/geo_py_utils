@@ -36,7 +36,8 @@ class Url_to_db(ABC):
                 download_destination = None,
                 force_download: bool = False,
                 overwrite: bool = False,
-                target_projection: str = None):
+                target_projection: str = None,
+                remove_tmp_download_files = True):
 
         self.delete_download_destination = False
         if download_destination is None:
@@ -50,12 +51,11 @@ class Url_to_db(ABC):
         self.force_download = force_download
         self.overwrite = overwrite
         self.target_projection = target_projection
+        self.remove_tmp_download_files = remove_tmp_download_files
         
 
         self.curl_download = None
         self.unzip_tmp_path = None
-
- 
 
 
     @staticmethod
@@ -70,11 +70,8 @@ class Url_to_db(ABC):
                     raise e(f"Fatal error trying to delete {f}")
 
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-
+    def _safe_delete_all_files(self):
+        
         files_always_delete = [self.unzip_tmp_path, self.curl_download]
         for f in files_always_delete:
             try:
@@ -88,6 +85,17 @@ class Url_to_db(ABC):
                 Url_to_db._safe_delete(self.download_destination)
         except Exception as e:
             logger.warning(f"Warning, failed to delete temp download dir up at cleanup - {e}")
+
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+
+        if self.remove_tmp_download_files:
+            self._safe_delete_all_files()
+        else:
+            logger.warning("Warning! not deleting temprary download files! make sure to not clog your system")
 
     def _curl(self):
 
