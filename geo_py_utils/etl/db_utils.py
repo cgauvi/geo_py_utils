@@ -4,11 +4,13 @@ from os.path import exists
 import logging
 from typing import Union
 import pandas as pd
+import geopandas as gpd
 import sqlite3
+from pathlib import Path
 
 logger = logging.getLogger(__file__)
     
-def list_tables(db_name) -> Union[None, list]:
+def list_tables(db_name: Union[Path, str]) -> Union[None, list]:
     """ List tables  in a spatialite db
 
     Args:
@@ -31,6 +33,44 @@ def list_tables(db_name) -> Union[None, list]:
 
         
     return list_tables
+
+
+
+def sql_to_gdf(db_name: Union[Path, str], query: str, use_gpd = False) -> Union[gpd.GeoDataFrame, pd.DataFrame] :
+
+    """Convenience wrapper to send a query to the db and fetch results as a (geo dataframe) 
+
+    Args:
+        db_name: name
+        query: query string
+        use_gpd: try to read in results with geopandas
+
+    Returns:
+        df : (geo) dataframe
+
+    """
+    with sqlite3.connect(db_name) as conn:
+
+        if use_gpd:
+            df = gpd.read_postgis(sql, conn) 
+        else:
+            df = pd.read_sql(query, conn)
+
+    return df
+
+
+def get_table_rows(db_name: Union[Path, str], tbl_name :str) -> int: 
+    
+    """Count the number of rows.
+
+    Transfers query to sql_to_gdf
+
+    """
+    
+    df = sql_to_gdf(db_name, f"select count(*) as num_rows from {tbl_name}")
+
+    return df.num_rows.values[0]
+
 
 
 if __name__ == "__main__":
