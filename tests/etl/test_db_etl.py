@@ -7,7 +7,7 @@ import os
 
 from geo_py_utils.etl.db_etl import  Url_to_spatialite, Url_to_postgis   
 from geo_py_utils.etl.gdf_load import spatialite_db_to_gdf
-from geo_py_utils.etl.db_utils import list_tables
+from geo_py_utils.etl.db_utils import list_tables, sql_to_gdf, get_table_rows
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
 from geo_py_utils.census_open_data.census import FSA_2016_URL
@@ -59,6 +59,14 @@ def test_spatialite_list_tables():
     existing_tables = list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)
 
     assert Qc_city_data.SPATIAL_LITE_TBL_QC in existing_tables
+
+
+def test_spatialite_send_query():
+    df_results = sql_to_gdf(Qc_city_data.SPATIAL_LITE_DB_PATH, 
+                            f"select count(*) as num_rows from {Qc_city_data.SPATIAL_LITE_TBL_QC}")
+
+    assert get_table_rows(Qc_city_data.SPATIAL_LITE_DB_PATH, Qc_city_data.SPATIAL_LITE_TBL_QC) == df_results.num_rows.values[0]
+
 
 
 def test_spatialite_zip():
