@@ -139,20 +139,9 @@ class Url_to_db(ABC):
 
 
 class Url_to_spatialite(Url_to_db):
-    def __init__(self, 
-                db_name,
-                table_name, 
-                download_url, 
-                download_destination = None,
-                force_download: bool = False,
-                target_projection: str = None):
+    def __init__(self, **kwargs):
 
-        super().__init__(db_name,
-                        table_name, 
-                        download_url, 
-                        download_destination ,
-                        force_download,
-                        target_projection)
+        super().__init__(**kwargs)
 
 
     def upload_url_to_database(self):
@@ -194,30 +183,20 @@ class Url_to_spatialite(Url_to_db):
 class Url_to_postgis(Url_to_db):
 
     def __init__(self, 
-                db_name,
-                table_name, 
                 host,
                 port,
                 user,
                 password,
                 schema,
-                download_url, 
-                download_destination = None,
-                force_download: bool = False,
-                target_projection: str = None):
-        
+                **kwargs):
+
         self.host = host
         self.port = port
         self.user = user
         self.password = password
         self.schema = schema
 
-        super().__init__(db_name,
-                        table_name, 
-                        download_url, 
-                        download_destination ,
-                        force_download,
-                        target_projection)
+        super().__init__( **kwargs)
 
     
     def _ogr2gr(self):
