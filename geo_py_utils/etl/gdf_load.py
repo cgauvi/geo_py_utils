@@ -1,9 +1,11 @@
 
 import sqlite3
 import geopandas as gpd
+import pandas as pd
 from typing import Union
 from pathlib import Path
 import logging
+
 
 logger = logging.getLogger(__file__)
 
@@ -44,6 +46,21 @@ def spatialite_db_to_gdf(db_name : Union[str, Path],
 
         # Drop the useless hex geometry
         df = df.drop(columns=['GEOMETRY'])
+
+        # Try to assign the correct CRS by reading back the `geometry_columns`
+        # Fuck it, if this fails we can set it manually later
+        try: 
+            df_geometry = pd.read_sql(f"select * from geometry_columns where f_table_name = '{tbl_name}' ", con) 
+            if df_geometry.shape[0] == 1:
+                srid = df_geometry.srid.values[0]
+                df_crs = pd.read_sql(f'select * from spatial_ref_sys where srid = {srid}', con)
+                crs = df_crs.srtext.values[0]# use the WKT2 proj representation: best praactice 
+                df = df.set_crs(crs)
+                logger.info("Successfully managed to set the crs when loading back to geopandas")
+            else:
+                logger.warning("Warning couldnt set the crs when loading back to geopandas -> perhaps `geometry_columns` not written yet")
+        except Exception as e:
+            logger.error(f"Error setting the CRS when loading back the data from spatialite")
 
     return df
 
