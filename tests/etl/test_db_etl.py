@@ -69,15 +69,27 @@ def test_spatialite_send_query():
 
 
 
-def test_spatialite_zip():
+def test_spatialite_zip_with_proj():
+
+
 
     with Url_to_spatialite(
         db_name = join(DATA_DIR, "test_fsa.db"), 
         table_name = 'geo_fsa_tbl',
         download_url = FSA_2016_URL,
-        download_destination = DATA_DIR) as uploader:
+        download_destination = DATA_DIR,
+        target_projection= 32198,
+        overwrite=True) as uploader:
 
         uploader.upload_url_to_database()
+
+
+    shp_test = spatialite_db_to_gdf(join(DATA_DIR, "test_fsa.db"),
+     'geo_fsa_tbl',
+     'limit 10'
+     )
+
+    assert shp_test.crs == 32198
 
 
 

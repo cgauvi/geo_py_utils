@@ -158,18 +158,22 @@ class Url_to_spatialite(Url_to_db):
         cmd = f"ogr2ogr " \
             " -progress " \
             " -f 'SQLite' " \
-            " -dsco SPATIALITE=YES " \
-            f" {dest} {source} "\
+            " -dsco SPATIALITE=YES " 
+
+        if self.target_projection is not None:
+            cmd += f"-t_srs EPSG:{self.target_projection}" 
+
+
+        cmd  +=  f" {dest} {source} "\
             f" -nlt PROMOTE_TO_MULTI "\
             f" -nln {self.table_name}"
 
         if self.overwrite:
-            cmd = cmd + " -overwrite"
+            cmd += " -overwrite"
         else:
-            cmd = cmd + " -append"
+            cmd += " -append"
 
-        if self.target_projection is not None:
-            cmd = cmd + "-t_srs 'EPSG:{self.target_projection}'" 
+
 
 
         logger.info(cmd)
@@ -208,19 +212,19 @@ class Url_to_postgis(Url_to_db):
         self._create_db()
 
         cmd = f"ogr2ogr  " \
-            " -progress "\
-            f" -f 'PostgreSQL' PG:'host={self.host} port={self.port} dbname={self.db_name} user={self.user} password={self.password}'" \
+            " -progress "
+
+        if self.target_projection is not None:
+            cmd += f"-t_srs 'EPSG:{self.target_projection}'" 
+
+        cmd += f" -f 'PostgreSQL' PG:'host={self.host} port={self.port} dbname={self.db_name} user={self.user} password={self.password}'" \
             f" -lco SCHEMA={self.schema} {source}" \
             f" -nlt PROMOTE_TO_MULTI  -nln {self.table_name} "
 
         if self.overwrite:
-            cmd = cmd + "- overwrite"
+            cmd += "- overwrite"
         else:
-            cmd = cmd + " -append"
-
-        if self.target_projection is not None:
-            cmd = cmd + "-t_srs 'EPSG:{self.target_projection}'" 
-
+            cmd += " -append"
 
         logger.info(cmd)
         p = subprocess.call(cmd, shell=True)
@@ -290,15 +294,32 @@ if __name__ == '__main__':
     from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
     from geo_py_utils.misc.constants import DATA_DIR
     from geo_py_utils.census_open_data.census import FSA_2016_URL
+    from geo_py_utils.etl.gdf_load import spatialite_db_to_gdf
+    from geo_py_utils.etl.db_utils import sql_to_df
+
+    shp_test = spatialite_db_to_gdf(join(DATA_DIR, "test_fsa.db"),  
+     'geo_fsa_tbl',
+     'limit 10'
+     )
 
     with Url_to_spatialite(
         db_name = join(DATA_DIR, "test_fsa.db"), 
         table_name = 'geo_fsa_tbl',
         download_url = FSA_2016_URL,
-        download_destination = DATA_DIR) as uploader:
+        download_destination = DATA_DIR,
+        target_projection=32198) as uploader:
 
         uploader.upload_url_to_database()
 
+    shp_test = spatialite_db_to_gdf(join(DATA_DIR, "test_fsa.db"),  
+     'geo_fsa_tbl',
+     'limit 10'
+     )
+
+    shp_test
+    
+    sql_to_df(join(DATA_DIR, "test_fsa.db"), 'select * from spatial_ref_sys where srid IN (32198, 325834)')
+    sql_to_df(join(DATA_DIR, "test_fsa.db"), 'select * from geometry_columns')
 
     # ----
 
