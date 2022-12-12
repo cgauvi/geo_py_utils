@@ -4,6 +4,7 @@ import subprocess
 from os.path import join
 import geopandas as gpd
 import os
+import tempfile
 
 from geo_py_utils.etl.db_etl import  Url_to_spatialite, Url_to_postgis   
 from geo_py_utils.etl.gdf_load import spatialite_db_to_gdf
@@ -71,8 +72,6 @@ def test_spatialite_send_query():
 
 def test_spatialite_zip_with_proj():
 
-
-
     with Url_to_spatialite(
         db_name = join(DATA_DIR, "test_fsa.db"), 
         table_name = 'geo_fsa_tbl',
@@ -91,6 +90,35 @@ def test_spatialite_zip_with_proj():
 
     assert shp_test.crs == 32198
 
+
+def test_spatialite_local_file():
+
+    if os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH):
+        os.remove(Qc_city_data.SPATIAL_LITE_DB_PATH)
+
+    # Read the shp file from the url + write to disk before uploading to spatialite
+    shp_qc = gpd.read_file(QC_CITY_NEIGH_URL)
+    tmp_dir = tempfile.mkdtemp()
+    path_shp_file_local = join(tmp_dir, 'tmp.shp')
+    shp_qc.to_file(path_shp_file_local)
+
+    with Url_to_spatialite(
+                        db_name = Qc_city_data.SPATIAL_LITE_DB_PATH, 
+                        table_name = Qc_city_data.SPATIAL_LITE_TBL_QC,
+                        download_url = path_shp_file_local, # local file does not require curl -- hacky + watch out, Url_to_spatialite will automatically delete the file 
+                        overwrite = True #for some weird reason, appending duplicates the dataset -- even if we start of with a clean db
+        ) as spatialite_etl:
+
+        # Upload the point DB 
+        spatialite_etl.upload_url_to_database()
+
+    
+    shp_test = spatialite_db_to_gdf( Qc_city_data.SPATIAL_LITE_DB_PATH,
+     Qc_city_data.SPATIAL_LITE_TBL_QC
+     )
+
+    assert shp_qc.shape[0] == shp_test.shape[0]
+ 
 
 
 def test_postgis_qc():

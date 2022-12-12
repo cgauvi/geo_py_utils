@@ -102,10 +102,16 @@ class Url_to_db(ABC):
         self.curl_download = join(self.download_destination, self.table_name)
 
         if not exists(self.curl_download) or self.force_download:
-            cmd =f"""curl {self.download_url} --output {self.curl_download}"""
-            logger.info(cmd)
-            p = subprocess.call(cmd, shell=True)
-            subprocess.check_call(cmd, shell=True)
+            try:
+                cmd =f"""curl {self.download_url} --output {self.curl_download}"""
+                logger.info(cmd)
+                p = subprocess.call(cmd, shell=True)
+                subprocess.check_call(cmd, shell=True)
+            except Exception as e:
+                
+                if exists(self.download_url):
+                    logger.info(f"Failed to run curl: {self.download_url} seems to be a local file/folder rather than a valid URL ... ")
+                    self.curl_download = self.download_url # point to the local file
  
 
     def _try_unzip(self):
@@ -158,7 +164,7 @@ class Url_to_spatialite(Url_to_db):
         cmd = f"ogr2ogr " \
             " -progress " \
             " -f 'SQLite' " \
-            " -dsco SPATIALITE=YES " 
+            " -dsco SPATIALITE=YES "
 
         if self.target_projection is not None:
             cmd += f"-t_srs EPSG:{self.target_projection}" 
@@ -166,15 +172,13 @@ class Url_to_spatialite(Url_to_db):
 
         cmd  +=  f" {dest} {source} "\
             f" -nlt PROMOTE_TO_MULTI "\
-            f" -nln {self.table_name}"
+            f" -nln {self.table_name}" \
+            " -lco ENCODING=UTF-8 " 
 
         if self.overwrite:
             cmd += " -overwrite"
         else:
             cmd += " -append"
-
-
-
 
         logger.info(cmd)
         p = subprocess.call(cmd, shell=True)
@@ -219,7 +223,8 @@ class Url_to_postgis(Url_to_db):
 
         cmd += f" -f 'PostgreSQL' PG:'host={self.host} port={self.port} dbname={self.db_name} user={self.user} password={self.password}'" \
             f" -lco SCHEMA={self.schema} {source}" \
-            f" -nlt PROMOTE_TO_MULTI  -nln {self.table_name} "
+            f" -nlt PROMOTE_TO_MULTI  -nln {self.table_name} " \
+            " -lco ENCODING=UTF-8 " 
 
         if self.overwrite:
             cmd += "- overwrite"
@@ -297,6 +302,45 @@ if __name__ == '__main__':
     from geo_py_utils.etl.gdf_load import spatialite_db_to_gdf
     from geo_py_utils.etl.db_utils import sql_to_df
 
+    import tempfile
+    import os
+    import geopandas as gpd
+
+    # --
+
+    spatialite_db_path = join(DATA_DIR, "test.db")
+    table_name = "qc_city_test_tbl"
+    download_url = QC_CITY_NEIGH_URL
+
+    # --
+
+
+    if os.path.exists(spatialite_db_path):
+        os.remove(spatialite_db_path)
+
+    # Read the shp file from the url + write to disk before uploading to spatialite
+    shp_qc = gpd.read_file(QC_CITY_NEIGH_URL)
+    tmp_dir = tempfile.mkdtemp()
+    path_shp_file_local = join(tmp_dir, 'tmp.shp')
+    shp_qc.to_file(path_shp_file_local)
+
+    with Url_to_spatialite(
+                        db_name = spatialite_db_path, 
+                        table_name = table_name,
+                        download_url = path_shp_file_local # local file does not require curl -- hacky 
+        ) as spatialite_etl:
+
+        # Upload the point DB 
+        spatialite_etl.upload_url_to_database()
+
+    
+    shp_test = spatialite_db_to_gdf(spatialite_db_path, table_name)
+    os.remove(path_shp_file_local)
+
+
+
+    # --
+
     shp_test = spatialite_db_to_gdf(join(DATA_DIR, "test_fsa.db"),  
      'geo_fsa_tbl',
      'limit 10'
@@ -334,9 +378,7 @@ if __name__ == '__main__':
 
     # -----
 
-    spatialite_db_path = join(DATA_DIR, "test.db")
-    table_name = "qc_city_test_tbl"
-    download_url = QC_CITY_NEIGH_URL
+
 
     with Url_to_spatialite(
         db_name = spatialite_db_path, 
