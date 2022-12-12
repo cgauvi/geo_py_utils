@@ -8,7 +8,7 @@ import tempfile
 
 from geo_py_utils.etl.db_etl import  Url_to_spatialite, Url_to_postgis   
 from geo_py_utils.etl.gdf_load import spatialite_db_to_gdf
-from geo_py_utils.etl.db_utils import list_tables, sql_to_df, get_table_rows, get_table_crs
+from geo_py_utils.etl.db_utils import list_tables, sql_to_df, get_table_rows, get_table_crs, drop_table
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
 from geo_py_utils.census_open_data.census import FSA_2016_URL
@@ -96,6 +96,7 @@ def test_spatialite_zip_with_proj():
 
 def test_spatialite_local_file():
 
+    # Remove if existing
     if os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH):
         os.remove(Qc_city_data.SPATIAL_LITE_DB_PATH)
 
@@ -123,6 +124,20 @@ def test_spatialite_local_file():
     assert shp_qc.shape[0] == shp_test.shape[0]
  
 
+def test_drop_table():
+
+     # Make sure table exists initially
+    if not os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH):
+        upload_qc_neigh_db()
+
+    # Drop table 
+    drop_table(Qc_city_data.SPATIAL_LITE_DB_PATH, Qc_city_data.SPATIAL_LITE_TBL_QC)
+
+    # Table not present
+    assert Qc_city_data.SPATIAL_LITE_TBL_QC not in list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)
+ 
+
+    
 
 def test_postgis_qc():
 

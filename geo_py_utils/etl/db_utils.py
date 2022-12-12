@@ -10,6 +10,28 @@ from pathlib import Path
 
 logger = logging.getLogger(__file__)
     
+def drop_table(db_name: Union[Path, str], tbl_name: str):
+    """Drop a table in a spatialite db if it exists.
+
+    Args:
+        db_name :str name of db
+        tbl_name: str name of table to drop
+    Returns:
+
+    """
+
+    existing_tables = list_tables(db_name)
+
+    if (tbl_name not in existing_tables):
+        logger.warning(f"Warning, cannot drop table {tbl_name} : not in db")
+        return 
+
+    with sqlite3.connect(db_name) as conn:
+        cursor = conn.cursor()
+        cursor.execute(f"DROP TABLE {tbl_name}")
+
+
+
 def list_tables(db_name: Union[Path, str]) -> Union[None, list]:
     """ List tables  in a spatialite db
 
