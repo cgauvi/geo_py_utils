@@ -54,7 +54,7 @@ def spatialite_db_to_gdf(db_name : Union[str, Path],
             if df_geometry.shape[0] == 1:
                 srid = df_geometry.srid.values[0]
                 df_crs = pd.read_sql(f'select * from spatial_ref_sys where srid = {srid}', con)
-                crs = df_crs.srtext.values[0]# use the WKT2 proj representation: best praactice 
+                crs = df_crs.srtext.values[0]# use the WKT2 proj representation: best practice 
                 df = df.set_crs(crs)
                 logger.info("Successfully managed to set the crs when loading back to geopandas")
             else:
@@ -63,6 +63,8 @@ def spatialite_db_to_gdf(db_name : Union[str, Path],
             logger.error(f"Error setting the CRS when loading back the data from spatialite")
 
     return df
+
+
 
 
 if __name__ == "__main__":
