@@ -67,6 +67,49 @@ def get_table_rows(db_name: Union[Path, str], tbl_name :str) -> int:
     return df.num_rows.values[0]
 
 
+def get_table_crs(db_name: str, tbl_name: str, return_srid = False) -> Union[int, str] : 
+
+    """ Extract the coordinate reference system from a spatialite table.
+
+    Args:
+        db_name : database
+        tbl_name: name of table
+        return_srid: returns the srid int if set to True. Otherwise returns the wkt2 representation.  (Defaults to False)
+    Returns:
+        crs:  WKT2 proj representation of crs (string) or srid (int)
+
+    """
+
+    # Check if table exists first 
+    existing_tables = list_tables(db_name)
+
+    if tbl_name not in existing_tables:
+        raise ValueError(f"Fatal error! {tbl_name} does not exist")
+
+    with sqlite3.connect(db_name) as con:
+
+        # sqlite connection with extensions
+        con.enable_load_extension(True)
+        con.load_extension("mod_spatialite")
+
+        try:
+            df_geometry = pd.read_sql(f"select * from geometry_columns where f_table_name = '{tbl_name}' ", con) 
+            if df_geometry.shape[0] != 1:
+                raise ValueError(f"Fatal error in get_table_crs: there are {df_geometry.shape[0]} rows in geometry_columns and there should be only 1 ")
+                
+            srid = df_geometry.srid.values[0]
+
+            if return_srid:
+                return srid
+
+            else:
+                df_crs = pd.read_sql(f'select * from spatial_ref_sys where srid = {srid}', con)
+                crs = df_crs.srtext.values[0]# use the WKT2 proj representation: best practice 
+                return crs
+
+        except Exception as e:
+            logger.error(f"Error retrieving the CRS from table ")
+
 
 if __name__ == "__main__":
 
@@ -75,3 +118,6 @@ if __name__ == "__main__":
     from geo_py_utils.misc.constants import DATA_DIR
 
     existing_tables = list_tables(os.path.join(DATA_DIR, "test.db"))
+
+    get_table_crs(os.path.join(DATA_DIR, "test.db"), 'qc_city_test_tbl', return_srid = True)
+    get_table_crs(os.path.join(DATA_DIR, "test.db"), 'qc_city_test_tbl', return_srid = False)

@@ -8,7 +8,7 @@ import tempfile
 
 from geo_py_utils.etl.db_etl import  Url_to_spatialite, Url_to_postgis   
 from geo_py_utils.etl.gdf_load import spatialite_db_to_gdf
-from geo_py_utils.etl.db_utils import list_tables, sql_to_df, get_table_rows
+from geo_py_utils.etl.db_utils import list_tables, sql_to_df, get_table_rows, get_table_crs
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
 from geo_py_utils.census_open_data.census import FSA_2016_URL
@@ -82,7 +82,7 @@ def test_spatialite_zip_with_proj():
 
         uploader.upload_url_to_database()
 
-
+    #Load back into memory using geopandas
     shp_test = spatialite_db_to_gdf(join(DATA_DIR, "test_fsa.db"),
      'geo_fsa_tbl',
      'limit 10'
@@ -90,6 +90,9 @@ def test_spatialite_zip_with_proj():
 
     assert shp_test.crs == 32198
 
+    # Get the crs using spatialite only
+    crs_spatial_lite = get_table_crs(join(DATA_DIR, "test_fsa.db"), 'geo_fsa_tbl', return_srid = True)
+    assert crs_spatial_lite == 32198
 
 def test_spatialite_local_file():
 
