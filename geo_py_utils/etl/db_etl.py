@@ -120,7 +120,6 @@ class Url_to_db(ABC):
             try:
                 cmd =f"""curl {self.download_url} --output {self.curl_download}"""
                 logger.info(cmd)
-                p = subprocess.call(cmd, shell=True)
                 subprocess.check_call(cmd, shell=True)
             except Exception as e:
                 
@@ -135,7 +134,6 @@ class Url_to_db(ABC):
             if not exists(self.path_src_to_upload) or len(listdir(self.path_src_to_upload)) == 0:
                 cmd = f"unzip -o {self.curl_download} -d {self.path_src_to_upload}"
                 logger.info(cmd)
-                p = subprocess.call(cmd, shell=True)
                 subprocess.check_call(cmd, shell=True)
 
                 # We might have unzipped a new folder xxx to self.path_src_to_upload/xxx
@@ -194,7 +192,6 @@ class Url_to_spatialite(Url_to_db):
             cmd += " -append"
 
         logger.info(cmd)
-        p = subprocess.call(cmd, shell=True)
         subprocess.check_call(cmd, shell=True)
  
 
@@ -245,7 +242,6 @@ class Url_to_postgis(Url_to_db):
             cmd += " -append"
 
         logger.info(cmd)
-        p = subprocess.call(cmd, shell=True)
         subprocess.check_call(cmd, shell=True)
  
 
