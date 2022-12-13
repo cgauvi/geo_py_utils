@@ -37,7 +37,8 @@ class Url_to_db(ABC):
                 force_download: bool = False,
                 overwrite: bool = False,
                 target_projection: str = None,
-                remove_tmp_download_files = True):
+                remove_tmp_download_files = True,
+                no_overwrite_append = False):
 
         # Download and unzipped directories 
         # Use tmp dir + delete at the edn
@@ -62,7 +63,7 @@ class Url_to_db(ABC):
         self.overwrite = overwrite
         self.target_projection = target_projection
         self.remove_tmp_download_files = remove_tmp_download_files # if download_destination is not None, this has precedence and we dont delete the folder 
-        
+        self.no_overwrite_append = no_overwrite_append
 
 
 
@@ -136,15 +137,15 @@ class Url_to_db(ABC):
                 logger.info(cmd)
                 subprocess.check_call(cmd, shell=True)
 
-                # We might have unzipped a new folder xxx to self.path_src_to_upload/xxx
-                # Need to point to self.path_src_to_upload/xxx
-                # This only works for 2 use cases, but seems impossibly complex to code in general if there are more than 1 level of nested directories
-                sub_dirs = listdir(self.path_src_to_upload)
-                if len(sub_dirs) == 1:
-                    self.path_src_to_upload = join(self.path_src_to_upload, sub_dirs[0])
-                    logger.debug(f"unzipping.. {self.path_src_to_upload} contains a single sub dir -> point to {sub_dirs[0]}")
-                elif len(sub_dirs) > 1:
-                    logger.debug(f"unzipping.. {self.path_src_to_upload} contains many directories -> point to {self.path_src_to_upload}")
+            # We might have unzipped a new folder xxx to self.path_src_to_upload/xxx
+            # Need to point to self.path_src_to_upload/xxx
+            # This only works for 2 use cases, but seems impossibly complex to code in general if there are more than 1 level of nested directories
+            sub_dirs = listdir(self.path_src_to_upload)
+            if len(sub_dirs) == 1:
+                self.path_src_to_upload = join(self.path_src_to_upload, sub_dirs[0])
+                logger.debug(f"In _try_unzip: {self.path_src_to_upload} contains a single sub dir/files -> point to {sub_dirs[0]}")
+            elif len(sub_dirs) > 1:
+                logger.debug(f"In _try_unzip: {self.path_src_to_upload} contains many directories -> point to {self.path_src_to_upload}")
 
         except Exception as e:
             logger.info("{self.curl_download} does not seem to be a zipped file: {e} .. ")
@@ -186,10 +187,11 @@ class Url_to_spatialite(Url_to_db):
             f" -nln {self.table_name}" \
             " -lco ENCODING=UTF-8 " 
 
-        if self.overwrite:
-            cmd += " -overwrite"
-        else:
-            cmd += " -append"
+        if not self.no_overwrite_append:
+            if self.overwrite:
+                cmd += " -overwrite"
+            else:
+                cmd += " -append"
 
         logger.info(cmd)
         subprocess.check_call(cmd, shell=True)
