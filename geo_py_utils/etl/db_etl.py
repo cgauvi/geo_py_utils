@@ -3,7 +3,7 @@
 
  
 from os.path import isfile, isdir, join, exists, abspath
-from os import listdir, environ
+from os import listdir, environ, makedirs
 import subprocess
 from abc import ABC
 from pathlib import Path
@@ -39,10 +39,20 @@ class Url_to_db(ABC):
                 target_projection: str = None,
                 remove_tmp_download_files = True):
 
-        self.delete_download_destination = False
+        # Download and unzipped directories 
+        # Use tmp dir + delete at the edn
         if download_destination is None:
             download_destination = tempfile.mkdtemp()
+            path_src_to_upload =  tempfile.mkdtemp() # point to dir where we will extract the data
             self.delete_download_destination = True
+        else:
+            path_src_to_upload = join(download_destination, f"{table_name}_post_curl")
+            makedirs(path_src_to_upload, exist_ok = True)
+            self.delete_download_destination = False
+
+        self.curl_download = join(download_destination, f"{table_name}_curl")
+        self.path_src_to_upload = path_src_to_upload
+
 
         self.db_name = db_name
         self.table_name = table_name
@@ -51,16 +61,18 @@ class Url_to_db(ABC):
         self.force_download = force_download
         self.overwrite = overwrite
         self.target_projection = target_projection
-        self.remove_tmp_download_files = remove_tmp_download_files
+        self.remove_tmp_download_files = remove_tmp_download_files # if download_destination is not None, this has precedence and we dont delete the folder 
         
 
-        self.curl_download = None
-        self.unzip_tmp_path = None
+
 
 
     @staticmethod
     def _safe_delete(f):
-         if exists(f) :
+        """Delete a single file or directory if it exists.
+        """
+
+        if exists(f) :
             try:
                 Path(f).unlink(missing_ok = True) #os.remove gives some weird errors
             except Exception:
@@ -71,8 +83,11 @@ class Url_to_db(ABC):
 
 
     def _safe_delete_all_files(self):
-        
-        files_always_delete = [self.unzip_tmp_path, self.curl_download]
+        """ Delete unnecessary tmp files
+        """ 
+
+        # Always delete the files downloaded by curl 
+        files_always_delete = [self.curl_download]
         for f in files_always_delete:
             try:
                 Url_to_db._safe_delete(f)
@@ -80,9 +95,11 @@ class Url_to_db(ABC):
                 logger.warning(f"Warning, failed to delete temp directories {f} up at cleanup - {e}")
                 pass 
 
+        # If we inputed a download_destination: keep everything
         try:
             if self.delete_download_destination and exists(self.download_destination):
                 Url_to_db._safe_delete(self.download_destination)
+                Url_to_db._safe_delete(self.path_src_to_upload)
         except Exception as e:
             logger.warning(f"Warning, failed to delete temp download dir up at cleanup - {e}")
 
@@ -98,8 +115,6 @@ class Url_to_db(ABC):
             logger.warning("Warning! not deleting temprary download files! make sure to not clog your system")
 
     def _curl(self):
-
-        self.curl_download = join(self.download_destination, self.table_name)
 
         if not exists(self.curl_download) or self.force_download:
             try:
@@ -117,8 +132,6 @@ class Url_to_db(ABC):
     def _try_unzip(self):
 
         try:
-            self.path_src_to_upload =  tempfile.mkdtemp() # point to dir where we will extract the data
-
             if not exists(self.path_src_to_upload) or len(listdir(self.path_src_to_upload)) == 0:
                 cmd = f"unzip -o {self.curl_download} -d {self.path_src_to_upload}"
                 logger.info(cmd)
