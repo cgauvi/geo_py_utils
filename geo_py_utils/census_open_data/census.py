@@ -96,9 +96,9 @@ def download_ca_cmas(year : int = 2016,
         logger.info(f"Saving data to {data_download_path}")
 
         if year == 2016:
-            zip_download_url = "https://www12.statcan.gc.ca/census-recensement/2011/geo/bound-limit/files-fichiers/2016/lcma000a16a_e.zip" \
+            zip_download_url = "https://www12.statcan.gc.ca/census-recensement/2011/geo/bound-limit/files-fichiers/2016/lcma000b16a_e.zip"\
             if use_cartographic \
-            else "https://www12.statcan.gc.ca/census-recensement/2011/geo/bound-limit/files-fichiers/2016/lcma000b16a_e.zip"
+            else "https://www12.statcan.gc.ca/census-recensement/2011/geo/bound-limit/files-fichiers/2016/lcma000a16a_e.zip"  
         else:
             raise ValueError(f"Fatal error - inputed {year}, but only 2016 implemented")
 
@@ -237,9 +237,9 @@ def download_fsas(year : int = 2016,
             _type_: _description_
         """
         if year == 2016:
-            zip_download_url = "https://www12.statcan.gc.ca/census-recensement/2011/geo/bound-limit/files-fichiers/2016/lfsa000a16a_e.zip" \
+            zip_download_url = "https://www12.statcan.gc.ca/census-recensement/2011/geo/bound-limit/files-fichiers/2016/lfsa000b16a_e.zip"  \
             if use_cartographic \
-            else "https://www12.statcan.gc.ca/census-recensement/2011/geo/bound-limit/files-fichiers/2016/lfsa000b16a_e.zip"
+            else "https://www12.statcan.gc.ca/census-recensement/2011/geo/bound-limit/files-fichiers/2016/lfsa000a16a_e.zip"
         else:
             raise ValueError(f"Fatal error - inputed {year}, but only 2016 implemented")
 
