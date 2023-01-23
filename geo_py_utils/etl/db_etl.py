@@ -196,7 +196,8 @@ class Url_to_spatialite(Url_to_db):
         # Make sure we are starting from scratch
         # Avoid weird bugs where query to non-existent db creates the file and trying to write after creates error
         if self.first_time_creating_db:
-            subprocess.check_call(f"rm {dest}", shell=True)
+            if exists(dest):
+                subprocess.check_call(f"rm {dest}", shell=True)
 
         # Actual ogr2ogr call
         logger.info(cmd)
