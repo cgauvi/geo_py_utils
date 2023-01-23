@@ -65,7 +65,7 @@ class Url_to_db(ABC):
         self.remove_tmp_download_files = remove_tmp_download_files # if download_destination is not None, this has precedence and we dont delete the folder 
         self.no_overwrite_append = no_overwrite_append
 
-
+        self.first_time_creating_db = True if not exists(db_name) else False # check existence BEFORE running any queries since opening connection to db creates it by default which is undesired
 
 
     @staticmethod
@@ -187,12 +187,18 @@ class Url_to_spatialite(Url_to_db):
             f" -nln {self.table_name}" \
             " -lco ENCODING=UTF-8 " 
 
-        if not self.no_overwrite_append:
+        if not self.no_overwrite_append and not self.first_time_creating_db:
             if self.overwrite:
                 cmd += " -overwrite"
             else:
                 cmd += " -append"
 
+        # Make sure we are starting from scratch
+        # Avoid weird bugs where query to non-existent db creates the file and trying to write after creates error
+        if self.first_time_creating_db:
+            subprocess.check_call(f"rm {dest}", shell=True)
+
+        # Actual ogr2ogr call
         logger.info(cmd)
         subprocess.check_call(cmd, shell=True)
  
