@@ -31,3 +31,19 @@
 
  
  
+ # Installation 
+
+The project requires installing geopandas through `conda`. The rest of the dependencies can be installed manually with `pip`
+
+ ```bash
+conda create --name geo_py_utils python=${{ matrix.python-version }} geopandas
+conda activate geo_py_utils
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+ ```
+
+ ## Note
+
+ The package depends on another [custom package](https://github.com/cgauvi/ben_py_utils). The following line was added to the `requirements.txt`:
+ 
+ `git+https://github.com/cgauvi/ben_py_utils.git@master`
