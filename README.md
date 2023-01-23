@@ -36,7 +36,7 @@
 The project requires installing geopandas through `conda`. The rest of the dependencies can be installed manually with `pip`
 
  ```bash
-conda create --name geo_py_utils python=${{ matrix.python-version }} geopandas
+conda create --name geo_py_utils python=3.9 geopandas
 conda activate geo_py_utils
 python -m pip install --upgrade pip
 pip install -r requirements.txt
