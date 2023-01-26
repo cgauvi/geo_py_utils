@@ -3,7 +3,7 @@
 
  
 from os.path import isfile, isdir, join, exists, abspath
-from os import listdir, environ
+from os import listdir, environ, makedirs
 import subprocess
 from abc import ABC
 from pathlib import Path
@@ -37,12 +37,23 @@ class Url_to_db(ABC):
                 force_download: bool = False,
                 overwrite: bool = False,
                 target_projection: str = None,
-                remove_tmp_download_files = True):
+                remove_tmp_download_files = True,
+                no_overwrite_append = False):
 
-        self.delete_download_destination = False
+        # Download and unzipped directories 
+        # Use tmp dir + delete at the edn
         if download_destination is None:
             download_destination = tempfile.mkdtemp()
+            path_src_to_upload =  tempfile.mkdtemp() # point to dir where we will extract the data
             self.delete_download_destination = True
+        else:
+            path_src_to_upload = join(download_destination, f"{table_name}_post_curl")
+            makedirs(path_src_to_upload, exist_ok = True)
+            self.delete_download_destination = False
+
+        self.curl_download = join(download_destination, f"{table_name}_curl")
+        self.path_src_to_upload = path_src_to_upload
+
 
         self.db_name = db_name
         self.table_name = table_name
@@ -51,16 +62,18 @@ class Url_to_db(ABC):
         self.force_download = force_download
         self.overwrite = overwrite
         self.target_projection = target_projection
-        self.remove_tmp_download_files = remove_tmp_download_files
-        
+        self.remove_tmp_download_files = remove_tmp_download_files # if download_destination is not None, this has precedence and we dont delete the folder 
+        self.no_overwrite_append = no_overwrite_append
 
-        self.curl_download = None
-        self.unzip_tmp_path = None
+        self.first_time_creating_db = True if not exists(db_name) else False # check existence BEFORE running any queries since opening connection to db creates it by default which is undesired
 
 
     @staticmethod
     def _safe_delete(f):
-         if exists(f) :
+        """Delete a single file or directory if it exists.
+        """
+
+        if exists(f) :
             try:
                 Path(f).unlink(missing_ok = True) #os.remove gives some weird errors
             except Exception:
@@ -71,8 +84,11 @@ class Url_to_db(ABC):
 
 
     def _safe_delete_all_files(self):
-        
-        files_always_delete = [self.unzip_tmp_path, self.curl_download]
+        """ Delete unnecessary tmp files
+        """ 
+
+        # Always delete the files downloaded by curl 
+        files_always_delete = [self.curl_download]
         for f in files_always_delete:
             try:
                 Url_to_db._safe_delete(f)
@@ -80,9 +96,11 @@ class Url_to_db(ABC):
                 logger.warning(f"Warning, failed to delete temp directories {f} up at cleanup - {e}")
                 pass 
 
+        # If we inputed a download_destination: keep everything
         try:
             if self.delete_download_destination and exists(self.download_destination):
                 Url_to_db._safe_delete(self.download_destination)
+                Url_to_db._safe_delete(self.path_src_to_upload)
         except Exception as e:
             logger.warning(f"Warning, failed to delete temp download dir up at cleanup - {e}")
 
@@ -99,13 +117,10 @@ class Url_to_db(ABC):
 
     def _curl(self):
 
-        self.curl_download = join(self.download_destination, self.table_name)
-
         if not exists(self.curl_download) or self.force_download:
             try:
                 cmd =f"""curl {self.download_url} --output {self.curl_download}"""
                 logger.info(cmd)
-                p = subprocess.call(cmd, shell=True)
                 subprocess.check_call(cmd, shell=True)
             except Exception as e:
                 
@@ -117,23 +132,20 @@ class Url_to_db(ABC):
     def _try_unzip(self):
 
         try:
-            self.path_src_to_upload =  tempfile.mkdtemp() # point to dir where we will extract the data
-
             if not exists(self.path_src_to_upload) or len(listdir(self.path_src_to_upload)) == 0:
                 cmd = f"unzip -o {self.curl_download} -d {self.path_src_to_upload}"
                 logger.info(cmd)
-                p = subprocess.call(cmd, shell=True)
                 subprocess.check_call(cmd, shell=True)
 
-                # We might have unzipped a new folder xxx to self.path_src_to_upload/xxx
-                # Need to point to self.path_src_to_upload/xxx
-                # This only works for 2 use cases, but seems impossibly complex to code in general if there are more than 1 level of nested directories
-                sub_dirs = listdir(self.path_src_to_upload)
-                if len(sub_dirs) == 1:
-                    self.path_src_to_upload = join(self.path_src_to_upload, sub_dirs[0])
-                    logger.debug(f"unzipping.. {self.path_src_to_upload} contains a single sub dir -> point to {sub_dirs[0]}")
-                elif len(sub_dirs) > 1:
-                    logger.debug(f"unzipping.. {self.path_src_to_upload} contains many directories -> point to {self.path_src_to_upload}")
+            # We might have unzipped a new folder xxx to self.path_src_to_upload/xxx
+            # Need to point to self.path_src_to_upload/xxx
+            # This only works for 2 use cases, but seems impossibly complex to code in general if there are more than 1 level of nested directories
+            sub_dirs = listdir(self.path_src_to_upload)
+            if len(sub_dirs) == 1:
+                self.path_src_to_upload = join(self.path_src_to_upload, sub_dirs[0])
+                logger.debug(f"In _try_unzip: {self.path_src_to_upload} contains a single sub dir/files -> point to {sub_dirs[0]}")
+            elif len(sub_dirs) > 1:
+                logger.debug(f"In _try_unzip: {self.path_src_to_upload} contains many directories -> point to {self.path_src_to_upload}")
 
         except Exception as e:
             logger.info("{self.curl_download} does not seem to be a zipped file: {e} .. ")
@@ -175,13 +187,20 @@ class Url_to_spatialite(Url_to_db):
             f" -nln {self.table_name}" \
             " -lco ENCODING=UTF-8 " 
 
-        if self.overwrite:
-            cmd += " -overwrite"
-        else:
-            cmd += " -append"
+        if not self.no_overwrite_append and not self.first_time_creating_db:
+            if self.overwrite:
+                cmd += " -overwrite"
+            else:
+                cmd += " -append"
 
+        # Make sure we are starting from scratch
+        # Avoid weird bugs where query to non-existent db creates the file and trying to write after creates error
+        if self.first_time_creating_db:
+            if exists(dest):
+                subprocess.check_call(f"rm {dest}", shell=True)
+
+        # Actual ogr2ogr call
         logger.info(cmd)
-        p = subprocess.call(cmd, shell=True)
         subprocess.check_call(cmd, shell=True)
  
 
@@ -232,7 +251,6 @@ class Url_to_postgis(Url_to_db):
             cmd += " -append"
 
         logger.info(cmd)
-        p = subprocess.call(cmd, shell=True)
         subprocess.check_call(cmd, shell=True)
  
 
