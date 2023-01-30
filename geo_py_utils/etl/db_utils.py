@@ -2,7 +2,7 @@
     
 from os.path import exists
 import logging
-from typing import Union
+from typing import Union, List
 import pandas as pd
 import geopandas as gpd
 import sqlite3
@@ -132,6 +132,22 @@ def get_table_crs(db_name: str, tbl_name: str, return_srid = False) -> Union[int
         except Exception as e:
             logger.error(f"Error retrieving the CRS from table ")
 
+
+
+def get_table_columns(db_name: str, tbl_name: str) -> Union[np.array, List[str]]:
+
+    with sqlite3.connect(db_name) as conn:
+        query = f"PRAGMA table_info(tbl_name);"
+        df = pd.read_sql(query, conn)
+
+    if df.shape[0] == 0:
+        logger.warn(f"Warning! table {tbl_name} does not exist or does not have columns")
+
+    return df.name.values
+
+    
+        
+        
 
 if __name__ == "__main__":
 
