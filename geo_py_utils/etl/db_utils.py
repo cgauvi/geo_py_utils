@@ -7,6 +7,7 @@ import pandas as pd
 import geopandas as gpd
 import sqlite3
 from pathlib import Path
+import numpy as np 
 
 logger = logging.getLogger(__file__)
     
@@ -137,7 +138,7 @@ def get_table_crs(db_name: str, tbl_name: str, return_srid = False) -> Union[int
 def get_table_columns(db_name: str, tbl_name: str) -> Union[np.array, List[str]]:
 
     with sqlite3.connect(db_name) as conn:
-        query = f"PRAGMA table_info(tbl_name);"
+        query = f"PRAGMA table_info({tbl_name});"
         df = pd.read_sql(query, conn)
 
     if df.shape[0] == 0:
