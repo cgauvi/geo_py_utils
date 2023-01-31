@@ -23,13 +23,13 @@ def drop_table(db_name: Union[Path, str], tbl_name: str):
 
     existing_tables = list_tables(db_name)
 
-    if (tbl_name not in existing_tables):
+    if ((existing_tables is not None) and (tbl_name not in existing_tables)):
         logger.warning(f"Warning, cannot drop table {tbl_name} : not in db")
         return 
 
     with sqlite3.connect(db_name) as conn:
         cursor = conn.cursor()
-        cursor.execute(f"DROP TABLE {tbl_name}")
+        cursor.execute(f"DROP TABLE if exists {tbl_name}")
 
 
 
