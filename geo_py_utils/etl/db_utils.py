@@ -8,6 +8,7 @@ import geopandas as gpd
 import sqlite3
 from pathlib import Path
 import numpy as np 
+import pandas as pd
 
 logger = logging.getLogger(__file__)
     
@@ -135,11 +136,9 @@ def get_table_crs(db_name: str, tbl_name: str, return_srid = False) -> Union[int
 
 
 
-def get_table_columns(db_name: str, tbl_name: str) -> Union[np.array, List[str]]:
+def get_table_column_names(db_name: str, tbl_name: str) -> np.array:
 
-    with sqlite3.connect(db_name) as conn:
-        query = f"PRAGMA table_info({tbl_name});"
-        df = pd.read_sql(query, conn)
+    df = get_table_column_all_metadata(db_name, tbl_name)
 
     if df.shape[0] == 0:
         logger.warn(f"Warning! table {tbl_name} does not exist or does not have columns")
@@ -147,7 +146,13 @@ def get_table_columns(db_name: str, tbl_name: str) -> Union[np.array, List[str]]
     return df.name.values
 
     
-        
+def get_table_column_all_metadata(db_name: str, tbl_name: str) -> pd.DataFrame:
+
+    with sqlite3.connect(db_name) as conn:
+        query = f"PRAGMA table_info({tbl_name});"
+        df = pd.read_sql(query, conn)
+
+    return df
         
 
 if __name__ == "__main__":
