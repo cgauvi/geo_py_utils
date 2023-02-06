@@ -15,4 +15,5 @@ rtree
 unicodedata2
 xyzservices
 google-auth
+python-geohash
 git+https://github.com/cgauvi/ben_py_utils.git@master
