@@ -80,21 +80,46 @@ def test_get_max_precision():
     
 
 
-def test_recursive_geohash():
+def test_recursive_geohash_normal():
 
 
     shp_all_1 = gpd.GeoDataFrame(
         {
-            'id': [0,1],
-            "geometry": [Point (-71.16451, 46.86968),   Point (-71.25148, 48.41987)	],
-            "counts": [1.0, 1.0]
-    }     ,
+            'id': [0,1 ,2],
+            "geometry": [Point (-71.16451, 46.86968),   Point (-71.25148, 48.41987), Point (-71.25148, 48.419)	], #slight tweak - same geohash 
+            "counts": [1.0, 1.0, 1.0]
+    }   ,
     crs = 4326
     )
 
     shp_part, _ = recursively_partition_geohash_cells(shp_all_1,
                                                     count_column_name='counts',
-                                                    thresh_num_points = 1)
+                                                    min_num_points=1,
+                                                    max_precision=4)
+
+    assert shp_part.shape[0] == shp_all_1.shape[0]-1 # aggregated 2 geohashes into one (last 2 points)
+
+
+def test_recursive_geohash_does_nothing():
+
+    shp_bug = gpd.GeoDataFrame(
+            {
+            'id' :[0	,1,	2	,3],
+            'geohash_index' : ["drgp",	"drgr",	"f0r9",	"f0rb"],  #also tests name colisions for `geohash_index`
+            "lat" : [44.997203	,44.996874	,46.722120	,46.521345],
+            "lng": [-74.349024,	-74.084504,	-79.103772	,-78.868221],
+            'counts' : [134, 410, 119	,59],
+            'geometry': [Point(-74.34902, 44.99720),Point(-74.08450,44.99687),Point(-79.10377,46.72212),Point(-78.86822,46.52135)]
+            },
+            crs = 4326          
+    )
+        
+    shp_part, _ = recursively_partition_geohash_cells(shp_bug,
+                                                        count_column_name='counts',
+                                                        min_num_points = 2)
+
+    assert shp_part.shape[0] == shp_bug.shape[0] # same number of rows: we did nothing really
+
 
 
 if __name__ == '__main__':
