@@ -428,9 +428,10 @@ def add_geohash_index(shp_to_add, precision, new_col_name='geohash_index', keep_
             'Fatal error! there are NAs in the lat lng! From add_centroid or initially ')
 
     if new_col_name in shp.columns:
-        logger.debug(
-            f'Warning in add_geohash_index! {new_col_name} already exists')
-        return shp
+        logger.warn (
+            f'Warning in add_geohash_index! {new_col_name} '\
+            f' already exists - dropping and repopulating')
+        shp.drop(columns=new_col_name, inplace=True)
 
     assert np.all(-90 <= shp.lat) and np.all(shp.lat <= 90)
     assert np.all(-180 <= shp.lng) and np.all(shp.lng <= 180)
@@ -584,65 +585,7 @@ if __name__ == "__main__":
 
     GEOHASH_PRECISION = 6
      
-
-    """
-
-    geohash_indices = ['f2k', 'f2m']
-    prec = list(set([len(p) for p in geohash_indices]))[0]
-
-    list_shp_children = []
-    list_geo = []
-    list_all_sub_geohash = []
-
-    for ind in geohash_indices:
-        geo_shp_ = get_all_geohash_from_geohash_indices([ind])
-        geo_shp_['index'] = ind
-        list_geo.append(geo_shp_)
-
-        geo_shp_all_ = get_all_geohash_from_gdf(geo_shp_, precision=prec+1)
-        geo_shp_all_['parent'] = ind
-        list_all_sub_geohash.append(geo_shp_all_)
-
-        lng, lat = get_bbox_centroid(geo_shp_)
-        geohash_indices_children = [cell for cell in
-                                    geohash.neighbors(geohash.encode(lat, lng, precision=prec+1))]
-        geo_shp_children_ = get_all_geohash_from_geohash_indices(
-            geohash_indices_children)
-        geo_shp_children_['parent'] = ind
-        list_shp_children.append(geo_shp_children_)
-
-    geo_shp = pd.concat(list_geo)
-    geo_shp['parent_numeric'] = np.arange(geo_shp.shape[0])
-
-    geo_shp_children = pd.concat(list_shp_children)
-    geo_shp_children = geo_shp_children.merge(geo_shp[["index", "parent_numeric"]],
-                                              left_on='parent', right_on='index')
-
-    geo_shp_all = pd.concat(list_all_sub_geohash)
-    geo_shp_all = geo_shp_all.merge(geo_shp[["index", "parent_numeric"]],
-                                    left_on='parent', right_on='index')
-
-    map_simple({'original': geo_shp,
-                "children": geo_shp_children,
-                'all sub geohash': geo_shp_all},
-               column_color='parent_numeric',
-               tootltip_fields=['parent_numeric'])
-    """
-
-    '''
-    shp_all_1 = gpd.GeoDataFrame(
-        {
-            'id': [0,1],
-            "geometry": [Point (-71.16451, 46.86968),   Point (-71.25148, 48.41987)	],
-            "counts": [1.0, 1.0]
-    }   ,
-    crs = 4326
-    )
-
-    shp_part, _ = recursively_partition_geohash_cells(shp_all_1,
-                                                    count_column_name='counts',
-                                                    min_num_points = 2)
-    '''
+ 
 
     shp_bug = gpd.GeoDataFrame(
             {
