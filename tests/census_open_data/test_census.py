@@ -2,9 +2,20 @@ import geopandas as gpd
 import pandas as pd
 from os.path import join
 
-from geo_py_utils.census_open_data.census import download_fsas, download_qc_city_fsa_2016, download_ca_cmas, download_das
+from geo_py_utils.census_open_data.census import (
+    download_fsas, 
+    download_qc_city_fsa_2016, 
+    download_ca_cmas, 
+    download_das,
+    get_crs_str)
+    
 from geo_py_utils.misc.constants import DATA_DIR
 
+
+def test_crs_string():
+
+    assert get_crs_str(4326) != 'null'
+    assert get_crs_str(32198) != 'null'
 
 def download_compare(year, pr_code, use_cartographic=False):
 
@@ -60,4 +71,4 @@ def test_2021_nb_da ():
 if __name__ == "__main__":
     #test_2016_fsa_qc_city()
     #test_2016_cma_ca_qc()
-    test_2016_cma_ca_qc_crs()
+    test_crs_string()

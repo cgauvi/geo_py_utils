@@ -28,6 +28,8 @@ def get_crs_str(new_crs: Union[str, CRS]):
 
     """Helper function to try to get a reasonable string from a crs (ideally the epsg code as a string)
 
+    Tries in order: str repr, int epsg,  py.to_epsg()
+
     Args:
         new_crs (Union): _description_
 
@@ -37,16 +39,15 @@ def get_crs_str(new_crs: Union[str, CRS]):
     
     crs_str = "null" 
 
-    if type(new_crs) == str:
-        try:
+    try:
+        if isinstance(new_crs, str):
             crs_str = new_crs
-        except:
-            pass
-    else:
-        try:
+        elif isinstance(new_crs, int):
+            crs_str = str(new_crs)
+        else:
             crs_str = new_crs.to_epsg()
-        except:
-            pass
+    except:
+        logger.warning(f'Warning! In get_crs_str cannot get a valid crs representation for crs {new_crs} - setting to {crs_str}')
 
     return crs_str
 
