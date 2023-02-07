@@ -91,6 +91,38 @@ def get_table_rows(db_name: Union[Path, str], tbl_name :str) -> int:
     return df.num_rows.values[0]
 
 
+def is_spatial_index_enabled(db_name: str, tbl_name: str) -> bool:
+    """Determine if the spatial index is enabled for a given table
+
+    Args:
+        db_name (str):  
+        tbl_name (str):  
+
+    Returns:
+        bool: True if column `spatial_index_enabled` is 1
+    """
+
+    # Check if table exists first 
+    existing_tables = list_tables(db_name)
+
+    if tbl_name not in existing_tables:
+        raise ValueError(f"Fatal error! {tbl_name} does not exist")
+
+    with sqlite3.connect(db_name) as con:
+
+        # sqlite connection with extensions
+        con.enable_load_extension(True)
+        con.load_extension("mod_spatialite")
+
+        df_geometry = pd.read_sql(f"SELECT spatial_index_enabled, f_table_name FROM geometry_columns WHERE f_table_name = '{tbl_name}' ", con) 
+
+    is_enabled = df_geometry['spatial_index_enabled'].values[0] == 1
+
+    return is_enabled
+
+
+
+
 def get_table_crs(db_name: str, tbl_name: str, return_srid = False) -> Union[int, str] : 
 
     """ Extract the coordinate reference system from a spatialite table.
