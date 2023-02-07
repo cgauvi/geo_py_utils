@@ -8,7 +8,7 @@ import tempfile
 
 from geo_py_utils.etl.db_etl import  Url_to_spatialite, Url_to_postgis   
 from geo_py_utils.etl.gdf_load import spatialite_db_to_gdf
-from geo_py_utils.etl.db_utils import list_tables, sql_to_df, get_table_rows, get_table_crs, drop_table
+from geo_py_utils.etl.db_utils import list_tables, sql_to_df, get_table_rows, get_table_crs, drop_table, is_spatial_index_enabled
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
 from geo_py_utils.census_open_data.census import FSA_2016_URL
@@ -32,6 +32,17 @@ def upload_qc_neigh_db(db_name = Qc_city_data.SPATIAL_LITE_DB_PATH,
 
         uploader.upload_url_to_database()
 
+
+def test_spatial_index():
+
+    if (not os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH)) or \
+        (not Qc_city_data.SPATIAL_LITE_TBL_QC in list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)) :
+        upload_qc_neigh_db()
+
+    assert is_spatial_index_enabled(
+        Qc_city_data.SPATIAL_LITE_DB_PATH,
+        Qc_city_data.SPATIAL_LITE_TBL_QC
+        )
 
 def test_upload_spatialite_qc():
     upload_qc_neigh_db()
@@ -173,3 +184,7 @@ def test_postgis_qc():
         logger.warning("Skipping test_postgis: did not find psql on system")
 
  
+
+if __name__ == '__main__':
+
+    test_spatial_index()

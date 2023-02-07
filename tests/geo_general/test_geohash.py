@@ -6,7 +6,7 @@ from os.path import join
 from gic.constants import Projet_paths
 
 import sys
-sys.path.append(join(Projet_paths.PATH_TO_GIC, 'geo_py_utils'))
+sys.path.insert(0, join(Projet_paths.PATH_TO_GIC, 'geo_py_utils'))
 
 from geo_py_utils.geo_general.bbox import get_list_coordinates_from_bbox, get_bbox_centroid
 from geo_py_utils.geo_general.geo_utils import get_geodataframe_from_list_coord
@@ -80,7 +80,7 @@ def test_get_max_precision():
     
 
 
-def test_recursive_geohash_normal():
+def test_recursive_geohash_refines():
 
 
     shp_all_1 = gpd.GeoDataFrame(
@@ -97,7 +97,7 @@ def test_recursive_geohash_normal():
                                                     min_num_points=1,
                                                     max_precision=4)
 
-    assert shp_part.shape[0] == shp_all_1.shape[0]-1 # aggregated 2 geohashes into one (last 2 points)
+    assert shp_part[shp_part['counts'] > 0].shape[0] == shp_all_1.shape[0]-1 # aggregated 2 geohashes into one (last 2 points)
 
 
 def test_recursive_geohash_does_nothing():
@@ -118,11 +118,11 @@ def test_recursive_geohash_does_nothing():
                                                         count_column_name='counts',
                                                         min_num_points = 2)
 
-    assert shp_part.shape[0] == shp_bug.shape[0] # same number of rows: we did nothing really
+    assert shp_part[shp_part['counts'] > 0].shape[0] == shp_bug.shape[0] # same number of non-zero rows: we tried drilling down but cannot go any more recise than the 4 individual points
 
 
 
 if __name__ == '__main__':
 
-
-    test_recursive_geohash()
+    test_recursive_geohash_refines()
+ 
