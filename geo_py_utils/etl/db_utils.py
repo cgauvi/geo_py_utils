@@ -11,27 +11,7 @@ import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__file__)
-    
-def drop_table(db_name: Union[Path, str], tbl_name: str):
-    """Drop a table in a spatialite db if it exists.
-
-    Args:
-        db_name :str name of db
-        tbl_name: str name of table to drop
-    Returns:
-
-    """
-
-    existing_tables = list_tables(db_name)
-
-    if ((existing_tables is not None) and (tbl_name not in existing_tables)):
-        logger.warning(f"Warning, cannot drop table {tbl_name} : not in db")
-        return 
-
-    with sqlite3.connect(db_name) as conn:
-        cursor = conn.cursor()
-        cursor.execute(f"DROP TABLE if exists {tbl_name}")
-
+  
 
 
 def list_tables(db_name: Union[Path, str]) -> Union[None, list]:
@@ -122,6 +102,125 @@ def is_spatial_index_enabled(db_name: str, tbl_name: str) -> bool:
 
 
 
+def is_spatial_index_valid(db_name: str, tbl_name: str, geometry_name: str) -> bool:
+    """Check if a given spatial index is valid
+
+    Args:
+        db_name (str): _description_
+        tbl_name (str): _description_
+        geometry_name (str): _description_
+
+    Raises:
+        ValueError: if no spatial index exists for the table geometry
+
+    Returns:
+        bool: True if no error, False (0) otherwise
+    """
+    with sqlite3.connect(db_name) as con:
+        con.enable_load_extension(True)
+        con.load_extension("mod_spatialite")
+
+        query_idx = f" SELECT CheckSpatialIndex ('{tbl_name}', '{geometry_name}') as is_spatial_idx_correct "
+
+        df_results = pd.read_sql(query_idx, con)
+        
+        if (df_results is None) or \
+            (df_results.shape[0] == 0) or \
+            (df_results.is_spatial_idx_correct.values[0] is None) :
+            raise ValueError(f"Fatal error {tbl_name}.{geometry_name} does not have an index")
+        
+    return bool(df_results.is_spatial_idx_correct.values[0])
+
+
+
+
+def drop_geo_table_all(db_name: Union[Path, str], tbl_name: str, geometry_name: str)-> None:
+    """Safely delete a table + auxiliary data including records in geometry_column table + spatial index if it exists
+
+    Args:
+        db_name (Union[Path, str]): _description_
+        tbl_name (str): _description_
+        geometry_name (str): _description_
+    """
+    
+    drop_table(db_name, tbl_name) 
+    drop_geometry_columns(db_name, tbl_name)
+    try:
+        drop_spatial_index(db_name, tbl_name, geometry_name)
+    except Exception as e:
+        logger.warning(f"Warning! Failed to drop spatial index on table {tbl_name} -> geometry {geometry_name}" )
+
+
+
+def drop_spatial_index(db_name: str,  tbl_name: str, geometry_name: str) -> None:
+
+    """Remove all the virtual tables associated with the spatial index of a given table geometry + disable geometry
+
+    Args:
+        db_name (str): _description_
+        tbl_name (str): _description_
+        geometry_name (str): _description_
+    """
+
+    with sqlite3.connect(db_name) as con:
+        con.enable_load_extension(True)
+        con.load_extension("mod_spatialite")
+
+        cur = con.cursor()
+        cur.execute(f" SELECT DisableSpatialIndex('{tbl_name}', '{geometry_name}'); ")
+        con.commit()
+
+        list_aux_tables_to_drop = ['','_rowid', '_node', '_parent']
+        for suffix in list_aux_tables_to_drop:
+            cur.execute(f"DROP TABLE IF EXISTS idx_{tbl_name}_{geometry_name}{suffix};")
+            con.commit()
+
+        cur.execute("VACUUM;")
+        con.commit()
+
+
+  
+def drop_table(db_name: Union[Path, str], tbl_name: str):
+    """Drop a table in a spatialite db if it exists.
+
+    Args:
+        db_name :str name of db
+        tbl_name: str name of table to drop
+    Returns:
+
+    """
+
+    existing_tables = list_tables(db_name)
+
+    if ((existing_tables is not None) and (tbl_name not in existing_tables)):
+        logger.warning(f"Warning, cannot drop table {tbl_name} : not in db")
+        return 
+
+    with sqlite3.connect(db_name) as conn:
+        cursor = conn.cursor()
+        cursor.execute(f"DROP TABLE if exists {tbl_name}")
+
+
+def drop_geometry_columns(db_name: str, tbl_name: str) -> None:
+
+    """Remove the `tbl_name` record in the auxiliary `geometry_columns` table.
+
+    Useful to ensure we clean everything up when deleting a table with geometry
+
+    Args:
+        db_name (str): _description_
+        tbl_name (str): _description_
+    """
+    with sqlite3.connect(db_name) as con:
+        con.enable_load_extension(True)
+        con.load_extension("mod_spatialite")
+
+        cur = con.cursor()
+        cur.execute(f"DELETE FROM geometry_columns WHERE f_table_name = '{tbl_name}'; ")
+        con.commit()
+ 
+
+ 
 
 def get_table_crs(db_name: str, tbl_name: str, return_srid = False) -> Union[int, str] : 
 

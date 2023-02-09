@@ -5,10 +5,20 @@ from os.path import join
 import geopandas as gpd
 import os
 import tempfile
+import numpy as np
 
 from geo_py_utils.etl.db_etl import  Url_to_spatialite, Url_to_postgis   
 from geo_py_utils.etl.gdf_load import spatialite_db_to_gdf
-from geo_py_utils.etl.db_utils import list_tables, sql_to_df, get_table_rows, get_table_crs, drop_table, is_spatial_index_enabled
+from geo_py_utils.etl.db_utils import (
+    list_tables, 
+    sql_to_df, 
+    get_table_rows,
+    get_table_crs,
+    drop_table,
+    drop_geo_table_all,
+    is_spatial_index_enabled,
+    is_spatial_index_valid
+)
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
 from geo_py_utils.census_open_data.census import FSA_2016_URL
@@ -18,6 +28,7 @@ class Qc_city_data:
     SPATIAL_LITE_DB_PATH = join(DATA_DIR, "test.db")
     SPATIAL_LITE_TBL_QC = "qc_city_test_tbl"
     QC_CITY_NEIGH_URL = QC_CITY_NEIGH_URL
+    SPATIAL_LITE_TBL_GEOMETRY_COL_NAME = 'GEOMETRY'
 
 
 def upload_qc_neigh_db(db_name = Qc_city_data.SPATIAL_LITE_DB_PATH,
@@ -33,7 +44,7 @@ def upload_qc_neigh_db(db_name = Qc_city_data.SPATIAL_LITE_DB_PATH,
         uploader.upload_url_to_database()
 
 
-def test_spatial_index():
+def test_spatial_index_enabled():
 
     if (not os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH)) or \
         (not Qc_city_data.SPATIAL_LITE_TBL_QC in list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)) :
@@ -43,6 +54,19 @@ def test_spatial_index():
         Qc_city_data.SPATIAL_LITE_DB_PATH,
         Qc_city_data.SPATIAL_LITE_TBL_QC
         )
+
+def test_spatial_index_valid():
+
+    if (not os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH)) or \
+        (not Qc_city_data.SPATIAL_LITE_TBL_QC in list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)) :
+        upload_qc_neigh_db()
+
+    assert is_spatial_index_valid(
+        Qc_city_data.SPATIAL_LITE_DB_PATH,
+        Qc_city_data.SPATIAL_LITE_TBL_QC,
+        Qc_city_data.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME
+        )
+
 
 def test_upload_spatialite_qc():
     upload_qc_neigh_db()
@@ -146,8 +170,13 @@ def test_drop_table():
 
     # Table not present
     assert Qc_city_data.SPATIAL_LITE_TBL_QC not in list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)
- 
 
+    # Drop ALL
+    drop_geo_table_all(Qc_city_data.SPATIAL_LITE_DB_PATH, Qc_city_data.SPATIAL_LITE_TBL_QC, Qc_city_data.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME)
+    list_aux_tables_to_drop_suff = ['','_rowid', '_node', '_parent']
+    list_aux_tables_to_drop =  [ f"{Qc_city_data.SPATIAL_LITE_TBL_QC}_{Qc_city_data.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME}{suffix};" \
+                                 for suffix in list_aux_tables_to_drop_suff]
+    assert not np.any(np.isin(np.array(list_aux_tables_to_drop), list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)   ))
     
 
 def test_postgis_qc():
