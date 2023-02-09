@@ -71,6 +71,12 @@ def get_table_rows(db_name: Union[Path, str], tbl_name :str) -> int:
     return df.num_rows.values[0]
 
 
+def is_spatial_index_enabled_valid(db_name: str, tbl_name: str, geometry_name:str) -> bool:
+
+    return is_spatial_index_enabled(db_name, tbl_name) and \
+            is_spatial_index_valid(db_name, tbl_name, geometry_name)
+
+
 def is_spatial_index_enabled(db_name: str, tbl_name: str) -> bool:
     """Determine if the spatial index is enabled for a given table
 
@@ -142,7 +148,7 @@ def drop_geo_table_all(db_name: Union[Path, str], tbl_name: str, geometry_name: 
         tbl_name (str): _description_
         geometry_name (str): _description_
     """
-    
+
     drop_table(db_name, tbl_name) 
     drop_geometry_columns(db_name, tbl_name)
     try:

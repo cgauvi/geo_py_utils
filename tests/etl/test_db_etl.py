@@ -17,7 +17,8 @@ from geo_py_utils.etl.db_utils import (
     drop_table,
     drop_geo_table_all,
     is_spatial_index_enabled,
-    is_spatial_index_valid
+    is_spatial_index_valid,
+    is_spatial_index_enabled_valid
 )
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
@@ -55,13 +56,15 @@ def test_spatial_index_enabled():
         Qc_city_data.SPATIAL_LITE_TBL_QC
         )
 
+    
+
 def test_spatial_index_valid():
 
     if (not os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH)) or \
         (not Qc_city_data.SPATIAL_LITE_TBL_QC in list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)) :
         upload_qc_neigh_db()
 
-    assert is_spatial_index_valid(
+    assert is_spatial_index_enabled_valid(
         Qc_city_data.SPATIAL_LITE_DB_PATH,
         Qc_city_data.SPATIAL_LITE_TBL_QC,
         Qc_city_data.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME
