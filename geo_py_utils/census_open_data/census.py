@@ -7,15 +7,15 @@ import geopandas as gpd
 from os.path import join
 import logging
 import numpy as np
-from typing import Union
-from pyproj import CRS
+
+
 
 from ben_py_utils.misc.cache import Cache_wrapper
 
 from geo_py_utils.etl.download_zip import download_zip_shp
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import download_qc_city_neighborhoods
-
+from geo_py_utils.geo_general.crs import get_crs_str
 
 logger = logging.getLogger(__file__)
 
@@ -24,32 +24,6 @@ USE_CARTOGRAPHIC = False
 FSA_2016_URL = "https://www12.statcan.gc.ca/census-recensement/2011/geo/bound-limit/files-fichiers/2016/lfsa000b16a_e.zip"
 
 
-def get_crs_str(new_crs: Union[str, CRS]):
-
-    """Helper function to try to get a reasonable string from a crs (ideally the epsg code as a string)
-
-    Tries in order: str repr, int epsg,  py.to_epsg()
-
-    Args:
-        new_crs (Union): _description_
-
-    Returns:
-        str: str representation
-    """    
-    
-    crs_str = "null" 
-
-    try:
-        if isinstance(new_crs, str):
-            crs_str = new_crs
-        elif isinstance(new_crs, int):
-            crs_str = str(new_crs)
-        else:
-            crs_str = new_crs.to_epsg()
-    except:
-        logger.warning(f'Warning! In get_crs_str cannot get a valid crs representation for crs {new_crs} - setting to {crs_str}')
-
-    return crs_str
 
 @Cache_wrapper(path_cache = join(DATA_DIR, "cache", "canada_water.parquet"))
 def download_water(year = 2011, new_crs = None):
