@@ -58,6 +58,36 @@ def sql_to_df(db_name: Union[Path, str], query: str) ->  pd.DataFrame :
     return df
 
 
+def get_table_geometry_type(db_name: Union[Path, str], tbl_name :str) -> int: 
+    """Get the goemtry type
+
+    See https://r-spatial.github.io/sf/articles/sf1.html
+    1 = POINT
+    2 = LINESTRING
+    3 = POLYGON
+    4 -MULTIPOINT	set of points; a MULTIPOINT is simple if no two Points in the MULTIPOINT are equal
+    5- MULTILINESTRING	set of linestrings
+    6 - MULTIPOLYGON	set of polygons
+    7 - GEOMETRYCOLLECTION
+
+    Args:
+        db_name (Union[Path, str]): _description_
+        tbl_name (str): _description_
+
+    Raises:
+        ValueError: if the tbl does not have a geometry column
+
+    Returns:
+        int: geom type 
+    """
+    query = f"select * from geometry_columns where f_table_name = '{self.tax_tbl_name_init}'"
+    df_geom_type = sql_to_df(DB_PATH, query)
+
+    if df_geom_type.shape[0] == 0:
+        raise ValueError(f"Fatal error table {tbl_name} does not have an associated geometryQ")
+
+    return df_geom_type['geometry_type'].values[0]
+
 def get_table_rows(db_name: Union[Path, str], tbl_name :str) -> int: 
     
     """Count the number of rows.
@@ -151,10 +181,8 @@ def drop_geo_table_all(db_name: Union[Path, str], tbl_name: str, geometry_name: 
 
     drop_table(db_name, tbl_name) 
     drop_geometry_columns(db_name, tbl_name)
-    try:
-        drop_spatial_index(db_name, tbl_name, geometry_name)
-    except Exception as e:
-        logger.warning(f"Warning! Failed to drop spatial index on table {tbl_name} -> geometry {geometry_name}" )
+    drop_spatial_index(db_name, tbl_name, geometry_name)
+ 
 
 
 
@@ -172,17 +200,30 @@ def drop_spatial_index(db_name: str,  tbl_name: str, geometry_name: str) -> None
         con.enable_load_extension(True)
         con.load_extension("mod_spatialite")
 
-        cur = con.cursor()
-        cur.execute(f" SELECT DisableSpatialIndex('{tbl_name}', '{geometry_name}'); ")
-        con.commit()
+        try:
+            cur = con.cursor()
+            cur.execute(f" SELECT DisableSpatialIndex('{tbl_name}', '{geometry_name}'); ")
+            con.commit()
+        except Exception as e:
+            logger.warning(f"Warning! Failed to drop spatial index on table {tbl_name} -> geometry {geometry_name}" )
+
+        try:
+            cur = con.cursor()
+            cur.execute(f" SELECT DiscardGeometryColumn('{tbl_name}', '{geometry_name}'); ")
+            con.commit()
+        except Exception as e:
+            logger.warning(f"Warning! Failed too discard geometryon table {tbl_name} -> geometry {geometry_name}" )
+
 
         list_aux_tables_to_drop = ['','_rowid', '_node', '_parent']
         for suffix in list_aux_tables_to_drop:
-            cur.execute(f"DROP TABLE IF EXISTS idx_{tbl_name}_{geometry_name}{suffix};")
-            con.commit()
+            try:
+                cur.execute(f"DROP TABLE IF EXISTS idx_{tbl_name}_{geometry_name}{suffix}")
+                con.commit()
+            except Exception as e:
+                logger.warning(f"Warning! Failed to drop table idx_{tbl_name}_{geometry_name}{suffix}" )
 
-        cur.execute("VACUUM;")
-        con.commit()
+
 
 
   
@@ -196,15 +237,12 @@ def drop_table(db_name: Union[Path, str], tbl_name: str):
 
     """
 
-    existing_tables = list_tables(db_name)
-
-    if ((existing_tables is not None) and (tbl_name not in existing_tables)):
-        logger.warning(f"Warning, cannot drop table {tbl_name} : not in db")
-        return 
-
     with sqlite3.connect(db_name) as conn:
-        cursor = conn.cursor()
-        cursor.execute(f"DROP TABLE if exists {tbl_name}")
+        try:
+            cursor = conn.cursor()
+            cursor.execute(f"DROP TABLE if exists {tbl_name}")
+        except Exception as e:
+                logger.warning(f"Warning! Failed to drop table tbl_name" )
 
 
 def drop_geometry_columns(db_name: str, tbl_name: str) -> None:
@@ -221,10 +259,12 @@ def drop_geometry_columns(db_name: str, tbl_name: str) -> None:
         con.enable_load_extension(True)
         con.load_extension("mod_spatialite")
 
-        cur = con.cursor()
-        cur.execute(f"DELETE FROM geometry_columns WHERE f_table_name = '{tbl_name}'; ")
-        con.commit()
- 
+        try:
+            cur = con.cursor()
+            cur.execute(f"DELETE FROM geometry_columns WHERE f_table_name = '{tbl_name}'; ")
+            con.commit()
+        except Exception as e:
+            logger.warning(f"Warning! Failed to drop record from geometry_columns for table {tbl_name}" )
 
  
 
