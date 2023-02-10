@@ -38,7 +38,8 @@ class Url_to_db(ABC):
                 overwrite: bool = False,
                 target_projection: str = None,
                 remove_tmp_download_files = True,
-                no_overwrite_append = False):
+                no_overwrite_append = False,
+                promote_to_multi=True):
 
         # Download and unzipped directories 
         # Use tmp dir + delete at the edn
@@ -64,6 +65,7 @@ class Url_to_db(ABC):
         self.target_projection = target_projection
         self.remove_tmp_download_files = remove_tmp_download_files # if download_destination is not None, this has precedence and we dont delete the folder 
         self.no_overwrite_append = no_overwrite_append
+        self.promote_to_multi = promote_to_multi
 
         self.first_time_creating_db = True if not exists(db_name) else False # check existence BEFORE running any queries since opening connection to db creates it by default which is undesired
 
@@ -181,11 +183,12 @@ class Url_to_spatialite(Url_to_db):
         if self.target_projection is not None:
             cmd += f"-t_srs EPSG:{self.target_projection}" 
 
-
         cmd  +=  f" {dest} {source} "\
-            f" -nlt PROMOTE_TO_MULTI "\
             f" -nln {self.table_name}" \
             " -lco ENCODING=UTF-8 " 
+
+        if self.promote_to_multi:
+             cmd +=  f" -nlt PROMOTE_TO_MULTI "
 
         if not self.no_overwrite_append and not self.first_time_creating_db:
             if self.overwrite:
