@@ -58,15 +58,15 @@ def sql_to_df(db_name: Union[Path, str], query: str) ->  pd.DataFrame :
     return df
 
 
-def get_table_geometry_type(db_name: Union[Path, str], tbl_name :str) -> int: 
+def get_table_geometry_type(db_name: Union[Path, str], tbl_name :str) -> str: 
     """Get the goemtry type
 
     See https://r-spatial.github.io/sf/articles/sf1.html
-    1 = POINT
-    2 = LINESTRING
-    3 = POLYGON
-    4 -MULTIPOINT	set of points; a MULTIPOINT is simple if no two Points in the MULTIPOINT are equal
-    5- MULTILINESTRING	set of linestrings
+    1 - POINT
+    2 - LINESTRING
+    3 - POLYGON
+    4 - MULTIPOINT	set of points; a MULTIPOINT is simple if no two Points in the MULTIPOINT are equal
+    5 - MULTILINESTRING	set of linestrings
     6 - MULTIPOLYGON	set of polygons
     7 - GEOMETRYCOLLECTION
 
@@ -78,15 +78,33 @@ def get_table_geometry_type(db_name: Union[Path, str], tbl_name :str) -> int:
         ValueError: if the tbl does not have a geometry column
 
     Returns:
-        int: geom type 
+        str: geom name - e.g.' POINT' 
     """
-    query = f"select * from geometry_columns where f_table_name = '{self.tax_tbl_name_init}'"
-    df_geom_type = sql_to_df(DB_PATH, query)
+    query = f"select * from geometry_columns where f_table_name = '{tbl_name}'"
+    df_geom_type = sql_to_df(db_name, query)
 
     if df_geom_type.shape[0] == 0:
-        raise ValueError(f"Fatal error table {tbl_name} does not have an associated geometryQ")
+        raise ValueError(f"Fatal error table {tbl_name} does not have an associated geometry!")
 
-    return df_geom_type['geometry_type'].values[0]
+    if df_geom_type['geometry_type'].values[0] == 1:
+        return 'POINT'
+    elif df_geom_type['geometry_type'].values[0] == 2:
+        return 'LINESTRING'
+    elif df_geom_type['geometry_type'].values[0] == 3:
+        return 'POLYGON'
+    elif df_geom_type['geometry_type'].values[0] == 4:
+        return 'MULTIPOINT'
+    elif df_geom_type['geometry_type'].values[0] == 5:
+        return 'MULTILINESTRING'
+    elif df_geom_type['geometry_type'].values[0] == 6:
+        return 'MULTIPOLYGON'
+    elif df_geom_type['geometry_type'].values[0] == 7:
+        return 'GEOMETRYCOLLECTION'
+    else:
+        raise ValueError(f"Fatal error! cannot determine geoemtry type, got {df_geom_type['geometry_type'].values[0]} as code")
+    
+
+      
 
 def get_table_rows(db_name: Union[Path, str], tbl_name :str) -> int: 
     
@@ -180,7 +198,7 @@ def drop_geo_table_all(db_name: Union[Path, str], tbl_name: str, geometry_name: 
     """
 
     drop_table(db_name, tbl_name) 
-    drop_geometry_columns(db_name, tbl_name)
+    drop_geometry_columns(db_name, tbl_name, geometry_name)
     drop_spatial_index(db_name, tbl_name, geometry_name)
  
 
@@ -206,14 +224,6 @@ def drop_spatial_index(db_name: str,  tbl_name: str, geometry_name: str) -> None
             con.commit()
         except Exception as e:
             logger.warning(f"Warning! Failed to drop spatial index on table {tbl_name} -> geometry {geometry_name}" )
-
-        try:
-            cur = con.cursor()
-            cur.execute(f" SELECT DiscardGeometryColumn('{tbl_name}', '{geometry_name}'); ")
-            con.commit()
-        except Exception as e:
-            logger.warning(f"Warning! Failed too discard geometryon table {tbl_name} -> geometry {geometry_name}" )
-
 
         list_aux_tables_to_drop = ['','_rowid', '_node', '_parent']
         for suffix in list_aux_tables_to_drop:
@@ -245,7 +255,7 @@ def drop_table(db_name: Union[Path, str], tbl_name: str):
                 logger.warning(f"Warning! Failed to drop table tbl_name" )
 
 
-def drop_geometry_columns(db_name: str, tbl_name: str) -> None:
+def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> None:
 
     """Remove the `tbl_name` record in the auxiliary `geometry_columns` table.
 
@@ -258,6 +268,13 @@ def drop_geometry_columns(db_name: str, tbl_name: str) -> None:
     with sqlite3.connect(db_name) as con:
         con.enable_load_extension(True)
         con.load_extension("mod_spatialite")
+
+        try:
+            cur = con.cursor()
+            cur.execute(f" SELECT DiscardGeometryColumn('{tbl_name}', '{geometry_name}'); ")
+            con.commit()
+        except Exception as e:
+            logger.warning(f"Warning! Failed too discard geometryon table {tbl_name} -> geometry {geometry_name}" )
 
         try:
             cur = con.cursor()

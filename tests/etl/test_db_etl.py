@@ -6,6 +6,7 @@ import geopandas as gpd
 import os
 import tempfile
 import numpy as np
+import pytest
 
 from geo_py_utils.etl.db_etl import  Url_to_spatialite, Url_to_postgis   
 from geo_py_utils.etl.gdf_load import spatialite_db_to_gdf
@@ -18,7 +19,8 @@ from geo_py_utils.etl.db_utils import (
     drop_geo_table_all,
     is_spatial_index_enabled,
     is_spatial_index_valid,
-    is_spatial_index_enabled_valid
+    is_spatial_index_enabled_valid,
+    get_table_geometry_type
 )
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
@@ -44,6 +46,16 @@ def upload_qc_neigh_db(db_name = Qc_city_data.SPATIAL_LITE_DB_PATH,
 
         uploader.upload_url_to_database()
 
+
+def test_geometry_type():
+    if (not os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH)) or \
+        (not Qc_city_data.SPATIAL_LITE_TBL_QC in list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)) :
+        upload_qc_neigh_db()
+
+    with pytest.raises(Exception):
+        get_table_geometry_type( 
+            Qc_city_data.SPATIAL_LITE_DB_PATH,
+            Qc_city_data.SPATIAL_LITE_TBL_QC) == 'POLYGON' # We expect a polygon, but the geometry type is mixed so we get an error
 
 def test_spatial_index_enabled():
 
@@ -219,4 +231,5 @@ def test_postgis_qc():
 
 if __name__ == '__main__':
 
-    test_spatial_index()
+    test_geometry_type()
+    #test_spatial_index()
