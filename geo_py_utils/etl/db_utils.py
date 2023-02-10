@@ -135,7 +135,7 @@ def is_spatial_index_valid(db_name: str, tbl_name: str, geometry_name: str) -> b
             (df_results.is_spatial_idx_correct.values[0] is None) :
             raise ValueError(f"Fatal error {tbl_name}.{geometry_name} does not have an index")
         
-    return bool(df_results.is_spatial_idx_correct.values[0])
+    return bool(df_results.is_spatial_idx_correct.values[0] == 1)
 
 
 
