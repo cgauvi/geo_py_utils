@@ -2,13 +2,12 @@
     
 from os.path import exists
 import logging
-from typing import Union, List
+from typing import Union
 import pandas as pd
 import geopandas as gpd
 import sqlite3
 from pathlib import Path
 import numpy as np 
-import pandas as pd
 
 logger = logging.getLogger(__file__)
   
@@ -40,7 +39,7 @@ def list_tables(db_name: Union[Path, str]) -> Union[None, list]:
 
 
 
-def sql_to_df(db_name: Union[Path, str], query: str) ->  pd.DataFrame :
+def sql_to_df(db_name: Union[Path, str], query: str) -> pd.DataFrame:
 
     """Convenience wrapper to send a query to the db and fetch results as a dataframe
 
@@ -49,7 +48,7 @@ def sql_to_df(db_name: Union[Path, str], query: str) ->  pd.DataFrame :
         query: query string
 
     Returns:
-        df : (geo) dataframe
+        df : dataframe
 
     """
     with sqlite3.connect(db_name) as conn:
@@ -58,7 +57,7 @@ def sql_to_df(db_name: Union[Path, str], query: str) ->  pd.DataFrame :
     return df
 
 
-def get_table_geometry_type(db_name: Union[Path, str], tbl_name :str) -> str: 
+def get_table_geometry_type(db_name: Union[Path, str], tbl_name: str) -> str: 
     """Get the goemtry type
 
     See https://r-spatial.github.io/sf/articles/sf1.html
@@ -101,17 +100,23 @@ def get_table_geometry_type(db_name: Union[Path, str], tbl_name :str) -> str:
     elif df_geom_type['geometry_type'].values[0] == 7:
         return 'GEOMETRYCOLLECTION'
     else:
-        raise ValueError(f"Fatal error! cannot determine geoemtry type, got {df_geom_type['geometry_type'].values[0]} as code")
-    
+        raise ValueError(f"""
+            Fatal error! cannot determine geoemtry type, 
+            got {df_geom_type['geometry_type'].values[0]} as code
+            """
+        )
 
-      
-
-def get_table_rows(db_name: Union[Path, str], tbl_name :str) -> int: 
-    
+def get_table_rows(db_name: Union[Path, str], tbl_name: str) -> int: 
     """Count the number of rows.
 
     Transfers query to sql_to_df
 
+    Args:
+        db_name (Union[Path, str]): _description_
+        tbl_name (str): _description_
+
+    Returns:
+        int: _description_
     """
     
     df = sql_to_df(db_name, f"select count(*) as num_rows from {tbl_name}")
@@ -252,7 +257,7 @@ def drop_table(db_name: Union[Path, str], tbl_name: str):
             cursor = conn.cursor()
             cursor.execute(f"DROP TABLE if exists {tbl_name}")
         except Exception as e:
-                logger.warning(f"Warning! Failed to drop table tbl_name" )
+            logger.warning(f"Warning! Failed to drop table tbl_name" )
 
 
 def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> None:

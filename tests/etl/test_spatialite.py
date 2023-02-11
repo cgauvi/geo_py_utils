@@ -1,6 +1,3 @@
-
-
-import subprocess
 from os.path import join
 import geopandas as gpd
 import os
@@ -8,9 +5,9 @@ import tempfile
 import numpy as np
 import pytest
 
-from geo_py_utils.etl.db_etl import  Url_to_spatialite, Url_to_postgis   
-from geo_py_utils.etl.gdf_load import spatialite_db_to_gdf
-from geo_py_utils.etl.db_utils import (
+from geo_py_utils.etl.db_etl import  Url_to_spatialite 
+from geo_py_utils.etl.spatialite.gdf_load import spatialite_db_to_gdf
+from geo_py_utils.etl.spatialite.db_utils import (
     list_tables, 
     sql_to_df, 
     get_table_rows,
@@ -192,42 +189,7 @@ def test_drop_table():
     list_aux_tables_to_drop =  [ f"{Qc_city_data.SPATIAL_LITE_TBL_QC}_{Qc_city_data.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME}{suffix};" \
                                  for suffix in list_aux_tables_to_drop_suff]
     assert not np.any(np.isin(np.array(list_aux_tables_to_drop), list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)   ))
-    
-
-def test_postgis_qc():
-
-    import subprocess
-    import logging
-
-    logger = logging.getLogger(__name__)
-
-    psql_exists_results = subprocess.run(["which","psql"], stdout=subprocess.PIPE)
-    if len(psql_exists_results.stdout) > 0:
-
-        user = os.getenv('PG_LOCAL_USER') # defaults to None if not set
-        password = os.getenv('PG_LOCAL_PASSWORD')
-        postgis_db_path = 'qc_city_db'
-
-        with Url_to_postgis(
-            db_name = postgis_db_path, 
-            table_name = "qc_city_test_tbl",
-            download_url = QC_CITY_NEIGH_URL,
-            download_destination = DATA_DIR, 
-            host = "localhost",
-            port = 5432,
-            user = user, 
-            password = password,
-            schema = "public",
-            ) as uploader:
-
-            if uploader._port_is_open():
-                uploader.upload_url_to_database()
-            else:
-                logger.warning("Skipping test_postgis: port seems closed")
-    else:
-        logger.warning("Skipping test_postgis: did not find psql on system")
-
- 
+   
 
 if __name__ == '__main__':
 
