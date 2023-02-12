@@ -59,6 +59,9 @@ def sfkl_to_gpd(query:str,
         gpd.GeoDataFrame: Result of query - with geometry column
     """
 
+    # Important to set the output format as WKT before we query - otherwise defaults to json and everything will crash
+    conn.cursor().execute("ALTER SESSION SET GEOGRAPHY_OUTPUT_FORMAT  = 'WKT'") 
+
     
     # Remove the first part and add in the ST_ASWKT() section 
     assert re.search('.*select.*',query, flags=re.IGNORECASE) is not None , 'Fatal error, invalid query without a SELECT clause'
