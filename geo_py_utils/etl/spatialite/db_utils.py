@@ -13,6 +13,62 @@ logger = logging.getLogger(__file__)
   
 
 
+def promote_multi(db_name: Union[Path, str],
+                 tbl_name: str ,
+                 geometry_name: str = 'GEOMETRY') -> None:
+
+    """Promote geometry to multi version
+
+    Args:
+        db_name (Union[Path, str]): _description_
+        tbl_name (str): _description_
+        geometry_name(str): _description_
+
+    Returns:
+        None
+    """
+    logger.info("Forcing promotion to multipolygon...")
+
+    # Safey get geom before
+    geom_before = "MIXED/ERROR"
+    try:
+        geom_before = get_table_geometry_type(db_name, tbl_name)
+    except Exception as e:
+        logger.warning(f'Error in promote_multi getting geom type before - {e}')
+
+    with sqlite3.connect(db_name) as con:
+        con.enable_load_extension(True)
+        con.load_extension("mod_spatialite")
+         
+        # Now update the tabe and actually fill the geometry
+        query_update = f"UPDATE {tbl_name} " \
+                f" SET {geometry_name} = CastToMulti({tbl_name}.{geometry_name})  "  
+            
+        c = con.cursor()
+        c.execute(query_update)
+        con.commit()
+
+    # Safey get geom after
+    geom_after = "MIXED/ERROR"
+    try:
+        geom_after = get_table_geometry_type(db_name, tbl_name)
+    except Exception as e :
+        logger.warning(f'Error in promote_multi getting geom type before - {e}')
+
+    # Print info on transformation
+    if geom_after == geom_before:
+        logger.warning(f"""
+        Warning! didnt managed to promote {tbl_name}.{geometry_name} to multi version!
+        Geometry is stil {geom_before}
+        """)
+    else:
+        logger.info(f"""
+        Successfully promoted {tbl_name}.{geometry_name} to multi! 
+        Geometry was {geom_before} and is now {geom_after}
+        """)
+
+
+
 def list_tables(db_name: Union[Path, str]) -> Union[None, list]:
     """ List tables  in a spatialite db
 
@@ -262,7 +318,7 @@ def drop_table(db_name: Union[Path, str], tbl_name: str):
 
 def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> None:
 
-    """Remove the `tbl_name` record in the auxiliary `geometry_columns` table.
+    """Remove the `tbl_name` record in the auxiliary `geometry_columns`, `vector_layers`, etc tables.
 
     Useful to ensure we clean everything up when deleting a table with geometry
 
@@ -281,14 +337,24 @@ def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> Non
         except Exception as e:
             logger.warning(f"Warning! Failed too discard geometryon table {tbl_name} -> geometry {geometry_name}" )
 
-        try:
-            cur = con.cursor()
-            cur.execute(f"DELETE FROM geometry_columns WHERE f_table_name = '{tbl_name}'; ")
-            con.commit()
-        except Exception as e:
-            logger.warning(f"Warning! Failed to drop record from geometry_columns for table {tbl_name}" )
 
- 
+        for t in ['geom_cols_ref_sys', 'geometry_columns']:
+            try:
+                cur = con.cursor()
+                cur.execute(f"DELETE FROM {t} WHERE f_table_name = '{tbl_name}'; ")
+                con.commit()
+            except Exception as e:
+                logger.warning(f"Warning! Failed to drop record from {t} for table {tbl_name}" )
+
+
+        for suff in ['', '_auth', '_fields_info', '_statistics']:
+            try:
+                cur = con.cursor()
+                cur.execute(f"DELETE FROM vector_layers{suff} WHERE table_name = '{tbl_name}'; ")
+                con.commit()
+            except Exception as e:
+                logger.warning(f"Warning! Failed to drop record from vector_layers{suff} for table {tbl_name}" )
+
 
 def get_table_crs(db_name: str, tbl_name: str, return_srid = False) -> Union[int, str] : 
 
@@ -340,7 +406,7 @@ def get_table_column_names(db_name: str, tbl_name: str) -> np.array:
     df = get_table_column_all_metadata(db_name, tbl_name)
 
     if df.shape[0] == 0:
-        logger.warn(f"Warning! table {tbl_name} does not exist or does not have columns")
+        logger.warning(f"Warning! table {tbl_name} does not exist or does not have columns")
 
     return df.name.values
 
@@ -359,8 +425,26 @@ if __name__ == "__main__":
     import os
     from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
     from geo_py_utils.misc.constants import DATA_DIR
+    from geo_py_utils.etl.db_etl import  Url_to_spatialite 
+    from geo_py_utils.etl.spatialite.db_utils import list_tables, drop_geo_table_all
 
-    existing_tables = list_tables(os.path.join(DATA_DIR, "test.db"))
+    def upload_qc_neigh_db(db_name = os.path.join(DATA_DIR, "test.db"),
+                            tbl_name = "qc_city_test_tbl",
+                            download_url = QC_CITY_NEIGH_URL):
+        
+        with Url_to_spatialite(
+            db_name = db_name, 
+            table_name = tbl_name,
+            download_url = download_url,
+            download_destination = DATA_DIR,
+            promote_to_multi=False) as uploader:
 
-    get_table_crs(os.path.join(DATA_DIR, "test.db"), 'qc_city_test_tbl', return_srid = True)
-    get_table_crs(os.path.join(DATA_DIR, "test.db"), 'qc_city_test_tbl', return_srid = False)
+            uploader.upload_url_to_database()
+
+    drop_geo_table_all(os.path.join(DATA_DIR, "test.db"),"qc_city_test_tbl",'GEOMETRY' )
+
+    if (not os.path.exists(os.path.join(DATA_DIR, "test.db"))) or \
+        (not "qc_city_test_tbl" in list_tables(os.path.join(DATA_DIR, "test.db"))) :
+        upload_qc_neigh_db()
+    
+    promote_multi(os.path.join(DATA_DIR, "test.db"),"qc_city_test_tbl")

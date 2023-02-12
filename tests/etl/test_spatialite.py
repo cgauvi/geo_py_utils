@@ -17,7 +17,8 @@ from geo_py_utils.etl.spatialite.db_utils import (
     is_spatial_index_enabled,
     is_spatial_index_valid,
     is_spatial_index_enabled_valid,
-    get_table_geometry_type
+    get_table_geometry_type,
+    promote_multi
 )
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
@@ -33,15 +34,38 @@ class Qc_city_data:
 
 def upload_qc_neigh_db(db_name = Qc_city_data.SPATIAL_LITE_DB_PATH,
                         tbl_name = Qc_city_data.SPATIAL_LITE_TBL_QC,
-                        download_url = Qc_city_data.QC_CITY_NEIGH_URL):
+                        download_url = Qc_city_data.QC_CITY_NEIGH_URL,
+                        promote_to_multi=True):
     
     with Url_to_spatialite(
         db_name = db_name, 
         table_name = tbl_name,
         download_url = download_url,
-        download_destination = DATA_DIR) as uploader:
+        download_destination = DATA_DIR, 
+        promote_to_multi=promote_to_multi) as uploader:
 
         uploader.upload_url_to_database()
+
+
+def test_promot_to_multi():
+
+    # Make sure we start from scratch, and dont defacto promot to multipolygon
+    drop_geo_table_all(Qc_city_data.SPATIAL_LITE_DB_PATH, Qc_city_data.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
+    if (not os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH)) or \
+        (not Qc_city_data.SPATIAL_LITE_TBL_QC in list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)) :
+        upload_qc_neigh_db(promote_to_multi=False)
+
+    shp_before = spatialite_db_to_gdf(Qc_city_data.SPATIAL_LITE_DB_PATH, Qc_city_data.SPATIAL_LITE_TBL_QC)
+    
+    promote_multi(Qc_city_data.SPATIAL_LITE_DB_PATH, Qc_city_data.SPATIAL_LITE_TBL_QC)
+
+    shp_after = spatialite_db_to_gdf(Qc_city_data.SPATIAL_LITE_DB_PATH, Qc_city_data.SPATIAL_LITE_TBL_QC)
+
+    # The geometry is not properly set in the aux geometry_columns table, but the geometry might still be successfully changed
+    assert len(shp_before.geometry.type.unique()) == 2
+
+    assert len(shp_after.geometry.type.unique()) == 1
+    assert shp_after.geometry.type.unique() == 'MultiPolygon' 
 
 
 def test_geometry_type():
