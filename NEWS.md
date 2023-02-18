@@ -1,4 +1,13 @@
 
+
+
+geo_py_utils 0.3.0
+
+==================
+
+- Added possibility to download qc administrative boundaries + perform corresponding dissolve operation
+
+
 geo_py_utils 0.2.0
 
 ==================
