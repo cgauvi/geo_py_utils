@@ -428,7 +428,7 @@ def add_geohash_index(shp_to_add, precision, new_col_name='geohash_index', keep_
             'Fatal error! there are NAs in the lat lng! From add_centroid or initially ')
 
     if new_col_name in shp.columns:
-        logger.warn (
+        logger.warning (
             f'Warning in add_geohash_index! {new_col_name} '\
             f' already exists - dropping and repopulating')
         shp.drop(columns=new_col_name, inplace=True)
@@ -549,7 +549,7 @@ def recursively_partition_geohash_cells(shp_points,
 
         # Check if we reached the max precision and would still require greater precision to meet the threshold condition
         if (p == max_precision) & (shp_count_by_hash_not_suff_precise.shape[0] > 0):
-            logger.warn('Warning! Reached the maximum number of iterations (given the max precision) without \
+            logger.warning('Warning! Reached the maximum number of iterations (given the max precision) without \
                creating a sufficiently precise geohash grid')
             
             # Still append the cells even if they are not suff precise
