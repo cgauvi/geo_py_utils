@@ -15,8 +15,7 @@ DEFAULT_DATA_DOWNLOAD_PATH = DATA_DIR
 
 def download_zip_shp(url: str,
                      data_download_path: str = DEFAULT_DATA_DOWNLOAD_PATH ) -> gpd.GeoDataFrame :
-    """
-    download_zip_shp Download a zipped shp file from a url + save results
+    """ Download a zipped shp file from a url + save results.
 
     Only meant to work with zipped shp files, for geojson just read in using .read_file()
 
@@ -55,3 +54,5 @@ def download_zip_shp(url: str,
         shp = gpd.read_file(path_data_dir_unzipped_shp)
 
     return shp
+
+
