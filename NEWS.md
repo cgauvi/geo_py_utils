@@ -1,5 +1,10 @@
 
 
+geo_py_utils 0.3.1
+
+==================
+
+- list_table returns an empty list: avoids issues with non-existing DB returning None
 
 geo_py_utils 0.3.0
 

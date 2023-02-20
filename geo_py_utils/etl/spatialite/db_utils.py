@@ -69,17 +69,17 @@ def promote_multi(db_name: Union[Path, str],
 
 
 
-def list_tables(db_name: Union[Path, str]) -> Union[None, list]:
+def list_tables(db_name: Union[Path, str]) ->  list:
     """ List tables  in a spatialite db
 
     Args:
-
+        db_name 
     Returns:
-        list of table names : list
+        list of table names : list: will return an empty list if db does not exist
 
     """
 
-    list_tables = None
+    list_tables = []
     if exists(db_name):
         logger.info(f"DB {db_name} exists!")
 
