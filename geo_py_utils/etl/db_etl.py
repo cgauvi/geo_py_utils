@@ -218,6 +218,7 @@ class Url_to_postgis(Url_to_db):
                 user,
                 password,
                 schema,
+                src_spatialite_tbl_name=None,
                 **kwargs):
 
         self.host = host
@@ -225,6 +226,7 @@ class Url_to_postgis(Url_to_db):
         self.user = user
         self.password = password
         self.schema = schema
+        self.src_spatialite_tbl_name = src_spatialite_tbl_name
 
         super().__init__( **kwargs)
 
@@ -244,9 +246,16 @@ class Url_to_postgis(Url_to_db):
         if self.target_projection is not None:
             cmd += f"-t_srs 'EPSG:{self.target_projection}'" 
 
-        cmd += fr"  -f 'PostgreSQL' PG:'host={self.host} port={self.port} dbname={self.db_name} user={self.user} password={self.password}'" \
-            fr" '{source}' " \
-            f' -lco SCHEMA={self.schema} ' \
+        cmd += fr"  -f 'PostgreSQL' PG:'host={self.host} port={self.port} dbname={self.db_name} user={self.user} password={self.password}'" 
+            
+        # Special treatment fro spatialite to postgis
+        # Hackish: only works by manually setting self.path_src_to_upload
+        if self.src_spatialite_tbl_name is not None:
+            cmd += fr" '{source}' {self.src_spatialite_tbl_name} " 
+        else:
+            cmd += fr" '{source}' " 
+
+        cmd += f' -lco SCHEMA={self.schema} ' \
             f" -nln {self.table_name} " \
             " -lco ENCODING=UTF-8 " 
 
