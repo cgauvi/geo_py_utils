@@ -27,6 +27,9 @@ def promote_multi(db_name: Union[Path, str],
     Returns:
         None
     """
+    if not exists(db_name):
+        raise ValueError(f"Fatal error! Cannot run `promote_multi`. {db_name} does not exist")
+
     logger.info("Forcing promotion to multipolygon...")
 
     # Safey get geom before
@@ -69,7 +72,7 @@ def promote_multi(db_name: Union[Path, str],
 
 
 
-def list_tables(db_name: Union[Path, str]) ->  list:
+def list_tables(db_name: Union[Path, str]) -> list:
     """ List tables  in a spatialite db
 
     Args:
@@ -106,7 +109,14 @@ def sql_to_df(db_name: Union[Path, str], query: str) -> pd.DataFrame:
     Returns:
         df : dataframe
 
+    Raises:
+        ValueError if DB does not exist
+
     """
+
+    if not exists(db_name):
+        raise ValueError(f"Fatal error! Cannot run `sql_to_df`. {db_name} does not exist")
+
     with sqlite3.connect(db_name) as conn:
         df = pd.read_sql(query, conn)
 
@@ -258,15 +268,17 @@ def drop_geo_table_all(db_name: Union[Path, str], tbl_name: str, geometry_name: 
         geometry_name (str): _description_
     """
 
-    drop_table(db_name, tbl_name) 
-    drop_geometry_columns(db_name, tbl_name, geometry_name)
-    drop_spatial_index(db_name, tbl_name, geometry_name)
+    if exists(db_name):
+        drop_table(db_name, tbl_name) 
+        drop_geometry_columns(db_name, tbl_name, geometry_name)
+        drop_spatial_index(db_name, tbl_name, geometry_name)
+    else:
+        logger.info(f'Not running drop_geo_table_all {db_name} does not exist')
  
 
 
 
 def drop_spatial_index(db_name: str,  tbl_name: str, geometry_name: str) -> None:
-
     """Remove all the virtual tables associated with the spatial index of a given table geometry + disable geometry
 
     Args:
@@ -274,6 +286,10 @@ def drop_spatial_index(db_name: str,  tbl_name: str, geometry_name: str) -> None
         tbl_name (str): _description_
         geometry_name (str): _description_
     """
+
+    if not exists(db_name):
+        logger.info(f'Not running drop_spatial_index {db_name} does not exist')
+        return 
 
     with sqlite3.connect(db_name) as con:
         con.enable_load_extension(True)
@@ -307,6 +323,9 @@ def drop_table(db_name: Union[Path, str], tbl_name: str):
     Returns:
 
     """
+    if not exists(db_name):
+        logger.info(f'Not running drop_table {db_name} does not exist')
+        return 
 
     with sqlite3.connect(db_name) as conn:
         try:
@@ -317,7 +336,6 @@ def drop_table(db_name: Union[Path, str], tbl_name: str):
 
 
 def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> None:
-
     """Remove the `tbl_name` record in the auxiliary `geometry_columns`, `vector_layers`, etc tables.
 
     Useful to ensure we clean everything up when deleting a table with geometry
@@ -326,6 +344,11 @@ def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> Non
         db_name (str): _description_
         tbl_name (str): _description_
     """
+
+    if not exists(db_name):
+        logger.info(f'Not running drop_geometry_columns {db_name} does not exist')
+        return
+
     with sqlite3.connect(db_name) as con:
         con.enable_load_extension(True)
         con.load_extension("mod_spatialite")
@@ -367,7 +390,13 @@ def get_table_crs(db_name: str, tbl_name: str, return_srid = False) -> Union[int
     Returns:
         crs:  WKT2 proj representation of crs (string) or srid (int)
 
+    Raises:
+        ValueError if db or tbl does not exist
+
     """
+
+    if not exists(db_name):
+        raise ValueError(f"Fatal error! Cannot run `get_table_crs` db {db_name} does not exist")
 
     # Check if table exists first 
     existing_tables = list_tables(db_name)
@@ -402,6 +431,23 @@ def get_table_crs(db_name: str, tbl_name: str, return_srid = False) -> Union[int
 
 
 def get_table_column_names(db_name: str, tbl_name: str) -> np.array:
+    """Get table column names
+
+    Calls `get_table_column_all_metadata` 
+
+    Args:
+        db_name (str): _description_
+        tbl_name (str): _description_
+
+    Raises:
+        ValueError: _description_
+
+    Returns:
+        np.array: _description_
+    """
+
+    if not exists(db_name):
+        raise ValueError(f"Fatal error! Cannot run `get_table_column_names` db {db_name} does not exist")
 
     df = get_table_column_all_metadata(db_name, tbl_name)
 
@@ -412,6 +458,23 @@ def get_table_column_names(db_name: str, tbl_name: str) -> np.array:
 
     
 def get_table_column_all_metadata(db_name: str, tbl_name: str) -> pd.DataFrame:
+    """Get the table info - cloumn names, types, etc.
+
+    Wrapper over PRAGMA table_info(tbl)
+
+    Args:
+        db_name (str): _description_
+        tbl_name (str): _description_
+
+    Raises:
+        ValueError: _description_
+
+    Returns:
+        pd.DataFrame: _description_
+    """
+
+    if not exists(db_name):
+        raise ValueError(f"Fatal error! Cannot run `get_table_column_all_metadata` db {db_name} does not exist")
 
     with sqlite3.connect(db_name) as conn:
         query = f"PRAGMA table_info({tbl_name});"
