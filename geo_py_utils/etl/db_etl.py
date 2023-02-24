@@ -238,15 +238,16 @@ class Url_to_postgis(Url_to_db):
         self._create_db()
 
         cmd = f"ogr2ogr  " \
-            " -progress "
+            ' -progress ' \
+            ' --config PG_USE_COPY YES ' 
 
         if self.target_projection is not None:
             cmd += f"-t_srs 'EPSG:{self.target_projection}'" 
 
-        cmd += rf"  -f 'PostgreSQL' PG:'host={self.host} port={self.port} dbname={self.db_name} user={self.user} password={self.password}'" \
-            rf' --config PG_USE_COPY YES ' \
-            rf' -lco SCHEMA={self.schema} "{source}"' \
-            rf"  -nln {self.table_name} " \
+        cmd += fr"  -f 'PostgreSQL' PG:'host={self.host} port={self.port} dbname={self.db_name} user={self.user} password={self.password}'" \
+            fr" '{source}' " \
+            f' -lco SCHEMA={self.schema} ' \
+            f" -nln {self.table_name} " \
             " -lco ENCODING=UTF-8 " 
 
         if self.promote_to_multi:
@@ -259,7 +260,7 @@ class Url_to_postgis(Url_to_db):
                 cmd += " -append"
 
         logger.info(cmd)
-        subprocess.check_call(cmd, shell=False)
+        subprocess.check_call(cmd, shell=True)
  
 
     def _create_db(self):
