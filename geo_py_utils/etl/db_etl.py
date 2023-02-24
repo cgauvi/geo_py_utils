@@ -243,25 +243,30 @@ class Url_to_postgis(Url_to_db):
         if self.target_projection is not None:
             cmd += f"-t_srs 'EPSG:{self.target_projection}'" 
 
-        cmd += f" -f 'PostgreSQL' PG:'host={self.host} port={self.port} dbname={self.db_name} user={self.user} password={self.password}'" \
-            f" -lco SCHEMA={self.schema} {source}" \
-            f" -nlt PROMOTE_TO_MULTI  -nln {self.table_name} " \
+        cmd += rf"  -f 'PostgreSQL' PG:'host={self.host} port={self.port} dbname={self.db_name} user={self.user} password={self.password}'" \
+            rf' --config PG_USE_COPY YES ' \
+            rf' -lco SCHEMA={self.schema} "{source}"' \
+            rf"  -nln {self.table_name} " \
             " -lco ENCODING=UTF-8 " 
 
-        if self.overwrite:
-            cmd += "- overwrite"
-        else:
-            cmd += " -append"
+        if self.promote_to_multi:
+             cmd +=  f" -nlt PROMOTE_TO_MULTI "
+
+        if not self.no_overwrite_append and not self.first_time_creating_db:
+            if self.overwrite:
+                cmd += " -overwrite"
+            else:
+                cmd += " -append"
 
         logger.info(cmd)
-        subprocess.check_call(cmd, shell=True)
+        subprocess.check_call(cmd, shell=False)
  
 
     def _create_db(self):
 
         # Inspect all DBs
         with psycopg2.connect(
-            database = "postgres", 
+            database = self.db_name, 
             user = self.user, 
             password = self.password , 
             host = self.host, 
@@ -272,7 +277,7 @@ class Url_to_postgis(Url_to_db):
         # Db does not exist
         if self.db_name not in df_existing_dbs.datname.values:
             conn =  psycopg2.connect(
-                database="postgres", 
+                database=self.db_name, 
                 user = self.user, 
                 password = self.password , 
                 host = self.host, 
