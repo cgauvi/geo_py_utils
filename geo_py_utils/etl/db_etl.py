@@ -13,7 +13,9 @@ import atexit
 import logging
 import psycopg2
 import pandas as pd
-import socket
+
+from geo_py_utils.etl.port import is_port_open
+from geo_py_utils.etl.db_etl import pg_create_db
 
 logger = logging.getLogger(__file__)
 
@@ -275,53 +277,18 @@ class Url_to_postgis(Url_to_db):
     def _create_db(self):
 
         # Inspect all DBs
-        with psycopg2.connect(
+        pg_create_db(
             database = self.db_name, 
             user = self.user, 
             password = self.password , 
             host = self.host, 
             port = self.port
-        ) as conn: 
-            df_existing_dbs = pd.read_sql("SELECT datname FROM pg_database;", conn)
-            
-        # Db does not exist
-        if self.db_name not in df_existing_dbs.datname.values:
-            conn =  psycopg2.connect(
-                database=self.db_name, 
-                user = self.user, 
-                password = self.password , 
-                host = self.host, 
-                port = self.port)
-
-            conn.autocommit = True
-
-            #Creating a cursor object using the cursor() method
-            cursor = conn.cursor()
-
-            #Preparing query to create a database - make sure it is a POSTGIS DB
-            cursor.execute(f"CREATE database {self.db_name};")
-            cursor.execute("CREATE EXTENSION postgis;")
-
-            conn.close()
-
-            logger.info(f"Successfully created postgis db {self.db_name}")
+        )  
 
 
     def _port_is_open(self):
 
-        a_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        location = ("127.0.0.1", self.port)
-        result_of_check = a_socket.connect_ex(location)
-
-        if result_of_check == 0:
-            logger.info("Port is open")
-        else:
-            logger.info("Port is closed")
- 
-        a_socket.close()
-
-        return result_of_check == 0
+        return is_port_open(self.host, self.port)
 
 
     def upload_url_to_database(self):
