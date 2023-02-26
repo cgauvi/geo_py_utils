@@ -4,37 +4,48 @@ import geopandas as gpd
 import pandas as pd
 from typing import Union
 import re
+import logging
+from sqlalchemy.exc import OperationalError
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__file__)
   
 
-
-def pg_db_exists(engine: sqlalchemy.engine.base.Engine , db_name: str) -> bool:
+def pg_db_exists(engine: sqlalchemy.engine.base.Engine, db_name: str) -> bool:
     """Check if a db exists
 
     Args:
+        engine (sqlalchemy.engine.base.Engine)
         db_name (str): _description_
 
     Returns:
         bool: True if db exists
     """
- 
+    db_exists = False
+
     query_exists = f"""
                 SELECT datname 
                 FROM pg_catalog.pg_database 
                 WHERE lower(datname) = lower('{db_name}');
                 """
-    with engine.connect() as conn:
-        df_results = pd.read_sql(query_exists, conn)
+    # Trying to connect to non-existent db raises OperationalError
+    # https://stackoverflow.com/questions/15062208/how-to-search-for-the-existence-of-a-database-with-sqlalchemy
+    try:
+        with engine.connect() as conn:
+            df_results = pd.read_sql(query_exists, conn)
+        db_exists = df_results.shape[0] > 0
+    except OperationalError:
+        logger.info(f'{db_name} does not seem to exist')
 
-    return df_results.shape[0] > 0
+    return db_exists
 
 
-def pg_create_db(db_name, 
-                user, 
-                password , 
-                host, 
-                port):
+def pg_create_db(db_name: str, 
+                user: str,
+                password: str, 
+                host: str,
+                port: str):
     """Create a pg db + enable postgis extension 
 
     Sets user as owner
@@ -48,30 +59,41 @@ def pg_create_db(db_name,
     """
 
     # Inspect all DBs
-    engine = create_engine('postgresql://{user}:{password}@{host}:{port}/{db_name}')
+    engine_db_specific = create_engine(f'postgresql://{user}:{password}@{host}:{str(port)}/{db_name}')
 
     # Db does not exist
-    if pg_db_exists(engine):
-         with engine.connect() as conn:
+    if not pg_db_exists(engine_db_specific, db_name):
 
-            conn.autocommit = True
+        # Conenct to generic posrgres db
+        engine_generic = create_engine(f'postgresql://{user}:{password}@{host}:{str(port)}/postgres')
+        with engine_generic.connect() as conn:
 
-            #Creating a cursor object using the cursor() method
-            cursor = conn.cursor()
+            session = sessionmaker(bind=engine_generic)()
+            session.connection().connection.set_isolation_level(0)
 
             #Preparing query to create a database - make sure it is a POSTGIS DB
-            cursor.execute(f"""
+            session.\
+                execute(f"""
                 CREATE database {db_name} 
                 WITH 
                     OWNER = {user}
                     ENCODING = 'UTF8'
                     CONNECTION LIMIT = -1;
                 """)
-            cursor.execute("CREATE EXTENSION postgis;")
 
-            conn.close()
 
-    logger.info(f"Successfully created postgis db {self.db_name}")
+    # Connect on the correct newlys created db 
+    with engine_db_specific.connect() as conn:
+
+        conn.\
+                execute(f"""
+                CREATE EXTENSION postgis IF NOT EXISTS
+                """
+            )
+
+       
+
+    logger.info(f"Successfully created postgres db {db_name} & enabled postigs extension")
 
 
 def pg_list_tables():
@@ -169,6 +191,7 @@ def pg_is_spatial_index_enabled(engine: sqlalchemy.engine.base.Engine,
         Warning could not determine if spatial index is enabled or not for
         table {tbl_name} - {e}
         """
+        )
 
 
     return is_enabled
