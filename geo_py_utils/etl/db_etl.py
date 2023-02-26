@@ -15,7 +15,7 @@ import psycopg2
 import pandas as pd
 
 from geo_py_utils.etl.port import is_port_open
-from geo_py_utils.etl.db_etl import pg_create_db
+from geo_py_utils.etl.postgis.db_utils import pg_create_db
 
 logger = logging.getLogger(__file__)
 
@@ -278,7 +278,7 @@ class Url_to_postgis(Url_to_db):
 
         # Inspect all DBs
         pg_create_db(
-            database = self.db_name, 
+            db_name= self.db_name, 
             user = self.user, 
             password = self.password , 
             host = self.host, 
