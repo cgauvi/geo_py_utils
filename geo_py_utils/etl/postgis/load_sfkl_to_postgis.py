@@ -5,6 +5,7 @@ import logging
 import geopandas as gpd
 import sys
 
+from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.etl.db_etl import Url_to_postgis
 from geo_py_utils.etl.snowflake.snowflake_connect import connnect_snowflake_ext_browser
 from geo_py_utils.etl.snowflake.snowflake_read import sfkl_to_gpd
@@ -44,12 +45,12 @@ class LoadSfklPostgis:
                 host: str,
                 user: str,
                 password: str,
-                port="5052": str,
-                postgis_db_name='gis': str,
-                schema='public': str,
-                sfkl_geometry_name='GEOGRAPHY': str,
-                overwrite=True: bool,
-                promote_to_multi=False: bool):
+                port: str="5052",
+                postgis_db_name: str='gis',
+                schema: str='public',
+                sfkl_geometry_name: str='GEOGRAPHY',
+                overwrite: bool=True,
+                promote_to_multi: bool=False):
  
 
 
@@ -99,7 +100,7 @@ class LoadSfklPostgis:
         """
 
         # Create the directory to write the object
-        dir_dict = join(Projet_paths.DATA_PATH, self.sfkl_tbl_name)
+        dir_dict = join(DATA_DIR, self.sfkl_tbl_name)
         if not exists(dir_dict): 
             makedirs(dir_dict)
         path_shp_file = join(dir_dict, f"{self.sfkl_tbl_name}.gpkg")
@@ -125,8 +126,8 @@ class LoadSfklPostgis:
             promote_to_multi=self.promote_to_multi,
             download_destination=dir_dict)
 
-            postgis_etl.path_src_to_upload = path_shp_file
-            postgis_etl._ogr2gr()
+        postgis_etl.path_src_to_upload = path_shp_file
+        postgis_etl._ogr2gr()
 
         logger.info(f"Successfully uploaded table {self.sfkl_tbl_name} from snowflake to {self.postgis_tbl_name} on {self.host}:{self.port}/{self.postgis_db_name}")
 
