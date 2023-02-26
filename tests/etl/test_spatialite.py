@@ -5,7 +5,7 @@ import tempfile
 import numpy as np
 import pytest
 
-from geo_py_utils.etl.db_etl import  Url_to_spatialite 
+from geo_py_utils.etl.db_etl import  Url_to_spatialite
 from geo_py_utils.etl.spatialite.gdf_load import spatialite_db_to_gdf
 from geo_py_utils.etl.spatialite.db_utils import (
     list_tables, 
@@ -23,43 +23,23 @@ from geo_py_utils.etl.spatialite.db_utils import (
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
 from geo_py_utils.census_open_data.census import FSA_2016_URL
+from geo_py_utils.etl.spatialite.utils_testing import upload_qc_neigh_test_db, QcCityTestData
 
-
-class Qc_city_data:
-    SPATIAL_LITE_DB_PATH = join(DATA_DIR, "test.db")
-    SPATIAL_LITE_TBL_QC = "qc_city_test_tbl"
-    QC_CITY_NEIGH_URL = QC_CITY_NEIGH_URL
-    SPATIAL_LITE_TBL_GEOMETRY_COL_NAME = 'GEOMETRY'
-
-
-def upload_qc_neigh_db(db_name = Qc_city_data.SPATIAL_LITE_DB_PATH,
-                        tbl_name = Qc_city_data.SPATIAL_LITE_TBL_QC,
-                        download_url = Qc_city_data.QC_CITY_NEIGH_URL,
-                        promote_to_multi=True):
-    
-    with Url_to_spatialite(
-        db_name = db_name, 
-        table_name = tbl_name,
-        download_url = download_url,
-        download_destination = DATA_DIR, 
-        promote_to_multi=promote_to_multi) as uploader:
-
-        uploader.upload_url_to_database()
 
 
 def test_promot_to_multi():
 
     # Make sure we start from scratch, and dont defacto promot to multipolygon
-    drop_geo_table_all(Qc_city_data.SPATIAL_LITE_DB_PATH, Qc_city_data.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
-    if (not os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH)) or \
-        (not Qc_city_data.SPATIAL_LITE_TBL_QC in list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)) :
-        upload_qc_neigh_db(promote_to_multi=False)
+    drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
+    if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
+        (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
+        upload_qc_neigh_test_db(promote_to_multi=False)
 
-    shp_before = spatialite_db_to_gdf(Qc_city_data.SPATIAL_LITE_DB_PATH, Qc_city_data.SPATIAL_LITE_TBL_QC)
+    shp_before = spatialite_db_to_gdf(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
     
-    promote_multi(Qc_city_data.SPATIAL_LITE_DB_PATH, Qc_city_data.SPATIAL_LITE_TBL_QC)
+    promote_multi(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
 
-    shp_after = spatialite_db_to_gdf(Qc_city_data.SPATIAL_LITE_DB_PATH, Qc_city_data.SPATIAL_LITE_TBL_QC)
+    shp_after = spatialite_db_to_gdf(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
 
     # The geometry is not properly set in the aux geometry_columns table, but the geometry might still be successfully changed
     assert len(shp_before.geometry.type.unique()) == 2
@@ -69,53 +49,53 @@ def test_promot_to_multi():
 
 
 def test_geometry_type():
-    if (not os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH)) or \
-        (not Qc_city_data.SPATIAL_LITE_TBL_QC in list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)) :
-        upload_qc_neigh_db()
+    if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
+        (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
+        upload_qc_neigh_test_db()
 
     with pytest.raises(Exception):
         get_table_geometry_type( 
-            Qc_city_data.SPATIAL_LITE_DB_PATH,
-            Qc_city_data.SPATIAL_LITE_TBL_QC) == 'POLYGON' # We expect a polygon, but the geometry type is mixed so we get an error
+            QcCityTestData.SPATIAL_LITE_DB_PATH,
+            QcCityTestData.SPATIAL_LITE_TBL_QC) == 'POLYGON' # We expect a polygon, but the geometry type is mixed so we get an error
 
 def test_spatial_index_enabled():
 
-    if (not os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH)) or \
-        (not Qc_city_data.SPATIAL_LITE_TBL_QC in list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)) :
-        upload_qc_neigh_db()
+    if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
+        (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
+        upload_qc_neigh_test_db()
 
     assert is_spatial_index_enabled(
-        Qc_city_data.SPATIAL_LITE_DB_PATH,
-        Qc_city_data.SPATIAL_LITE_TBL_QC
+        QcCityTestData.SPATIAL_LITE_DB_PATH,
+        QcCityTestData.SPATIAL_LITE_TBL_QC
         )
 
     
 
 def test_spatial_index_valid():
 
-    if (not os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH)) or \
-        (not Qc_city_data.SPATIAL_LITE_TBL_QC in list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)) :
-        upload_qc_neigh_db()
+    if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
+        (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
+        upload_qc_neigh_test_db()
 
     assert is_spatial_index_enabled_valid(
-        Qc_city_data.SPATIAL_LITE_DB_PATH,
-        Qc_city_data.SPATIAL_LITE_TBL_QC,
-        Qc_city_data.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME
+        QcCityTestData.SPATIAL_LITE_DB_PATH,
+        QcCityTestData.SPATIAL_LITE_TBL_QC,
+        QcCityTestData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME
         )
 
 
 def test_upload_spatialite_qc():
-    upload_qc_neigh_db()
+    upload_qc_neigh_test_db()
 
 
 
 def test_read_gdf_spatialite_qc ():
 
-    if not os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH):
-        upload_qc_neigh_db()
+    if not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH):
+        upload_qc_neigh_test_db()
 
-    df = spatialite_db_to_gdf(db_name = Qc_city_data.SPATIAL_LITE_DB_PATH,
-                            tbl_name = Qc_city_data.SPATIAL_LITE_TBL_QC,
+    df = spatialite_db_to_gdf(db_name = QcCityTestData.SPATIAL_LITE_DB_PATH,
+                            tbl_name = QcCityTestData.SPATIAL_LITE_TBL_QC,
                             additional_where_limit_causes = "LIMIT 10"
     ) 
 
@@ -125,19 +105,19 @@ def test_read_gdf_spatialite_qc ():
 
 def test_spatialite_list_tables():
 
-    if not os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH):
-        upload_qc_neigh_db()
+    if not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH):
+        upload_qc_neigh_test_db()
 
-    existing_tables = list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)
+    existing_tables = list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)
 
-    assert Qc_city_data.SPATIAL_LITE_TBL_QC in existing_tables
+    assert QcCityTestData.SPATIAL_LITE_TBL_QC in existing_tables
 
 
 def test_spatialite_send_query():
-    df_results = sql_to_df(Qc_city_data.SPATIAL_LITE_DB_PATH, 
-                            f"select count(*) as num_rows from {Qc_city_data.SPATIAL_LITE_TBL_QC}")
+    df_results = sql_to_df(QcCityTestData.SPATIAL_LITE_DB_PATH, 
+                            f"select count(*) as num_rows from {QcCityTestData.SPATIAL_LITE_TBL_QC}")
 
-    assert get_table_rows(Qc_city_data.SPATIAL_LITE_DB_PATH, Qc_city_data.SPATIAL_LITE_TBL_QC) == df_results.num_rows.values[0]
+    assert get_table_rows(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC) == df_results.num_rows.values[0]
 
 
 
@@ -168,8 +148,8 @@ def test_spatialite_zip_with_proj():
 def test_spatialite_local_file():
 
     # Remove if existing
-    if os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH):
-        os.remove(Qc_city_data.SPATIAL_LITE_DB_PATH)
+    if os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH):
+        os.remove(QcCityTestData.SPATIAL_LITE_DB_PATH)
 
     # Read the shp file from the url + write to disk before uploading to spatialite
     shp_qc = gpd.read_file(QC_CITY_NEIGH_URL)
@@ -178,8 +158,8 @@ def test_spatialite_local_file():
     shp_qc.to_file(path_shp_file_local)
 
     with Url_to_spatialite(
-                        db_name = Qc_city_data.SPATIAL_LITE_DB_PATH, 
-                        table_name = Qc_city_data.SPATIAL_LITE_TBL_QC,
+                        db_name = QcCityTestData.SPATIAL_LITE_DB_PATH, 
+                        table_name = QcCityTestData.SPATIAL_LITE_TBL_QC,
                         download_url = path_shp_file_local, # local file does not require curl -- hacky + watch out, Url_to_spatialite will automatically delete the file 
                         overwrite = True #for some weird reason, appending duplicates the dataset -- even if we start of with a clean db
         ) as spatialite_etl:
@@ -188,8 +168,8 @@ def test_spatialite_local_file():
         spatialite_etl.upload_url_to_database()
 
     
-    shp_test = spatialite_db_to_gdf( Qc_city_data.SPATIAL_LITE_DB_PATH,
-     Qc_city_data.SPATIAL_LITE_TBL_QC
+    shp_test = spatialite_db_to_gdf( QcCityTestData.SPATIAL_LITE_DB_PATH,
+     QcCityTestData.SPATIAL_LITE_TBL_QC
      )
 
     assert shp_qc.shape[0] == shp_test.shape[0]
@@ -198,21 +178,21 @@ def test_spatialite_local_file():
 def test_drop_table():
 
      # Make sure table exists initially
-    if not os.path.exists(Qc_city_data.SPATIAL_LITE_DB_PATH):
-        upload_qc_neigh_db()
+    if not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH):
+        upload_qc_neigh_test_db()
 
     # Drop table 
-    drop_table(Qc_city_data.SPATIAL_LITE_DB_PATH, Qc_city_data.SPATIAL_LITE_TBL_QC)
+    drop_table(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
 
     # Table not present
-    assert Qc_city_data.SPATIAL_LITE_TBL_QC not in list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)
+    assert QcCityTestData.SPATIAL_LITE_TBL_QC not in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)
 
     # Drop ALL
-    drop_geo_table_all(Qc_city_data.SPATIAL_LITE_DB_PATH, Qc_city_data.SPATIAL_LITE_TBL_QC, Qc_city_data.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME)
+    drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, QcCityTestData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME)
     list_aux_tables_to_drop_suff = ['','_rowid', '_node', '_parent']
-    list_aux_tables_to_drop =  [ f"{Qc_city_data.SPATIAL_LITE_TBL_QC}_{Qc_city_data.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME}{suffix};" \
+    list_aux_tables_to_drop =  [ f"{QcCityTestData.SPATIAL_LITE_TBL_QC}_{QcCityTestData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME}{suffix};" \
                                  for suffix in list_aux_tables_to_drop_suff]
-    assert not np.any(np.isin(np.array(list_aux_tables_to_drop), list_tables(Qc_city_data.SPATIAL_LITE_DB_PATH)   ))
+    assert not np.any(np.isin(np.array(list_aux_tables_to_drop), list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)   ))
    
 
 if __name__ == '__main__':
