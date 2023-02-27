@@ -1,6 +1,5 @@
 brotlipy
 folium
-gdal==2.2.3
 mapclassify
 matplotlib
 munkres
@@ -18,4 +17,5 @@ google-auth
 python-geohash
 sqlalchemy
 snowflake-connector-python
+flake8
 git+https://github.com/cgauvi/ben_py_utils.git@master
