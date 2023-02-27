@@ -1,7 +1,7 @@
 
-# %%
-from warnings import warn
+
 import geohash
+from warnings import warn
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import shape, Polygon
@@ -15,6 +15,8 @@ from geo_py_utils.geo_general.geo_utils import get_geodataframe_from_list_coord,
 from geo_py_utils.geo_general.centroid import add_centroid
 from geo_py_utils.misc.constants import ROOT_DIR
 from geo_py_utils.data.datasets import get_geohash_worst_dim_path
+
+
 
 import logging
 
@@ -418,7 +420,7 @@ def add_geohash_index(shp_to_add, precision, new_col_name='geohash_index', keep_
     # Add lat and lng columns if absent
     if not np.isin(['lat', 'lng'], shp.columns).all():
         logger.debug(
-            'Warning in count_sightings_by_geohash_no_spatial! No lat lng for geocode encoding: trying to add the centroid')
+            'Warning in add_geohash_index! No lat lng for geocode encoding: trying to add the centroid')
         shp = add_centroid(shp)
 
     if (shp[['lat', 'lng']].isna().sum() > 0).any():
@@ -426,9 +428,10 @@ def add_geohash_index(shp_to_add, precision, new_col_name='geohash_index', keep_
             'Fatal error! there are NAs in the lat lng! From add_centroid or initially ')
 
     if new_col_name in shp.columns:
-        logger.debug(
-            f'Warning in count_sightings_by_geohash_no_spatial! {new_col_name} already exists')
-        return shp
+        logger.warning (
+            f'Warning in add_geohash_index! {new_col_name} '\
+            f' already exists - dropping and repopulating')
+        shp.drop(columns=new_col_name, inplace=True)
 
     assert np.all(-90 <= shp.lat) and np.all(shp.lat <= 90)
     assert np.all(-180 <= shp.lng) and np.all(shp.lng <= 180)
@@ -445,9 +448,12 @@ def add_geohash_index(shp_to_add, precision, new_col_name='geohash_index', keep_
 
 def recursively_partition_geohash_cells(shp_points,
                                         count_column_name=None,
-                                        thresh_num_points=10,
+                                        min_num_points=10,
                                         max_precision=7):
     """From a gpd.GeoDataFrame with point geometry, form a geohash grid with flexible spatial precision.
+
+    Warning! Only works with POINT geometry
+
     The precision is greater (cells are smaller) in regions with many points
 
     No spatial join performed, only regular joins by geohash cells after encoding each point's lat lng to a geohash index
@@ -455,11 +461,17 @@ def recursively_partition_geohash_cells(shp_points,
     Args:
         shp_points (gpd.GeoDataFrame) :  gpd.GeoDataFrame with Point geometry and a 
         count_column_name (str) (optional) : name of the column that indicates the number of elements per lat lng - if None will count each row as 1 element
-        thresh_num_points (int_): min number of observations in geohash cell required to stop partitioning 
+        min_num_points (int_): min number of observations in geohash cell required to stop partitioning 
         max_precision (int): max geohash precision
     Returns:
         shp_partionned[gpd.GeoDataFrame], dict_layers[dict]: final gpd geodf + dict where keys indicate precision and values are gpd geodf sufficiently precise at that level
     """
+
+    # QA
+    assert isinstance(shp_points, gpd.GeoDataFrame)
+    assert min_num_points >= 1, \
+        f"Fatal error, cannot use {min_num_points} as " \
+        f"a min threshold: use a value >= 1"
 
     if count_column_name is not None:
         assert count_column_name in shp_points.columns
@@ -470,8 +482,10 @@ def recursively_partition_geohash_cells(shp_points,
         print(f'No column provided for counts - assuming each row has 1 count')
 
 
-    assert np.all(shp_points.type == 'Point'), 'Code will work with non Point geometry type,\
-                                        but will take the centroid, which could lead to unexpected results '
+    assert np.all(shp_points.type == 'Point'), \
+        'Code will work with non Point geometry type, '\
+        'consider taking the centroid or the points in the exterior of ' \
+        'a polygon if this makes sense.'
 
     # Get the highest precision such that only 1 geohash cell is required
     init_precision = geohash_max_precision(shp_points)
@@ -490,13 +504,16 @@ def recursively_partition_geohash_cells(shp_points,
     # Progressively break down cells that have more points than the lower bound threshold
     for p in np.arange(init_precision, max_precision+1):
 
-        # Count sightings by hash - always consider all sightings
-        # Add geohash with precision p to sightings
+        # Count observations by hash - always consider all observations
+        # Add geohash with precision p to observations
         shp_points_with_hash = add_geohash_index(shp_points, p)
 
         # Count by geohash index
         df_recent_count_by_hash = count_by_index(
-            shp_points_with_hash, group_by_idx="geohash_index", agg_dict={count_column_name  : np.sum})
+            shp_points_with_hash, 
+            group_by_idx="geohash_index", 
+            agg_dict={count_column_name  : np.sum}
+            )
 
         # Left join the hash count and fill with 0
         shp_hash_extent = shp_count_by_hash_to_refine.\
@@ -506,34 +523,51 @@ def recursively_partition_geohash_cells(shp_points,
 
         # Check which cells need refining
         shp_count_by_hash_not_suff_precise = shp_hash_extent.loc[
-            shp_hash_extent[count_column_name] >= thresh_num_points, ]
-        shp_count_by_hash_suff_precise = shp_hash_extent.loc[shp_hash_extent[count_column_name] < thresh_num_points, ].copy(
-        )
+            shp_hash_extent[count_column_name] > min_num_points, 
+            ]
+        # Check which cells are sufficiently precise
+        shp_count_by_hash_suff_precise = shp_hash_extent.loc[
+            shp_hash_extent[count_column_name] <= min_num_points, 
+            ].copy()
 
         # Append final results
         if shp_count_by_hash_suff_precise.shape[0] > 0:
             list_complete.append(shp_count_by_hash_suff_precise)
             dict_layers[p] = shp_count_by_hash_suff_precise
 
-            # Remove the sightings
-            idx_remove = shp_points_with_hash.merge(
-                shp_count_by_hash_suff_precise, on='geohash_index').index
-            shp_points = shp_points.loc[~shp_points.index.isin(
-                idx_remove), ].copy()
+            # Remove the observations
+            idx_remove = shp_points_with_hash.\
+                merge(
+                    shp_count_by_hash_suff_precise, 
+                    on='geohash_index')\
+                .index
 
-        if p == max_precision:
-            print('Warning! Reached the maximum number of iterations (given the max precision) without \
+            # These are the points to consider in the next iteration
+            shp_points = shp_points.loc[
+                ~shp_points.index.isin(idx_remove), 
+                ].copy()
+
+        # Check if we reached the max precision and would still require greater precision to meet the threshold condition
+        if (p == max_precision) & (shp_count_by_hash_not_suff_precise.shape[0] > 0):
+            logger.warning('Warning! Reached the maximum number of iterations (given the max precision) without \
                creating a sufficiently precise geohash grid')
-
+            
+            # Still append the cells even if they are not suff precise
             list_complete.append(shp_count_by_hash_not_suff_precise)
             if p in dict_layers.keys():
                 dict_layers[p].append(shp_count_by_hash_not_suff_precise)
             else:
                 dict_layers[p] = shp_count_by_hash_not_suff_precise
 
-        # Refine these geohashes at the next precision
-        shp_count_by_hash_to_refine = get_all_geohash_from_gdf(
-            shp_count_by_hash_not_suff_precise, precision=p+1, predicate='within')
+        elif shp_count_by_hash_not_suff_precise.shape[0] > 0:
+            # Refine these geohashes at the next precision
+            shp_count_by_hash_to_refine = get_all_geohash_from_gdf(
+                shp_count_by_hash_not_suff_precise, 
+                precision=p+1, 
+                predicate='within')
+        elif shp_count_by_hash_not_suff_precise.shape[0] == 0:
+            # We are done: shp_count_by_hash_not_suff_precise has no rows 
+            break
 
     shp_partionned = pd.concat(list_complete)
 
@@ -543,125 +577,28 @@ def recursively_partition_geohash_cells(shp_points,
 # %%
 if __name__ == "__main__":
 
-    from insights.utilities.util_bbox import get_list_coordinates_from_bbox
-    from insights.utilities.util_geo import get_geodataframe_from_list_coord
+    from geo_py_utils.geo_general.bbox import get_list_coordinates_from_bbox, get_bbox_centroid
+    from geo_py_utils.geo_general.geo_utils import get_geodataframe_from_list_coord
+    from geo_py_utils.geo_general.map import map_simple
+ 
+    from shapely.geometry import Point, Polygon
 
     GEOHASH_PRECISION = 6
-    '''
-    # Getting all geohash from extent
-    geohash_single_index = geohash.encode(46.5, -71.3, GEOHASH_PRECISION)
-    geohash_bbox_coord_list = get_geohash_box(geohash_single_index)
-    get_geodataframe_from_list_coord([geohash_bbox_coord_list], crs=4326)
-
-    geohash.neighbors(geohash_single_index)
-
-    shp = gpd.GeoDataFrame({'id': [0]},
-                           geometry=[Polygon(((-71.5, 46.5),
-                                              (-71.6, 46.4),
-                                              (-71.5, 46.7),
-                                              (-71.5, 46.5)))
-                                     ],
-                           crs=4326
-                           )
-
-    get_all_geohash_from_extent(shp, GEOHASH_PRECISION)
-    get_all_geohash_from_gdf(shp, GEOHASH_PRECISION)
-
-    shp_2 = gpd.GeoDataFrame({'id': [0, 1]},
-                             geometry=[Polygon(((-71.5, 46.5),
-                                                (-71.6, 46.4),
-                                                (-71.5, 46.7),
-                                                (-71.5, 46.5))),
-                                       Polygon(((-71.7, 46.1),
-                                                (-71.6, 46.4),
-                                                (-71.5, 46.7),
-                                                (-71.2, 46.5)))
-                                       ],
-                             crs=4326
-                             )
-
-    get_all_geohash_from_extent(shp_2, GEOHASH_PRECISION)
-    get_all_geohash_from_gdf(shp_2, GEOHASH_PRECISION)
-
-    get_all_geohash_from_gdf(shp_2['geometry'], GEOHASH_PRECISION)
-
-    min_lng, min_lat, max_lng, max_lat = shp_2.total_bounds
-    list_lat_lng = np.concatenate([
-        np.linspace(min_lng, max_lng, 50).reshape(-1, 1),
-        np.linspace(min_lat, max_lat, 50).reshape(-1, 1),
-    ], axis=1)
-
-    list_geo_hashes = [geohash.encode(list_lat_lng[k][1], list_lat_lng[k][0], 3)
-                       for k in range(list_lat_lng.shape[0])]
-    shp_geo_3 = get_geodataframe_from_list_coord(
-        [get_geohash_box(hash) for hash in np.unique(list_geo_hashes)],
-        crs=4326
-    )
-    '''
-    from insights.utilities.map import map_simple
-    from insights.utilities.util_bbox import get_bbox_centroid
-
-    geohash_indices = ['f2k', 'f2m']
-    prec = list(set([len(p) for p in geohash_indices]))[0]
-
-    list_shp_children = []
-    list_geo = []
-    list_all_sub_geohash = []
-
-    for ind in geohash_indices:
-        geo_shp_ = get_all_geohash_from_geohash_indices([ind])
-        geo_shp_['index'] = ind
-        list_geo.append(geo_shp_)
-
-        geo_shp_all_ = get_all_geohash_from_gdf(geo_shp_, precision=prec+1)
-        geo_shp_all_['parent'] = ind
-        list_all_sub_geohash.append(geo_shp_all_)
-
-        lng, lat = get_bbox_centroid(geo_shp_)
-        geohash_indices_children = [cell for cell in
-                                    geohash.neighbors(geohash.encode(lat, lng, precision=prec+1))]
-        geo_shp_children_ = get_all_geohash_from_geohash_indices(
-            geohash_indices_children)
-        geo_shp_children_['parent'] = ind
-        list_shp_children.append(geo_shp_children_)
-
-    geo_shp = pd.concat(list_geo)
-    geo_shp['parent_numeric'] = np.arange(geo_shp.shape[0])
-
-    geo_shp_children = pd.concat(list_shp_children)
-    geo_shp_children = geo_shp_children.merge(geo_shp[["index", "parent_numeric"]],
-                                              left_on='parent', right_on='index')
-
-    geo_shp_all = pd.concat(list_all_sub_geohash)
-    geo_shp_all = geo_shp_all.merge(geo_shp[["index", "parent_numeric"]],
-                                    left_on='parent', right_on='index')
-
-    map_simple({'original': geo_shp,
-                "children": geo_shp_children,
-                'all sub geohash': geo_shp_all},
-               column_color='parent_numeric',
-               tootltip_fields=['parent_numeric'])
-
-    # Max precision
-    # Quebec city
-    qc_city_extents = {"east": -70.69047684581989,
-                       "north": 47.308868412273725,
-                       "south": 46.52872508839602,
-                       "west": -71.81461940388115}
-
-    # Max precision should be 3 and no errors
-    shp_qc_city = get_geodataframe_from_list_coord(
-        [get_list_coordinates_from_bbox(qc_city_extents)], crs=4326)
-    max_prec_qc = geohash_max_precision(shp_qc_city)
-
-    # Entire US - not just CONUS, the entire thing with puerto rico et al.
-    shp_us = gpd.read_file(
-        'https://www2.census.gov/geo/tiger/GENZ2018/shp/cb_2018_us_nation_5m.zip')
-
-    # Max precision should be 1 and should get a warning since no single geohash cell is large enough to cover the entire region
-    max_prec_us = geohash_max_precision(shp_us)
-
-    print(
-        f'Max precision for qc city: {max_prec_qc}\nMax precision for entire US : {max_prec_us}')
-
+     
  
+
+    shp_bug = gpd.GeoDataFrame(
+            {
+            'id' :[0	,1,	2	,3],
+            'geohash_index' : ["drgp",	"drgr",	"f0r9",	"f0rb"],
+            "lat" : [44.997203	,44.996874	,46.722120	,46.521345],
+            "lng": [-74.349024,	-74.084504,	-79.103772	,-78.868221],
+            'counts' : [134, 410, 119	,59],
+            'geometry': [Point(-74.34902, 44.99720),Point(-74.08450,44.99687),Point(-79.10377,46.72212),Point(-78.86822,46.52135)]
+            },
+            crs = 4326          
+    )
+     
+    shp_part_bug, _ = recursively_partition_geohash_cells(shp_bug,
+                                                    count_column_name='counts',
+                                                    min_num_points = 2)

@@ -11,7 +11,9 @@ logger = logging.getLogger(__file__)
 
 def spatialite_db_to_gdf(db_name : Union[str, Path],
                        tbl_name: str,
-                       additional_where_limit_causes: str = None) -> gpd.GeoDataFrame:
+                       additional_where_limit_causes: str = None,
+                       current_geo_col_name = 'GEOMETRY',
+                       new_geo_col_name = 'geometry' ) -> gpd.GeoDataFrame:
 
     """Read a tbl from a spatialite db into memory as a GeoDataFrame.
 
@@ -24,14 +26,17 @@ def spatialite_db_to_gdf(db_name : Union[str, Path],
 
     """
 
+    tmp_col = "geometry_123somerandom_not_dup"
+
     with sqlite3.connect(db_name) as con:
 
         # sqlite connection with extensions
         con.enable_load_extension(True)
         con.load_extension("mod_spatialite")
-            
+
+    
         # select everything, but convert the geometry to binary
-        query = "SELECT *, Hex(AsBinary(GEOMETRY)) as geometry " \
+        query = f"SELECT *, Hex(AsBinary({current_geo_col_name})) as {tmp_col} " \
                 f"FROM {tbl_name}"
 
         if additional_where_limit_causes is not None:
@@ -42,10 +47,16 @@ def spatialite_db_to_gdf(db_name : Union[str, Path],
         # read with geo
         df = gpd.read_postgis(sql = query,
                                 con = con, 
-                                geom_col = 'geometry' )
+                                geom_col = tmp_col)
 
         # Drop the useless hex geometry
-        df = df.drop(columns=['GEOMETRY'])
+        df = df.drop(columns=[current_geo_col_name])
+
+        # Rename 
+        df = df.rename(columns={tmp_col :new_geo_col_name})
+
+        # Set the geometry 
+        df = df.set_geometry(new_geo_col_name) 
 
         # Try to assign the correct CRS by reading back the `geometry_columns`
         # Fuck it, if this fails we can set it manually later

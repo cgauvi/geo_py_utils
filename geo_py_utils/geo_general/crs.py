@@ -1,9 +1,41 @@
 from functools import wraps
 import geopandas as gpd
 
+from typing import Union
+from pyproj import CRS
+
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+
+def get_crs_str(new_crs: Union[str, CRS]):
+
+    """Helper function to try to get a reasonable string from a crs (ideally the epsg code as a string)
+
+    Tries in order: str repr, int epsg,  py.to_epsg()
+
+    Args:
+        new_crs (Union): _description_
+
+    Returns:
+        str: str representation
+    """    
+    
+    crs_str = "null" 
+
+    try:
+        if isinstance(new_crs, str):
+            crs_str = new_crs
+        elif isinstance(new_crs, int):
+            crs_str = str(new_crs)
+        else:
+            crs_str = new_crs.to_epsg()
+    except:
+        logger.warning(f'Warning! In get_crs_str cannot get a valid crs representation for crs {new_crs} - setting to {crs_str}')
+
+    return crs_str
 
 def crs_transform(fun=None, new_crs=None):
 

@@ -9,11 +9,12 @@ from abc import ABC
 from pathlib import Path
 import tempfile
 import shutil
-import atexit
 import logging
-import psycopg2
-import pandas as pd
-import socket
+from sqlalchemy import create_engine
+
+
+from geo_py_utils.etl.port import is_port_open
+from geo_py_utils.etl.postgis.db_utils import pg_create_db, pg_db_exists
 
 logger = logging.getLogger(__file__)
 
@@ -38,7 +39,8 @@ class Url_to_db(ABC):
                 overwrite: bool = False,
                 target_projection: str = None,
                 remove_tmp_download_files = True,
-                no_overwrite_append = False):
+                no_overwrite_append = False,
+                promote_to_multi=True):
 
         # Download and unzipped directories 
         # Use tmp dir + delete at the edn
@@ -64,8 +66,8 @@ class Url_to_db(ABC):
         self.target_projection = target_projection
         self.remove_tmp_download_files = remove_tmp_download_files # if download_destination is not None, this has precedence and we dont delete the folder 
         self.no_overwrite_append = no_overwrite_append
+        self.promote_to_multi = promote_to_multi
 
-        self.first_time_creating_db = True if not exists(db_name) else False # check existence BEFORE running any queries since opening connection to db creates it by default which is undesired
 
 
     @staticmethod
@@ -161,6 +163,8 @@ class Url_to_spatialite(Url_to_db):
 
         super().__init__(**kwargs)
 
+        self.first_time_creating_db = True if not exists(self.db_name) else False # check existence BEFORE running any queries since opening connection to db creates it by default which is undesired
+
 
     def upload_url_to_database(self):
         self._curl()
@@ -181,11 +185,12 @@ class Url_to_spatialite(Url_to_db):
         if self.target_projection is not None:
             cmd += f"-t_srs EPSG:{self.target_projection}" 
 
-
         cmd  +=  f" {dest} {source} "\
-            f" -nlt PROMOTE_TO_MULTI "\
             f" -nln {self.table_name}" \
             " -lco ENCODING=UTF-8 " 
+
+        if self.promote_to_multi:
+             cmd +=  f" -nlt PROMOTE_TO_MULTI "
 
         if not self.no_overwrite_append and not self.first_time_creating_db:
             if self.overwrite:
@@ -215,6 +220,7 @@ class Url_to_postgis(Url_to_db):
                 user,
                 password,
                 schema,
+                src_spatialite_tbl_name=None,
                 **kwargs):
 
         self.host = host
@@ -222,8 +228,12 @@ class Url_to_postgis(Url_to_db):
         self.user = user
         self.password = password
         self.schema = schema
+        self.src_spatialite_tbl_name = src_spatialite_tbl_name
 
         super().__init__( **kwargs)
+
+        engine = create_engine(f'postgresql://{user}:{password}@{host}:{port}/{self.db_name}')
+        self.first_time_creating_db = True if not pg_db_exists(engine, self.db_name) else False 
 
     
     def _ogr2gr(self):
@@ -235,20 +245,33 @@ class Url_to_postgis(Url_to_db):
         self._create_db()
 
         cmd = f"ogr2ogr  " \
-            " -progress "
+            ' -progress ' \
+            ' --config PG_USE_COPY YES ' 
 
         if self.target_projection is not None:
             cmd += f"-t_srs 'EPSG:{self.target_projection}'" 
 
-        cmd += f" -f 'PostgreSQL' PG:'host={self.host} port={self.port} dbname={self.db_name} user={self.user} password={self.password}'" \
-            f" -lco SCHEMA={self.schema} {source}" \
-            f" -nlt PROMOTE_TO_MULTI  -nln {self.table_name} " \
+        cmd += fr"  -f 'PostgreSQL' PG:'host={self.host} port={self.port} dbname={self.db_name} user={self.user} password={self.password}'" 
+            
+        # Special treatment fro spatialite to postgis
+        # Hackish: only works by manually setting self.path_src_to_upload
+        if self.src_spatialite_tbl_name is not None:
+            cmd += fr" '{source}' {self.src_spatialite_tbl_name} " 
+        else:
+            cmd += fr" '{source}' " 
+
+        cmd += f' -lco SCHEMA={self.schema} ' \
+            f" -nln {self.table_name} " \
             " -lco ENCODING=UTF-8 " 
 
-        if self.overwrite:
-            cmd += "- overwrite"
-        else:
-            cmd += " -append"
+        if self.promote_to_multi:
+             cmd +=  f" -nlt PROMOTE_TO_MULTI "
+
+        if not self.no_overwrite_append and not self.first_time_creating_db:
+            if self.overwrite:
+                cmd += " -overwrite"
+            else:
+                cmd += " -append"
 
         logger.info(cmd)
         subprocess.check_call(cmd, shell=True)
@@ -257,53 +280,18 @@ class Url_to_postgis(Url_to_db):
     def _create_db(self):
 
         # Inspect all DBs
-        with psycopg2.connect(
-            database = "postgres", 
+        pg_create_db(
+            db_name= self.db_name, 
             user = self.user, 
             password = self.password , 
             host = self.host, 
             port = self.port
-        ) as conn: 
-            df_existing_dbs = pd.read_sql("SELECT datname FROM pg_database;", conn)
-            
-        # Db does not exist
-        if self.db_name not in df_existing_dbs.datname.values:
-            conn =  psycopg2.connect(
-                database="postgres", 
-                user = self.user, 
-                password = self.password , 
-                host = self.host, 
-                port = self.port)
-
-            conn.autocommit = True
-
-            #Creating a cursor object using the cursor() method
-            cursor = conn.cursor()
-
-            #Preparing query to create a database - make sure it is a POSTGIS DB
-            cursor.execute(f"CREATE database {self.db_name};")
-            cursor.execute("CREATE EXTENSION postgis;")
-
-            conn.close()
-
-            logger.info(f"Successfully created postgis db {self.db_name}")
+        )  
 
 
     def _port_is_open(self):
 
-        a_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        location = ("127.0.0.1", self.port)
-        result_of_check = a_socket.connect_ex(location)
-
-        if result_of_check == 0:
-            logger.info("Port is open")
-        else:
-            logger.info("Port is closed")
- 
-        a_socket.close()
-
-        return result_of_check == 0
+        return is_port_open(self.host, self.port)
 
 
     def upload_url_to_database(self):
