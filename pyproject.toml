@@ -17,3 +17,13 @@ markers =[
     "requires_local_docker_pg_connection: requires a running docker container with postgis DB accepting connections on 80:5432.",
     "requires_remote_pg_connection: requires a remote postgis db set up accepting connections on 5052"
     ]
+
+[tool.flake8]
+    max-complexity = 10
+    max-line-length = 100
+    extend-ignore = """
+        E128,
+        E303,
+        E251,
+        W291
+    """

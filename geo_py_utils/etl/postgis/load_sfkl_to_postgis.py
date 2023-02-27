@@ -1,15 +1,12 @@
-
 from os.path import join, exists
-from os import remove, makedirs, environ 
+from os import makedirs 
 import logging
 import geopandas as gpd
-import sys
-
+ 
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.etl.db_etl import Url_to_postgis
 from geo_py_utils.etl.snowflake.snowflake_connect import connnect_snowflake_ext_browser
 from geo_py_utils.etl.snowflake.snowflake_read import sfkl_to_gpd
-from geo_py_utils.etl.spatialite.gdf_load import spatialite_db_to_gdf
  
 
 # Logger

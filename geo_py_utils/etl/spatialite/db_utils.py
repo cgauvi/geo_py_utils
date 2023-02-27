@@ -4,7 +4,6 @@ from os.path import exists
 import logging
 from typing import Union
 import pandas as pd
-import geopandas as gpd
 import sqlite3
 from pathlib import Path
 import numpy as np 
@@ -300,7 +299,7 @@ def drop_spatial_index(db_name: str,  tbl_name: str, geometry_name: str) -> None
             cur.execute(f" SELECT DisableSpatialIndex('{tbl_name}', '{geometry_name}'); ")
             con.commit()
         except Exception as e:
-            logger.warning(f"Warning! Failed to drop spatial index on table {tbl_name} -> geometry {geometry_name}" )
+            logger.warning(f"Warning! Failed to drop spatial index on table {tbl_name} -> geometry {geometry_name} - {e}" )
 
         list_aux_tables_to_drop = ['','_rowid', '_node', '_parent']
         for suffix in list_aux_tables_to_drop:
@@ -308,7 +307,7 @@ def drop_spatial_index(db_name: str,  tbl_name: str, geometry_name: str) -> None
                 cur.execute(f"DROP TABLE IF EXISTS idx_{tbl_name}_{geometry_name}{suffix}")
                 con.commit()
             except Exception as e:
-                logger.warning(f"Warning! Failed to drop table idx_{tbl_name}_{geometry_name}{suffix}" )
+                logger.warning(f"Warning! Failed to drop table idx_{tbl_name}_{geometry_name}{suffix} - {e}" )
 
 
 
@@ -332,7 +331,7 @@ def drop_table(db_name: Union[Path, str], tbl_name: str):
             cursor = conn.cursor()
             cursor.execute(f"DROP TABLE if exists {tbl_name}")
         except Exception as e:
-            logger.warning(f"Warning! Failed to drop table tbl_name" )
+            logger.warning(f"Warning! Failed to drop table tbl_name - {e}" )
 
 
 def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> None:
@@ -358,7 +357,7 @@ def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> Non
             cur.execute(f" SELECT DiscardGeometryColumn('{tbl_name}', '{geometry_name}'); ")
             con.commit()
         except Exception as e:
-            logger.warning(f"Warning! Failed too discard geometryon table {tbl_name} -> geometry {geometry_name}" )
+            logger.warning(f"Warning! Failed too discard geometryon table {tbl_name} -> geometry {geometry_name} - {e}" )
 
 
         for t in ['geom_cols_ref_sys', 'geometry_columns']:
@@ -367,7 +366,7 @@ def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> Non
                 cur.execute(f"DELETE FROM {t} WHERE f_table_name = '{tbl_name}'; ")
                 con.commit()
             except Exception as e:
-                logger.warning(f"Warning! Failed to drop record from {t} for table {tbl_name}" )
+                logger.warning(f"Warning! Failed to drop record from {t} for table {tbl_name} - {e}" )
 
 
         for suff in ['', '_auth', '_fields_info', '_statistics']:
@@ -376,7 +375,7 @@ def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> Non
                 cur.execute(f"DELETE FROM vector_layers{suff} WHERE table_name = '{tbl_name}'; ")
                 con.commit()
             except Exception as e:
-                logger.warning(f"Warning! Failed to drop record from vector_layers{suff} for table {tbl_name}" )
+                logger.warning(f"Warning! Failed to drop record from vector_layers{suff} for table {tbl_name} - {e}" )
 
 
 def get_table_crs(db_name: str, tbl_name: str, return_srid = False) -> Union[int, str] : 
@@ -426,7 +425,7 @@ def get_table_crs(db_name: str, tbl_name: str, return_srid = False) -> Union[int
                 return crs
 
         except Exception as e:
-            logger.error(f"Error retrieving the CRS from table ")
+            logger.error(f"Error retrieving the CRS from table - {e}")
 
 
 
@@ -489,7 +488,7 @@ if __name__ == "__main__":
     from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
     from geo_py_utils.misc.constants import DATA_DIR
     from geo_py_utils.etl.db_etl import  Url_to_spatialite 
-    from geo_py_utils.etl.spatialite.db_utils import list_tables, drop_geo_table_all
+ 
 
     def upload_qc_neigh_db(db_name = os.path.join(DATA_DIR, "test.db"),
                             tbl_name = "qc_city_test_tbl",

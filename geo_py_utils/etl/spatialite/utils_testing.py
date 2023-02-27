@@ -1,9 +1,6 @@
 
 from os.path import join
-import pandas as pd
-import geopandas as gpd
 import sqlite3
-
 
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL

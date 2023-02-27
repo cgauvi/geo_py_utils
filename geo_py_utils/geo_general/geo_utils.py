@@ -5,7 +5,7 @@ import numpy as np
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import shape
-from typing import List, Union, Dict
+from typing import  Union
 
 def flip_coord(list_points):
     new_poly = []

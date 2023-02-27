@@ -7,7 +7,6 @@ from scipy.spatial import cKDTree as KDTree
 import geopandas as gpd
 import pandas as pd
 from insights.utilities.util_geo import get_matrix_point_coordinates
-from typing import Union
 
 # ...............................................................................
 

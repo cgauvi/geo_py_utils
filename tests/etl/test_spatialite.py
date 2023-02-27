@@ -15,7 +15,6 @@ from geo_py_utils.etl.spatialite.db_utils import (
     drop_table,
     drop_geo_table_all,
     is_spatial_index_enabled,
-    is_spatial_index_valid,
     is_spatial_index_enabled_valid,
     get_table_geometry_type,
     promote_multi

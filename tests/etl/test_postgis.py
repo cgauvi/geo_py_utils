@@ -1,12 +1,9 @@
-from os.path import join, exists
-import geopandas as gpd
+from os.path import exists
 import os
-import tempfile
 import numpy as np
 import pytest
 import subprocess
 import logging
-from sqlalchemy import create_engine
 
 
 logger = logging.getLogger(__file__)
@@ -14,7 +11,6 @@ logger = logging.getLogger(__file__)
 from geo_py_utils.misc.constants import DATA_DIR
 #--
 from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
-from geo_py_utils.census_open_data.census import FSA_2016_URL
 #--
 from geo_py_utils.etl.db_etl import Url_to_postgis
 from geo_py_utils.etl.port import is_port_open
@@ -181,7 +177,7 @@ def test_sfkl_to_postgis_local_docker():
                     port=LocalDockerPostGIS.PORT)
 
     # Drop table if exists
-    if 'GEO_BUGS' in pg_list_tables(engine, RemotePLocalDockerPostGISostGIS.POSTGIS_DB):
+    if 'GEO_BUGS' in pg_list_tables(engine, LocalDockerPostGIS.POSTGIS_DB):
         pg_drop_table(engine, LocalDockerPostGIS.POSTGIS_DB, 'GEO_BUGS')
 
     # Bugs dataset

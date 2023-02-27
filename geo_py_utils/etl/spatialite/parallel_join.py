@@ -7,20 +7,13 @@ import numpy as np
 import sqlite3
 import pandas as pd
 import logging
-import sys
 
 
-from geo_py_utils.etl.spatialite.db_utils import list_tables, get_table_rows, sql_to_df, drop_table, get_table_crs    
+from geo_py_utils.etl.spatialite.db_utils import  get_table_rows, get_table_crs
 from geo_py_utils.etl.spatialite.gdf_load import spatialite_db_to_gdf
-from geo_py_utils.geo_general.geohash_utils import (
-    recursively_partition_geohash_cells, 
-    get_all_geohash_from_gdf,
-    add_geohash_index,
-    get_all_geohash_from_geohash_indices
-)
+from geo_py_utils.geo_general.geohash_utils import  recursively_partition_geohash_cells
 from geo_py_utils.etl.db_etl import Url_to_spatialite
-
-from ben_py_utils.misc.cache import Cache_wrapper
+from geo_py_utils.misc.constants import DATA_DIR
 
 
 # Logger
@@ -185,7 +178,7 @@ class ParallelSpatialJoin:
         self.cumul_points_completed += shp_merged.shape[0]
         logger.info(
             f"""
-            Merged {shp_merged.shape[0]} left points at this iteation - 
+            Merged {shp_merged.shape[0]} left points at this iteation ({prop_completed*100}%) - 
             ({self.cumul_points_completed*100})% completed)
             """
         )
@@ -382,7 +375,7 @@ class ParallelSpatialJoin:
         shp_results = self._merge_all()
         
         # Write the results to a tmp location on disk
-        dir_dict = join(Projet_paths.DATA_PATH, self.tbl_new_name)
+        dir_dict = join(DATA_DIR, self.tbl_new_name)
         if not exists(dir_dict): makedirs(dir_dict)
         path_shp_file = join(dir_dict, f"{self.tbl_new_name}.shp")
         shp_results[[self.left_geo_id,self.right_geo_id, 'GEOMETRY']].to_file(path_shp_file, mode='w')  #overwrite each time

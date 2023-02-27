@@ -1,7 +1,6 @@
 
 
 import numpy as np
-import pandas as pd
 from shapely.geometry import Polygon
 import geopandas as gpd
 from math import ceil

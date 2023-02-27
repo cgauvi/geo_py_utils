@@ -1,12 +1,7 @@
-
-
-import numpy as np
-import pandas as pd
-from shapely.geometry import shape
 import geopandas as gpd
 import h3
 
-from geo_py_utils.geo_general.geo_utils import  get_geodataframe_from_list_coord
+from geo_py_utils.geo_general.geo_utils import get_geodataframe_from_list_coord
 
 
 def get_h3_hex_from_gpd(shp: gpd.GeoDataFrame,
@@ -15,7 +10,6 @@ def get_h3_hex_from_gpd(shp: gpd.GeoDataFrame,
     assert isinstance(shp, gpd.GeoDataFrame)
 
     # Convert to geographic coordinates 
-    crs_init = shp.crs
     shp_geo = shp.to_crs(4326)
 
     # Get the h3 indices from the lat,lng

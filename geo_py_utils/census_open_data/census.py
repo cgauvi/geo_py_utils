@@ -2,12 +2,10 @@
 
 """ Functions to download and cache polygon boundaries for select census/canada post regions """
 
-import pandas as pd
 import geopandas as gpd
 from os.path import join
 import logging
 import numpy as np
-
 
 
 from ben_py_utils.misc.cache import Cache_wrapper
@@ -87,7 +85,7 @@ def download_ca_cmas(year : int = 2016,
         # Get the province (with the correct crs) - use 2021 - shouldnt change
         shp_prov = download_prov_boundary(year= 2021,
                                         pr_code = pr_code,
-                                        use_cartographic = use_cartographic, 
+                                        use_cartographic = use_cartographic,
                                         data_download_path = data_download_path,
                                         new_crs = shp_ca_cmas_all.crs)
  

@@ -1,24 +1,16 @@
 
 
 import geohash
-from warnings import warn
 import geopandas as gpd
 import pandas as pd
-from shapely.geometry import shape, Polygon
 from typing import Union, List
-from os import environ
-from os.path import join
 import numpy as np
-
+import logging
 
 from geo_py_utils.geo_general.geo_utils import get_geodataframe_from_list_coord, get_matrix_point_coordinates, get_matrix_point_polygon
 from geo_py_utils.geo_general.centroid import add_centroid
-from geo_py_utils.misc.constants import ROOT_DIR
 from geo_py_utils.data.datasets import get_geohash_worst_dim_path
 
-
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -479,7 +471,7 @@ def recursively_partition_geohash_cells(shp_points,
     else:
         count_column_name='counts'
         shp_points[count_column_name] = np.ones(shp_points.shape[0])
-        print(f'No column provided for counts - assuming each row has 1 count')
+        print('No column provided for counts - assuming each row has 1 count')
 
 
     assert np.all(shp_points.type == 'Point'), \
@@ -577,11 +569,7 @@ def recursively_partition_geohash_cells(shp_points,
 # %%
 if __name__ == "__main__":
 
-    from geo_py_utils.geo_general.bbox import get_list_coordinates_from_bbox, get_bbox_centroid
-    from geo_py_utils.geo_general.geo_utils import get_geodataframe_from_list_coord
-    from geo_py_utils.geo_general.map import map_simple
- 
-    from shapely.geometry import Point, Polygon
+    from shapely.geometry import Point
 
     GEOHASH_PRECISION = 6
      
@@ -594,11 +582,12 @@ if __name__ == "__main__":
             "lat" : [44.997203	,44.996874	,46.722120	,46.521345],
             "lng": [-74.349024,	-74.084504,	-79.103772	,-78.868221],
             'counts' : [134, 410, 119	,59],
-            'geometry': [Point(-74.34902, 44.99720),Point(-74.08450,44.99687),Point(-79.10377,46.72212),Point(-78.86822,46.52135)]
+            'geometry': [Point(-74.34902, 44.99720), Point(-74.08450,44.99687), Point(-79.10377,46.72212), Point(-78.86822,46.52135)]
             },
             crs = 4326          
     )
      
     shp_part_bug, _ = recursively_partition_geohash_cells(shp_bug,
-                                                    count_column_name='counts',
-                                                    min_num_points = 2)
+                                                        count_column_name='counts',
+                                                        min_num_points = 2,
+                                                        max_precision=GEOHASH_PRECISION)
