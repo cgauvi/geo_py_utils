@@ -2,7 +2,7 @@
 import sqlalchemy
 import geopandas as gpd
 import pandas as pd
-from typing import Union
+from typing import Union, List
 import re
 import logging
 from sqlalchemy.exc import OperationalError
@@ -97,9 +97,57 @@ def pg_create_db(db_name: str,
         logger.info(f"{db_name} already exists")
 
 
-def pg_list_tables():
-    pass
+def pg_list_tables(engine: sqlalchemy.engine.base.Engine, db_name: str) -> List[str]:
+    """ List tables in a postgres db
 
+    Args:
+        engine (sqlalchemy.engine.base.Engine)
+        db_name (str)
+    Returns:
+        list of table names : list: will return an empty list if db does not exist
+
+    """
+    
+    list_tables = []
+    if not pg_db_exists(engine, db_name):
+        logger.info(f"DB {db_name} does not exist!")
+        return list_tables
+
+    query = """
+        SELECT tablename, schemaname
+        FROM pg_catalog.pg_tables
+        WHERE schemaname != 'pg_catalog'
+        AND   schemaname != 'information_schema';
+        """
+
+    with engine.connect() as conn:
+        df_results = pd.read_sql(query, conn)
+
+    return df_results.tablename.values
+
+
+
+
+  
+def pg_drop_table(engine: sqlalchemy.engine.base.Engine, db_name: str, tbl_name: str):
+    """Drop a table in a postgres db if it exists.
+
+    Args:
+        engine (sqlalchemy.engine.base.Engine)
+        db_name (str): name of db
+        tbl_name(str):  name of table to drop
+    Returns:
+
+    """
+    if not pg_db_exists(engine, db_name):
+        logger.info(f'Not running pg_drop_table {db_name} does not exist')
+        return 
+
+    with engine.connect() as conn:
+        try:
+            conn.execute(f"DROP TABLE if exists {tbl_name}")
+        except Exception as e:
+            logger.warning(f"Warning! Failed to drop table {tbl_name}" )
 
 
 def pg_sql_to_df( engine: sqlalchemy.engine.base.Engine, 
