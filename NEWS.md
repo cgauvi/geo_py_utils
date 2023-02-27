@@ -1,3 +1,11 @@
+geo_py_utils 0.4.4
+
+==================
+
+- tox.ini for better testing 
+- fixed missing imports in requirements.txt
+
+
 geo_py_utils 0.4.3
 
 ==================

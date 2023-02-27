@@ -119,7 +119,7 @@ def test_spatialite_send_query():
     assert get_table_rows(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC) == df_results.num_rows.values[0]
 
 
-
+@pytest.mark.requires_or2ogr
 def test_spatialite_zip_with_proj():
 
     with Url_to_spatialite(
@@ -144,6 +144,7 @@ def test_spatialite_zip_with_proj():
     crs_spatial_lite = get_table_crs(join(DATA_DIR, "test_fsa.db"), 'geo_fsa_tbl', return_srid = True)
     assert crs_spatial_lite == 32198
 
+@pytest.mark.requires_or2ogr
 def test_spatialite_local_file():
 
     # Remove if existing
