@@ -82,18 +82,19 @@ def pg_create_db(db_name: str,
                 """)
 
 
-    # Connect on the correct newlys created db 
-    with engine_db_specific.connect() as conn:
+        # Connect on the correct newlys created db 
+        with engine_db_specific.connect() as conn:
 
-        conn.\
-                execute(f"""
-                CREATE EXTENSION postgis IF NOT EXISTS
-                """
-            )
+            conn.\
+                    execute(f"""
+                    CREATE EXTENSION IF NOT EXISTS postgis 
+                    """
+                )
 
-       
 
-    logger.info(f"Successfully created postgres db {db_name} & enabled postigs extension")
+        logger.info(f"Successfully created postgres db {db_name} & enabled postigs extension")
+    else:
+        logger.info(f"{db_name} already exists")
 
 
 def pg_list_tables():
