@@ -53,7 +53,7 @@ class RemotePostGIS:
     SCHEMA = "public"
 
 
-
+@pytest.mark.requires_remote_pg_connection
 def test_spatialite_local_to_postgis_remote():
 
     # First check
@@ -119,6 +119,7 @@ def test_spatialite_local_to_postgis_remote():
     sqlite_postgis_loader.upload_url_to_database()
 
 
+@pytest.mark.requires_local_docker_pg_connection
 def test_sfkl_to_postgis_local_docker():
     
     # Quick check for open port
@@ -138,7 +139,7 @@ def test_sfkl_to_postgis_local_docker():
                     host=LocalDockerPostGIS.HOST,
                     port=LocalDockerPostGIS.PORT)
 
-    # Dissemination areas
+    # Bugs dataset
     sfkl_postgis_loader_agg_tbl = LoadSfklPostgis(
         sfkl_tbl_name="GEOSPATIAL_TEST_BUGS",
         postgis_tbl_name = 'GEO_BUGS',
@@ -155,7 +156,7 @@ def test_sfkl_to_postgis_local_docker():
  
 
 
-
+@pytest.mark.requires_local_pg_connection
 def test_local_shp_to_postgis_local_db_qc():
     """Run test against a local DB - presumably on local linux machine
     """
