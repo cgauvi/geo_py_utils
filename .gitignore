@@ -1,3 +1,5 @@
+# tox files for testing
+.tox
 
 ## Automatically added (default .gitignore) ##
 

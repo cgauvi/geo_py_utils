@@ -28,3 +28,18 @@ markers =[
         E251,
         W291
     """
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+min_version = 4.0
+env_list =
+    py39
+commands = 
+    python -m pip install --upgrade pip
+    pip install geopandas
+    pip install -r requirements.txt
+    pip install flake8 pytest
+    python -m pytest tests
+    python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+"""
