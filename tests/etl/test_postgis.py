@@ -21,7 +21,7 @@ from geo_py_utils.etl.port import is_port_open
 #--
 from geo_py_utils.etl.postgis.load_sfkl_to_postgis import LoadSfklPostgis
 from geo_py_utils.etl.postgis.load_spatialite_to_postgis import LoadSqlitePostgis
-from geo_py_utils.etl.postgis.db_utils import pg_db_exists, pg_create_db, pg_list_tables, pg_drop_table
+from geo_py_utils.etl.postgis.db_utils import pg_db_exists, pg_create_db, pg_list_tables, pg_drop_table, pg_create_engine
 #--
 from geo_py_utils.etl.spatialite.utils_testing import upload_qc_neigh_test_db, QcCityTestData, write_regular_csv_db
 from geo_py_utils.etl.spatialite.db_utils import list_tables
@@ -64,7 +64,11 @@ def test_list_tables_postgis_remote():
     DB_NAME_DOES_NOT_EXIST = "RANDOMTBLDOESNOTEXIST"
 
     # Create db connection
-    engine = create_engine(f'postgresql://{RemotePostGIS.USER}:{RemotePostGIS.PASSWORD}@{RemotePostGIS.HOST}:{RemotePostGIS.PORT}/{DB_NAME_DOES_NOT_EXIST}')
+    engine = pg_create_engine(db_name=DB_NAME_DOES_NOT_EXIST,
+                    user=RemotePostGIS.USER,
+                    password=RemotePostGIS.PASSWORD,
+                    host=RemotePostGIS.HOST,
+                    port=RemotePostGIS.PORT)
     
     assert pg_list_tables(engine, DB_NAME_DOES_NOT_EXIST) == []
 
@@ -89,7 +93,11 @@ def test_spatialite_local_to_postgis_remote():
         write_regular_csv_db()
 
     # Create db connection
-    engine = create_engine(f'postgresql://{RemotePostGIS.USER}:{RemotePostGIS.PASSWORD}@{RemotePostGIS.HOST}:{RemotePostGIS.PORT}/{RemotePostGIS.POSTGIS_DB}')
+    engine = pg_create_engine(db_name=RemotePostGIS.POSTGIS_DB,
+                    user=RemotePostGIS.USER,
+                    password=RemotePostGIS.PASSWORD,
+                    host=RemotePostGIS.HOST,
+                    port=RemotePostGIS.PORT)
     
     # Check if DB exists and create if not
     if not pg_db_exists(engine, RemotePostGIS.POSTGIS_DB):
@@ -157,7 +165,11 @@ def test_sfkl_to_postgis_local_docker():
         return
 
     # Create db connection
-    engine = create_engine(f'postgresql://{LocalDockerPostGIS.USER}:{LocalDockerPostGIS.PASSWORD}@{LocalDockerPostGIS.HOST}:{LocalDockerPostGIS.PORT}/{LocalDockerPostGIS.POSTGIS_DB}')
+    engine = pg_create_engine(db_name=LocalDockerPostGIS.POSTGIS_DB,
+                    user=LocalDockerPostGIS.USER,
+                    password=LocalDockerPostGIS.PASSWORD,
+                    host=LocalDockerPostGIS.HOST,
+                    port=LocalDockerPostGIS.PORT)
     
     # Check if DB exists and create if not
     if not pg_db_exists(engine, LocalDockerPostGIS.POSTGIS_DB):
