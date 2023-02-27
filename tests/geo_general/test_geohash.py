@@ -3,11 +3,6 @@ import geohash
 from shapely.geometry import Polygon, Point
 from os.path import join
 
-from gic.constants import Projet_paths
-
-import sys
-sys.path.insert(0, join(Projet_paths.PATH_TO_GIC, 'geo_py_utils'))
-
 from geo_py_utils.geo_general.bbox import get_list_coordinates_from_bbox
 from geo_py_utils.geo_general.geo_utils import get_geodataframe_from_list_coord
 from geo_py_utils.geo_general.geohash_utils import (
