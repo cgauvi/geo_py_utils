@@ -21,7 +21,7 @@ from geo_py_utils.etl.port import is_port_open
 #--
 from geo_py_utils.etl.postgis.load_sfkl_to_postgis import LoadSfklPostgis
 from geo_py_utils.etl.postgis.load_spatialite_to_postgis import LoadSqlitePostgis
-from geo_py_utils.etl.postgis.db_utils import pg_db_exists, pg_create_db
+from geo_py_utils.etl.postgis.db_utils import pg_db_exists, pg_create_db, pg_list_tables, pg_drop_table
 #--
 from geo_py_utils.etl.spatialite.utils_testing import upload_qc_neigh_test_db, QcCityTestData, write_regular_csv_db
 from geo_py_utils.etl.spatialite.db_utils import list_tables
@@ -31,7 +31,7 @@ from geo_py_utils.etl.spatialite.db_utils import list_tables
 class LocalPostGIS:
     USER = os.getenv('PG_LOCAL_USER') # defaults to None if not set
     PASSWORD = os.getenv('PG_LOCAL_PASSWORD')
-    POSTGIS_DB = 'qc_city_db'
+    POSTGIS_DB = 'test'
     HOST = "localhost"
     PORT = "5432"
     SCHEMA = "public"
@@ -54,6 +54,23 @@ class RemotePostGIS:
 
 
 @pytest.mark.requires_remote_pg_connection
+def test_list_tables_postgis_remote():
+
+    # First check
+    if not is_port_open(RemotePostGIS.HOST, RemotePostGIS.PORT):
+        logger.warning(f'Host: {RemotePostGIS.HOST}:{RemotePostGIS.PORT} seems closed -> skipping test `test_spatialite_local_to_postgis_remote`')
+        return
+
+    DB_NAME_DOES_NOT_EXIST = "RANDOMTBLDOESNOTEXIST"
+
+    # Create db connection
+    engine = create_engine(f'postgresql://{RemotePostGIS.USER}:{RemotePostGIS.PASSWORD}@{RemotePostGIS.HOST}:{RemotePostGIS.PORT}/{DB_NAME_DOES_NOT_EXIST}')
+    
+    assert pg_list_tables(engine, DB_NAME_DOES_NOT_EXIST) == []
+
+    
+
+@pytest.mark.requires_remote_pg_connection
 def test_spatialite_local_to_postgis_remote():
 
     # First check
@@ -68,7 +85,7 @@ def test_spatialite_local_to_postgis_remote():
         upload_qc_neigh_test_db(promote_to_multi=False)
 
     # Make sure the regular (non-geo) table exists
-    if not  QcCityTestData.SQL_LITE_TBL_CSV_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH):
+    if not QcCityTestData.SQL_LITE_TBL_CSV_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH):
         write_regular_csv_db()
 
     # Create db connection
@@ -82,6 +99,10 @@ def test_spatialite_local_to_postgis_remote():
                     password=RemotePostGIS.PASSWORD,
                     host=RemotePostGIS.HOST,
                     port=RemotePostGIS.PORT)
+
+    # Drop table if exists
+    if QcCityTestData.SPATIAL_LITE_TBL_QC in pg_list_tables(engine, RemotePostGIS.POSTGIS_DB):
+        pg_drop_table(engine, RemotePostGIS.POSTGIS_DB, QcCityTestData.SPATIAL_LITE_TBL_QC)
 
     # Administrative regions
     sqlite_postgis_loader  = LoadSqlitePostgis (
@@ -100,6 +121,9 @@ def test_spatialite_local_to_postgis_remote():
 
     sqlite_postgis_loader.upload_url_to_database()
 
+    # Drop table if exists
+    if QcCityTestData.SQL_LITE_TBL_CSV_QC in pg_list_tables(engine, RemotePostGIS.POSTGIS_DB):
+        pg_drop_table(engine, RemotePostGIS.POSTGIS_DB, QcCityTestData.SQL_LITE_TBL_CSV_QC)
 
     # Try a regular table 
     sqlite_postgis_loader = LoadSqlitePostgis(
@@ -117,6 +141,11 @@ def test_spatialite_local_to_postgis_remote():
         )
 
     sqlite_postgis_loader.upload_url_to_database()
+
+    # Make sure pg_list_tables works and all tables present
+    list_new_tbls = [QcCityTestData.SQL_LITE_TBL_CSV_QC, QcCityTestData.SPATIAL_LITE_TBL_QC]
+    list_existing_tables = pg_list_tables(engine, RemotePostGIS.POSTGIS_DB)
+    assert np.all(np.isin(list_new_tbls, list_existing_tables))
 
 
 @pytest.mark.requires_local_docker_pg_connection
@@ -139,10 +168,15 @@ def test_sfkl_to_postgis_local_docker():
                     host=LocalDockerPostGIS.HOST,
                     port=LocalDockerPostGIS.PORT)
 
+    # Drop table if exists
+    if 'GEO_BUGS' in pg_list_tables(engine, RemotePLocalDockerPostGISostGIS.POSTGIS_DB):
+        pg_drop_table(engine, LocalDockerPostGIS.POSTGIS_DB, 'GEO_BUGS')
+
     # Bugs dataset
     sfkl_postgis_loader_agg_tbl = LoadSfklPostgis(
         sfkl_tbl_name="GEOSPATIAL_TEST_BUGS",
         postgis_tbl_name = 'GEO_BUGS',
+        postgis_db_name=LocalDockerPostGIS.POSTGIS_DB,
         host = LocalDockerPostGIS.HOST,
         port = LocalDockerPostGIS.PORT,
         user = LocalDockerPostGIS.USER,
