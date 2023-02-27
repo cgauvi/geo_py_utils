@@ -11,6 +11,24 @@ from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__file__)
   
+def pg_create_engine(db_name:str,
+                    user: str,
+                    password: str,
+                    host: str,
+                    port: Union[int,str]) -> sqlalchemy.engine.base.Engine:
+    """Super thin convenience wrapper around create_engine to abstract string details
+
+    Args:
+        db_name (str): _description_
+        user (str): _description_
+        password (str): _description_
+        host (str): _description_
+        port (Union[int,str]): _description_
+
+    Returns:
+        sqlalchemy.engine.base.Engine: _description_
+    """
+    return create_engine(f'postgresql://{user}:{password}@{host}:{str(port)}/{db_name}')
 
 def pg_db_exists(engine: sqlalchemy.engine.base.Engine, db_name: str) -> bool:
     """Check if a db exists
