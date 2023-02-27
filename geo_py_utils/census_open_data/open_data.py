@@ -108,6 +108,8 @@ class DownloadQcDissolvedMrc(DownloadQcAdmBoundaries):
 
     MRC_DISSOLVE_ID_COL = "MRS_NM_REG"  # 'typical' names we are used to seeing: correspond to the keys in DICT_MAPPING
 
+    PATH_CACHE = join(DATA_DIR, "cache", "qc_adm_regions_MRC_DISSOLVED_17.parquet")
+
     DICT_MAPPING={
                 "Abitibi-Témiscamingue":    None,
                 "Bas-Saint-Laurent": None,
@@ -148,7 +150,7 @@ class DownloadQcDissolvedMrc(DownloadQcAdmBoundaries):
 
             return df_mapping
 
-    @Cache_wrapper(path_cache=join(DATA_DIR, "cache", "qc_adm_regions_MRC_DISSOLVED_17.parquet"))
+    @Cache_wrapper(path_cache=PATH_CACHE)
     def get_qc_administrative_boundaries(self) -> gpd.GeoDataFrame:
         """Take the MRC polygons and dissolve them into the large regions we want (based on `MRS_NM_REG`)
 

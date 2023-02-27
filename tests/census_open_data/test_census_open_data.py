@@ -1,4 +1,6 @@
 import numpy as np
+from os import remove
+from os.path import exists
 
 from geo_py_utils.census_open_data.open_data import (
     download_qc_city_neighborhoods, 
@@ -20,6 +22,10 @@ def test_qc_city_bbox():
 
 def test_mrcs_dissolved():
 
+    # Make sure clean slate 
+    if exists(DownloadQcDissolvedMrc.PATH_CACHE):
+        remove(DownloadQcDissolvedMrc.PATH_CACHE)
+
     qc_mrc_dissolved_extracter = DownloadQcDissolvedMrc()
     shp_mrc = qc_mrc_dissolved_extracter.get_qc_administrative_boundaries()
 
@@ -29,6 +35,10 @@ def test_mrcs_dissolved():
 
 
 def test_qa_adm_boundaries():
+
+    # Make sure clean slate 
+    if exists(DownloadQcDissolvedMrc.PATH_CACHE):
+        remove(DownloadQcDissolvedMrc.PATH_CACHE)
 
     # For some reason the number of features is different bepending on the precision - 1/20 or 1/100
     dict_check_num_records = {
