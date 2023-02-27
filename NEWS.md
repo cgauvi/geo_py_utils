@@ -1,5 +1,16 @@
 
 
+geo_py_utils 0.4.0
+
+==================
+
+- load snowflake to postgis
+- load spatialite to postgis
+- postgis utils like: 
+    * db creation
+    * listing tables
+    * droping tables 
+
 geo_py_utils 0.3.1
 
 ==================
