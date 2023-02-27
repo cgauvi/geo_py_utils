@@ -1,5 +1,4 @@
 import geopandas as gpd
-import pandas as pd
 from os.path import join
 
 from geo_py_utils.census_open_data.census import (

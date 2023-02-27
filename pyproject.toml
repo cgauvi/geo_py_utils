@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "geo_py_utils"
-version = "0.4.1"
+version = "0.4.3"
 description = "Python functions for generic geospatial manipulations"
 authors = ["Charles Gauvin"]
 
@@ -11,9 +11,20 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 minversion = "6.0"
 testpaths = ["tests"]
-addopts =  "-v -m 'not requires_local_pg_connection and not requires_local_docker_pg_connection and not requires_remote_pg_connection' "
+addopts =  "-v -m 'not requires_local_pg_connection and not requires_local_docker_pg_connection and not requires_remote_pg_connection and not requires_remote_pg_connection_sfkl_interactivity' "
 markers =[
     "requires_local_pg_connection: requires a local postgis db set up.",
     "requires_local_docker_pg_connection: requires a running docker container with postgis DB accepting connections on 80:5432.",
-    "requires_remote_pg_connection: requires a remote postgis db set up accepting connections on 5052"
+    "requires_remote_pg_connection: requires a remote postgis db set up accepting connections on 5052",
+    "requires_remote_pg_connection_sfkl_interactivity:  requires a remote postgis db + sfkl interactive external browser auth USE `-s`  "
     ]
+
+[tool.flake8]
+    max-complexity = 10
+    max-line-length = 100
+    extend-ignore = """
+        E128,
+        E303,
+        E251,
+        W291
+    """

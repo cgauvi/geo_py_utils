@@ -1,5 +1,3 @@
-from os.path import join, isfile
-import geopandas as gpd
 import numpy as np
 
 from geo_py_utils.census_open_data.open_data import (

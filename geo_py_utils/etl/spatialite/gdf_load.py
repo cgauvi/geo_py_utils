@@ -71,7 +71,7 @@ def spatialite_db_to_gdf(db_name : Union[str, Path],
             else:
                 logger.warning("Warning couldnt set the crs when loading back to geopandas -> perhaps `geometry_columns` not written yet")
         except Exception as e:
-            logger.error(f"Error setting the CRS when loading back the data from spatialite")
+            logger.error(f"Error setting the CRS when loading back the data from spatialite - {e}")
 
     return df
 
@@ -81,7 +81,6 @@ def spatialite_db_to_gdf(db_name : Union[str, Path],
 if __name__ == "__main__":
 
     import os
-    from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
     from geo_py_utils.misc.constants import DATA_DIR
 
     

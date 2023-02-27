@@ -63,7 +63,7 @@ def crs_transform(fun=None, new_crs=None):
                 logger.info(f"Transforming crs from {crs_init} to {new_crs} in crs_transform")
                 df = df.to_crs(new_crs)
             else:
-                logger.info(f"Doing nothing in crs_transform: no valid crs inputed")
+                logger.info("Doing nothing in crs_transform: no valid crs inputed")
 
             return df
 
@@ -109,7 +109,7 @@ def temp_crs_transform(fun=None, temp_crs=None):
                 return df_result
 
             else:
-                logger.info(f"Doing nothing in temp_crs_transform: no valid crs inputed")
+                logger.info("Doing nothing in temp_crs_transform: no valid crs inputed")
                 return df
             
         return wrapped_function

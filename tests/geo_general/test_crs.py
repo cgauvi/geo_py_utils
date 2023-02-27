@@ -1,5 +1,3 @@
-from os.path import join, isfile
-import geopandas as gpd
 
 from geo_py_utils.census_open_data.open_data import download_qc_city_neighborhoods
 from geo_py_utils.geo_general.crs import crs_transform, temp_crs_transform
@@ -22,7 +20,7 @@ def test_new_crs_3857():
 
 def test_new_crs_none():
     
-    crs_init = shp_qc_city = download_qc_city_neighborhoods().crs
+    crs_init = download_qc_city_neighborhoods().crs
 
     @crs_transform ()
     def crs_transform_qc_city():

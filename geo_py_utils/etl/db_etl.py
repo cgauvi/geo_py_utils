@@ -2,7 +2,7 @@
 
 
  
-from os.path import isfile, isdir, join, exists, abspath
+from os.path import join, exists, abspath
 from os import listdir, environ, makedirs
 import subprocess
 from abc import ABC
@@ -127,7 +127,7 @@ class Url_to_db(ABC):
             except Exception as e:
                 
                 if exists(self.download_url):
-                    logger.info(f"Failed to run curl: {self.download_url} seems to be a local file/folder rather than a valid URL ... ")
+                    logger.info(f"Failed to run curl: {self.download_url} seems to be a local file/folder rather than a valid URL ... {e} ")
                     self.curl_download = self.download_url # point to the local file
  
 
@@ -150,7 +150,7 @@ class Url_to_db(ABC):
                 logger.debug(f"In _try_unzip: {self.path_src_to_upload} contains many directories -> point to {self.path_src_to_upload}")
 
         except Exception as e:
-            logger.info("{self.curl_download} does not seem to be a zipped file: {e} .. ")
+            logger.info(f"{self.curl_download} does not seem to be a zipped file: {e} .. ")
             self.path_src_to_upload = self.curl_download # point to the file we just downloaded with curl
 
 
@@ -177,7 +177,7 @@ class Url_to_spatialite(Url_to_db):
         source = abspath(self.path_src_to_upload)
         dest = abspath(self.db_name)
 
-        cmd = f"ogr2ogr " \
+        cmd = "ogr2ogr " \
             " -progress " \
             " -f 'SQLite' " \
             " -dsco SPATIALITE=YES "
@@ -190,7 +190,7 @@ class Url_to_spatialite(Url_to_db):
             " -lco ENCODING=UTF-8 " 
 
         if self.promote_to_multi:
-             cmd +=  f" -nlt PROMOTE_TO_MULTI "
+             cmd +=  " -nlt PROMOTE_TO_MULTI "
 
         if not self.no_overwrite_append and not self.first_time_creating_db:
             if self.overwrite:
@@ -238,23 +238,25 @@ class Url_to_postgis(Url_to_db):
     
     def _ogr2gr(self):
 
-        source = abspath(self.path_src_to_upload)
-        dest = abspath(self.db_name)
+        
         
         # Make sure db exists
         self._create_db()
 
-        cmd = f"ogr2ogr  " \
+        cmd = "ogr2ogr  " \
             ' -progress ' \
             ' --config PG_USE_COPY YES ' 
 
         if self.target_projection is not None:
             cmd += f"-t_srs 'EPSG:{self.target_projection}'" 
 
+        # Target DB
         cmd += fr"  -f 'PostgreSQL' PG:'host={self.host} port={self.port} dbname={self.db_name} user={self.user} password={self.password}'" 
             
+        # Source DB
         # Special treatment fro spatialite to postgis
         # Hackish: only works by manually setting self.path_src_to_upload
+        source = abspath(self.path_src_to_upload)
         if self.src_spatialite_tbl_name is not None:
             cmd += fr" '{source}' {self.src_spatialite_tbl_name} " 
         else:
@@ -265,7 +267,7 @@ class Url_to_postgis(Url_to_db):
             " -lco ENCODING=UTF-8 " 
 
         if self.promote_to_multi:
-             cmd +=  f" -nlt PROMOTE_TO_MULTI "
+             cmd +=  " -nlt PROMOTE_TO_MULTI "
 
         if not self.no_overwrite_append and not self.first_time_creating_db:
             if self.overwrite:
@@ -308,7 +310,6 @@ if __name__ == '__main__':
     from geo_py_utils.etl.gdf_load import spatialite_db_to_gdf
     from geo_py_utils.etl.db_utils import sql_to_df
 
-    import tempfile
     import os
     import geopandas as gpd
 

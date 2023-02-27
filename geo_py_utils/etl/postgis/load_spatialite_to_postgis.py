@@ -1,9 +1,6 @@
 
-from os.path import join, exists
-from os import remove, makedirs, environ 
+from os.path import exists
 import logging
-import geopandas as gpd
-import sys
 
 from geo_py_utils.etl.db_etl import Url_to_postgis
 from geo_py_utils.etl.spatialite.db_utils import list_tables

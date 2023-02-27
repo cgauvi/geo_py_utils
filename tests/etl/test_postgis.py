@@ -1,12 +1,9 @@
-from os.path import join, exists
-import geopandas as gpd
+from os.path import exists
 import os
-import tempfile
 import numpy as np
 import pytest
 import subprocess
 import logging
-from sqlalchemy import create_engine
 
 
 logger = logging.getLogger(__file__)
@@ -14,7 +11,6 @@ logger = logging.getLogger(__file__)
 from geo_py_utils.misc.constants import DATA_DIR
 #--
 from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
-from geo_py_utils.census_open_data.census import FSA_2016_URL
 #--
 from geo_py_utils.etl.db_etl import Url_to_postgis
 from geo_py_utils.etl.port import is_port_open
@@ -29,15 +25,16 @@ from geo_py_utils.etl.spatialite.db_utils import list_tables
 
 
 class LocalPostGIS:
-    USER = os.getenv('PG_LOCAL_USER') # defaults to None if not set
+    USER = os.getenv('PG_LOCAL_USER')
     PASSWORD = os.getenv('PG_LOCAL_PASSWORD')
     POSTGIS_DB = 'test'
     HOST = "localhost"
     PORT = "5432"
     SCHEMA = "public"
+    TBL_NAME = "qc_city_test_tbl"
 
 class LocalDockerPostGIS:
-    USER = os.getenv('PG_GIC_USER') # defaults to None if not set
+    USER = os.getenv('PG_GIC_USER')  # use same password as RemotePostGIS
     PASSWORD = os.getenv('PG_GIC_PASSWORD')
     POSTGIS_DB = 'test'
     HOST = "localhost"
@@ -45,12 +42,56 @@ class LocalDockerPostGIS:
     SCHEMA = "public"
 
 class RemotePostGIS:
-    USER = os.getenv('PG_GIC_USER') # defaults to None if not set
+    USER = os.getenv('PG_GIC_USER')
     PASSWORD = os.getenv('PG_GIC_PASSWORD')
     POSTGIS_DB = 'test'
     HOST = os.getenv('PG_GIC_HOST')
     PORT = "5052"
     SCHEMA = "public"
+
+class SfklTbl:
+    SFKL_TBL_NAME = 'GEOSPATIAL_TEST_BUGS'
+    POSTGIS_TBL_NAME = 'GEOSPATIAL_TEST_BUGS'
+    GEOMETRY_COLUMN_NAME = 'GEOMETRY'
+
+
+@pytest.mark.requires_remote_pg_connection_sfkl_interactivity
+def test_sflk_to_postgis_remote():
+
+    # First check
+    if not is_port_open(RemotePostGIS.HOST, RemotePostGIS.PORT):
+        logger.warning(f'Host: {RemotePostGIS.HOST}:{RemotePostGIS.PORT} seems closed -> skipping test `test_spatialite_local_to_postgis_remote`')
+        return
+
+    # Create db connection
+    engine = pg_create_engine(
+        db_name=RemotePostGIS.POSTGIS_DB,
+        user=RemotePostGIS.USER,
+        password=RemotePostGIS.PASSWORD,
+        host=RemotePostGIS.HOST,
+        port=RemotePostGIS.PORT
+    )
+    
+    # Drop table if exists
+    if SfklTbl.SFKL_TBL_NAME in pg_list_tables(engine, RemotePostGIS.POSTGIS_DB):
+        pg_drop_table(engine, RemotePostGIS.POSTGIS_DB, SfklTbl.SFKL_TBL_NAME)
+
+    # Bugs dataset
+    sfkl_postgis_loader_agg_tbl = LoadSfklPostgis(
+        sfkl_tbl_name=SfklTbl.SFKL_TBL_NAME,
+        sfkl_geometry_name=SfklTbl.GEOMETRY_COLUMN_NAME,
+        postgis_tbl_name=SfklTbl.SFKL_TBL_NAME,
+        postgis_db_name=RemotePostGIS.POSTGIS_DB,
+        host=RemotePostGIS.HOST,
+        port=RemotePostGIS.PORT,
+        user=RemotePostGIS.USER,
+        password=RemotePostGIS.PASSWORD,
+        schema=RemotePostGIS.SCHEMA,
+        promote_to_multi=False,
+        overwrite=True
+        )
+
+    sfkl_postgis_loader_agg_tbl.upload_url_to_database()
 
 
 @pytest.mark.requires_remote_pg_connection
@@ -64,11 +105,13 @@ def test_list_tables_postgis_remote():
     DB_NAME_DOES_NOT_EXIST = "RANDOMTBLDOESNOTEXIST"
 
     # Create db connection
-    engine = pg_create_engine(db_name=DB_NAME_DOES_NOT_EXIST,
-                    user=RemotePostGIS.USER,
-                    password=RemotePostGIS.PASSWORD,
-                    host=RemotePostGIS.HOST,
-                    port=RemotePostGIS.PORT)
+    engine = pg_create_engine(
+        db_name=DB_NAME_DOES_NOT_EXIST,
+        user=RemotePostGIS.USER,
+        password=RemotePostGIS.PASSWORD,
+        host=RemotePostGIS.HOST,
+        port=RemotePostGIS.PORT
+    )
     
     assert pg_list_tables(engine, DB_NAME_DOES_NOT_EXIST) == []
 
@@ -93,11 +136,13 @@ def test_spatialite_local_to_postgis_remote():
         write_regular_csv_db()
 
     # Create db connection
-    engine = pg_create_engine(db_name=RemotePostGIS.POSTGIS_DB,
-                    user=RemotePostGIS.USER,
-                    password=RemotePostGIS.PASSWORD,
-                    host=RemotePostGIS.HOST,
-                    port=RemotePostGIS.PORT)
+    engine = pg_create_engine(
+        db_name=RemotePostGIS.POSTGIS_DB,
+        user=RemotePostGIS.USER,
+        password=RemotePostGIS.PASSWORD,
+        host=RemotePostGIS.HOST,
+        port=RemotePostGIS.PORT
+    )
     
     # Check if DB exists and create if not
     if not pg_db_exists(engine, RemotePostGIS.POSTGIS_DB):
@@ -113,7 +158,7 @@ def test_spatialite_local_to_postgis_remote():
         pg_drop_table(engine, RemotePostGIS.POSTGIS_DB, QcCityTestData.SPATIAL_LITE_TBL_QC)
 
     # Administrative regions
-    sqlite_postgis_loader  = LoadSqlitePostgis (
+    sqlite_postgis_loader = LoadSqlitePostgis (
         sqlite_tbl_name=QcCityTestData.SPATIAL_LITE_TBL_QC,
         sqlite_db_name=QcCityTestData.SPATIAL_LITE_DB_PATH,
         postgis_tbl_name=QcCityTestData.SPATIAL_LITE_TBL_QC,
@@ -181,25 +226,25 @@ def test_sfkl_to_postgis_local_docker():
                     port=LocalDockerPostGIS.PORT)
 
     # Drop table if exists
-    if 'GEO_BUGS' in pg_list_tables(engine, RemotePLocalDockerPostGISostGIS.POSTGIS_DB):
-        pg_drop_table(engine, LocalDockerPostGIS.POSTGIS_DB, 'GEO_BUGS')
+    if SfklTbl.SFKL_TBL_NAME in pg_list_tables(engine, LocalDockerPostGIS.POSTGIS_DB):
+        pg_drop_table(engine, LocalDockerPostGIS.POSTGIS_DB, SfklTbl.SFKL_TBL_NAME)
 
     # Bugs dataset
     sfkl_postgis_loader_agg_tbl = LoadSfklPostgis(
-        sfkl_tbl_name="GEOSPATIAL_TEST_BUGS",
-        postgis_tbl_name = 'GEO_BUGS',
+        sfkl_tbl_name=SfklTbl.SFKL_TBL_NAME,
+        sfkl_geometry_name=SfklTbl.GEOMETRY_COLUMN_NAME,
+        postgis_tbl_name=SfklTbl.SFKL_TBL_NAME,
         postgis_db_name=LocalDockerPostGIS.POSTGIS_DB,
-        host = LocalDockerPostGIS.HOST,
-        port = LocalDockerPostGIS.PORT,
-        user = LocalDockerPostGIS.USER,
-        password = LocalDockerPostGIS.PASSWORD,
-        schema = LocalDockerPostGIS.SCHEMA,
+        host=LocalDockerPostGIS.HOST,
+        port=LocalDockerPostGIS.PORT,
+        user=LocalDockerPostGIS.USER,
+        password=LocalDockerPostGIS.PASSWORD,
+        schema=LocalDockerPostGIS.SCHEMA,
         promote_to_multi=False,
         overwrite=True
         )
 
     sfkl_postgis_loader_agg_tbl.upload_url_to_database()
- 
 
 
 @pytest.mark.requires_local_pg_connection
@@ -212,8 +257,8 @@ def test_local_shp_to_postgis_local_db_qc():
 
 
         with Url_to_postgis(
-            db_name = LocalPostGIS.POSTGIS_DB, 
-            table_name = "qc_city_test_tbl",
+            db_name = LocalPostGIS.POSTGIS_DB,
+            table_name = LocalPostGIS.TBL_NAME,
             download_url = QC_CITY_NEIGH_URL,
             download_destination = DATA_DIR,
             host = LocalPostGIS.HOST,

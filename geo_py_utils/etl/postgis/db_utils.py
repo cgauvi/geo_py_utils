@@ -3,7 +3,6 @@ import sqlalchemy
 import geopandas as gpd
 import pandas as pd
 from typing import Union, List
-import re
 import logging
 from sqlalchemy.exc import OperationalError
 from sqlalchemy import create_engine
@@ -104,8 +103,8 @@ def pg_create_db(db_name: str,
         with engine_db_specific.connect() as conn:
 
             conn.\
-                    execute(f"""
-                    CREATE EXTENSION IF NOT EXISTS postgis 
+                    execute("""
+                    CREATE EXTENSION IF NOT EXISTS postgis
                     """
                 )
 
@@ -165,7 +164,7 @@ def pg_drop_table(engine: sqlalchemy.engine.base.Engine, db_name: str, tbl_name:
         try:
             conn.execute(f"DROP TABLE if exists {tbl_name}")
         except Exception as e:
-            logger.warning(f"Warning! Failed to drop table {tbl_name}" )
+            logger.warning(f"Warning! Failed to drop table {tbl_name} - {e}" )
 
 
 def pg_sql_to_df( engine: sqlalchemy.engine.base.Engine, 
