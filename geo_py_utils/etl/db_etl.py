@@ -9,13 +9,12 @@ from abc import ABC
 from pathlib import Path
 import tempfile
 import shutil
-import atexit
 import logging
-import psycopg2
-import pandas as pd
+from sqlalchemy import create_engine
+
 
 from geo_py_utils.etl.port import is_port_open
-from geo_py_utils.etl.postgis.db_utils import pg_create_db
+from geo_py_utils.etl.postgis.db_utils import pg_create_db, pg_db_exists
 
 logger = logging.getLogger(__file__)
 
@@ -69,7 +68,6 @@ class Url_to_db(ABC):
         self.no_overwrite_append = no_overwrite_append
         self.promote_to_multi = promote_to_multi
 
-        self.first_time_creating_db = True if not exists(db_name) else False # check existence BEFORE running any queries since opening connection to db creates it by default which is undesired
 
 
     @staticmethod
@@ -165,6 +163,8 @@ class Url_to_spatialite(Url_to_db):
 
         super().__init__(**kwargs)
 
+        self.first_time_creating_db = True if not exists(self.db_name) else False # check existence BEFORE running any queries since opening connection to db creates it by default which is undesired
+
 
     def upload_url_to_database(self):
         self._curl()
@@ -231,6 +231,9 @@ class Url_to_postgis(Url_to_db):
         self.src_spatialite_tbl_name = src_spatialite_tbl_name
 
         super().__init__( **kwargs)
+
+        engine = create_engine(f'postgresql://{user}:{password}@{host}:{port}/{self.db_name}')
+        self.first_time_creating_db = True if not pg_db_exists(engine, self.db_name) else False 
 
     
     def _ogr2gr(self):
