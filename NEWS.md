@@ -1,4 +1,11 @@
-geo_py_utils 0.4.1
+geo_py_utils 0.4.3
+
+==================
+
+- new test for sfkl to postgis + added markers to pyproject.toml
+
+
+geo_py_utils 0.4.2
 
 ==================
 
