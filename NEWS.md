@@ -1,3 +1,10 @@
+geo_py_utils 0.4.5
+
+==================
+
+- fix for utf errors in spatial_lite_to_gdf
+
+
 geo_py_utils 0.4.4
 
 ==================
