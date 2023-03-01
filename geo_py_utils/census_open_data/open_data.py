@@ -94,7 +94,48 @@ class DownloadQcAdmBoundaries:
         return shp_boundary
         
 
-  
+
+
+class DownloadQcDissolvedMunicipalities(DownloadQcAdmBoundaries):
+        
+    """Get the dissolved 17 regions representing the 'usual' Quebec administrative boundaries
+
+    Inherits from DownloadQcAdmBoundaries
+
+    Attributes:
+        data_download_path (_type_, optional): _description_. Defaults to join(DATA_DIR, 'qc_adm_regions').
+    """
+
+    MUNI_DISSOLVE_ID_COL = "MUS_NM_MUN"  # 'typical' names we are used to seeing: correspond to the keys in DICT_MAPPING
+
+    PATH_CACHE = join(DATA_DIR, "cache", "qc_adm_regions_MUNI_DISSOLVED_17.parquet")
+ 
+    def __init__(self,
+                data_download_path=join(DATA_DIR, 'qc_adm_regions')
+                ) :
+
+
+        super().__init__(DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI, data_download_path)
+                    
+
+    @Cache_wrapper(path_cache=PATH_CACHE)
+    def get_qc_administrative_boundaries(self) -> gpd.GeoDataFrame:
+        
+        # Call the parent method to download the raw polygons
+        shp_mrc_raw = super().get_qc_administrative_boundaries()
+
+        # Filter out uselesss garbagge
+        shp_mrc_raw = shp_mrc_raw[shp_mrc_raw[DownloadQcDissolvedMunicipalities.MUNI_DISSOLVE_ID_COL] != 'Toponyme à venir']
+
+        # Dissolve according to the large region names: MRS_NM_REG 
+        shp_muni_dissolved = shp_mrc_raw[[DownloadQcDissolvedMunicipalities.MUNI_DISSOLVE_ID_COL,'geometry']].\
+                        dissolve(by=DownloadQcDissolvedMunicipalities.MUNI_DISSOLVE_ID_COL).\
+                        reset_index()
+
+        return shp_muni_dissolved
+
+
+
 
 class DownloadQcDissolvedMrc(DownloadQcAdmBoundaries):
         
