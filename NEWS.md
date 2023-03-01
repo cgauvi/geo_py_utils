@@ -1,3 +1,9 @@
+geo_py_utils 0.5.0
+
+==================
+
+- new feature: renaming columns in spatialite table
+
 geo_py_utils 0.4.5
 
 ==================
