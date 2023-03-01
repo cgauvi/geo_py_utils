@@ -378,6 +378,36 @@ def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> Non
                 logger.warning(f"Warning! Failed to drop record from vector_layers{suff} for table {tbl_name} - {e}" )
 
 
+def rename_columns(db_name: str, tbl_name: str, dict_rename: dict) -> None:
+
+    for k, v in dict_rename.items():
+        query_rename=f"""
+        ALTER TABLE {tbl_name}
+        RENAME COLUMN {k} TO {v}
+        """
+
+        with sqlite3.connect(db_name) as con:
+            con.enable_load_extension(True)
+            con.load_extension("mod_spatialite")
+
+            cur = con.cursor()
+            cur.execute(query_rename)
+            con.commit()
+                
+    # Print message
+    renamed_cols_str = ",".join(dict_rename.keys())
+    new_cols_str = ",".join(dict_rename.values())
+
+    logger.info(
+        f"""
+        Successfully renamed columns {renamed_cols_str}
+        to -> {new_cols_str}
+        """
+        )
+    
+
+
+
 def get_table_crs(db_name: str, tbl_name: str, return_srid = False) -> Union[int, str] : 
 
     """ Extract the coordinate reference system from a spatialite table.
