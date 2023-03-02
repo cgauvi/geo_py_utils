@@ -1,3 +1,9 @@
+geo_py_utils 0.6.0
+
+==================
+
+- new feature: getting dissolved municipalities from qc administrative open data
+
 geo_py_utils 0.5.0
 
 ==================
