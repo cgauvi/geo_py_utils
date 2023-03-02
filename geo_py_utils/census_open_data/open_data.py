@@ -2,6 +2,7 @@
 import pandas as pd
 import geopandas as gpd
 from os.path import join, exists
+import logging 
 
 from ben_py_utils.misc.cache import Cache_wrapper
  
@@ -10,6 +11,7 @@ from geo_py_utils.etl.download_zip import download_zip_shp
 
 QC_CITY_NEIGH_URL = "https://www.donneesquebec.ca/recherche/dataset/5b1ae6f2-6719-46df-bd2f-e57a7034c917/resource/436c85aa-88d9-4e57-9095-b72b776a71a0/download/vdq-quartier.geojson"
 
+logger = logging.getLogger(__file__)
 
 @Cache_wrapper(path_cache=join(DATA_DIR, "cache", "qc_neighborhoods.parquet"))
 def download_qc_city_neighborhoods():
@@ -45,26 +47,37 @@ def get_qc_city_bbox()-> dict :
 
 
 class DownloadQcAdmBoundaries:
+    """Get raw Qc administrative polyons.
 
+    Select one of the following by using constants 
+
+    - ADM_REG : "mrc_s":  DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI
+    - Municipalities: "munic_s": DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ADM_REG
+    - Communauté urbaine: "comet_s": DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_METRO 
+
+    Attributes:
+        geo_level (_type_, optional): _description_. Defaults to QC_PROV_ADM_BOUND_ADM_REG.
+        data_download_path (_type_, optional): _description_. Defaults to join(DATA_DIR, 'qc_adm_regions').
+    """
     QC_PROV_ADM_BOUND_URL = "https://diffusion.mern.gouv.qc.ca/Diffusion/RGQ/Vectoriel/Theme/Local/SDA_20k/SHP/SHP.zip"
 
-    QC_PROV_ADM_BOUND_MRC = "mrc_s"
+    QC_PROV_ADM_BOUND_ADM_REG = "mrc_s"
     QC_PROV_ADM_BOUND_MUNI = "munic_s"
     QC_PROV_ADM_BOUND_METRO = "comet_s"
 
- 
     def __init__(self,
-                geo_level=QC_PROV_ADM_BOUND_MRC,
+                geo_level=QC_PROV_ADM_BOUND_ADM_REG,
                 data_download_path=join(DATA_DIR, 'qc_adm_regions')
                 ) :
+
         
         self.geo_level = geo_level
         self.data_download_path = data_download_path
-
+ 
 
     def _download_qc_administrative_boundaries(self):
 
-        """Download the zip file to disk.
+        """Download the administrative qc polygons & unzip to disk
         """
 
         # Unzip the entire directory of shp files - but dont try to read it in 
@@ -76,7 +89,7 @@ class DownloadQcAdmBoundaries:
 
  
     def get_qc_administrative_boundaries(self) -> gpd.GeoDataFrame :
-        """ Download the neighborhood polygons for Qc City (city proper only - corresponds to census sub division) 
+        """ Get the administrative qc polygons 
         """
 
         # point to data path of unzipped folder
@@ -92,52 +105,79 @@ class DownloadQcAdmBoundaries:
         shp_boundary = gpd.read_file(path_shp)
 
         return shp_boundary
+
+ 
         
 
 
 
 class DownloadQcDissolvedMunicipalities(DownloadQcAdmBoundaries):
         
-    """Get the dissolved 17 regions representing the 'usual' Quebec administrative boundaries
+    """Get the raw regions representing the 'usual' Quebec municipalities boundaries
+
+    *Dont* dissolve by muni name: makes no sense. Ste-Sabine in Les Etchemins not the same as ste-sabine in Brome-Missisquoi
+    *Do* dissolve by muni name + muni code
 
     Inherits from DownloadQcAdmBoundaries
 
     Attributes:
         data_download_path (_type_, optional): _description_. Defaults to join(DATA_DIR, 'qc_adm_regions').
+        filter_out_unknown_muni (bool, optional): Remove 'Toponyme à venir' . Defaults to True
     """
 
-    MUNI_DISSOLVE_ID_COL = "MUS_NM_MUN"  # 'typical' names we are used to seeing: correspond to the keys in DICT_MAPPING
-
-    PATH_CACHE = join(DATA_DIR, "cache", "qc_adm_regions_MUNI_DISSOLVED_17.parquet")
+    MUNI_DISSOLVE_ID_COL = "MUS_NM_MUN"  # 'typical' names we are used to seeing
+    MUNI_DISSOLVE_CODE_COL = "MUS_CO_GEO" # almost! a unique ID: some contiguous polygons have duplicate ids: fixed by dissolving
+ 
  
     def __init__(self,
-                data_download_path=join(DATA_DIR, 'qc_adm_regions')
+                data_download_path=join(DATA_DIR, 'qc_adm_regions'),
+                filter_out_unknown_muni=True
                 ) :
 
 
         super().__init__(DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI, data_download_path)
-                    
 
-    @Cache_wrapper(path_cache=PATH_CACHE)
-    def get_qc_administrative_boundaries(self) -> gpd.GeoDataFrame:
+        self.filter_out_unknown_muni = filter_out_unknown_muni
+        self.path_cache = join(DATA_DIR, "cache", f"qc_adm_regions_MUNI_DISSOLVED_{filter_out_unknown_muni}.parquet")
+
+    def get_raw_data(self) -> gpd.GeoDataFrame:
+        """Convenience method/synctacic sugar for subclasses.
+
+        child.get_raw_data() same as child.__super__().get_qc_administrative_boundaries()
+
+        Returns:
+            gpd.GeoDataFrame: _description_
+        """
+        return super().get_qc_administrative_boundaries()
+
+    def get_qc_administrative_boundaries(self) -> gpd.GeoDataFrame: 
+        fun = Cache_wrapper(path_cache=self.path_cache)(self.get_qc_administrative_boundaries_wrappee)
+        return fun()
+  
+    def get_qc_administrative_boundaries_wrappee(self) -> gpd.GeoDataFrame:
         
         # Call the parent method to download the raw polygons
-        shp_mrc_raw = super().get_qc_administrative_boundaries()
+        shp_mrc_raw = self.get_raw_data()
 
         # Filter out uselesss garbagge
-        shp_mrc_raw = shp_mrc_raw[shp_mrc_raw[DownloadQcDissolvedMunicipalities.MUNI_DISSOLVE_ID_COL] != 'Toponyme à venir']
+        if self.filter_out_unknown_muni:
+            logger.warning('Filtering out uninhabited municipalities with `Toponyme à venir`')
+            shp_mrc_raw = shp_mrc_raw[shp_mrc_raw["MUS_NM_MUN"] != 'Toponyme à venir']
 
-        # Dissolve according to the large region names: MRS_NM_REG 
-        shp_muni_dissolved = shp_mrc_raw[[DownloadQcDissolvedMunicipalities.MUNI_DISSOLVE_ID_COL,'geometry']].\
-                        dissolve(by=DownloadQcDissolvedMunicipalities.MUNI_DISSOLVE_ID_COL).\
-                        reset_index()
+        # Dissolve according to the large region names:  
+        cols_unique_id = [DownloadQcDissolvedMunicipalities.MUNI_DISSOLVE_ID_COL, DownloadQcDissolvedMunicipalities.MUNI_DISSOLVE_CODE_COL]
+        cols_unique_with_geo = [*cols_unique_id, 'geometry']
+
+        shp_muni_dissolved = shp_mrc_raw[cols_unique_with_geo].\
+            dissolve(by=DownloadQcDissolvedMunicipalities.MUNI_DISSOLVE_CODE_COL).\
+            reset_index()
 
         return shp_muni_dissolved
 
 
 
 
-class DownloadQcDissolvedMrc(DownloadQcAdmBoundaries):
+class DownloadQcDissolvedAdmReg(DownloadQcAdmBoundaries):
         
     """Get the dissolved 17 regions representing the 'usual' Quebec administrative boundaries
 
@@ -147,9 +187,10 @@ class DownloadQcDissolvedMrc(DownloadQcAdmBoundaries):
         data_download_path (_type_, optional): _description_. Defaults to join(DATA_DIR, 'qc_adm_regions').
     """
 
-    MRC_DISSOLVE_ID_COL = "MRS_NM_REG"  # 'typical' names we are used to seeing: correspond to the keys in DICT_MAPPING
+    ADM_REG_DISSOLVE_ID_COL = "MRS_NM_REG"  # 'typical' names we are used to seeing: correspond to the keys in DICT_MAPPING
+    ADM_REG_DISSOLVE_CODE_COL = "MRS_CO_REG"
 
-    PATH_CACHE = join(DATA_DIR, "cache", "qc_adm_regions_MRC_DISSOLVED_17.parquet")
+    PATH_CACHE = join(DATA_DIR, "cache", "qc_adm_regions_ADM_REG_DISSOLVED_17.parquet")
 
     DICT_MAPPING={
                 "Abitibi-Témiscamingue":    None,
@@ -176,15 +217,15 @@ class DownloadQcDissolvedMrc(DownloadQcAdmBoundaries):
                 ) :
 
 
-        super().__init__(DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MRC , data_download_path)
-                    
+        super().__init__(DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ADM_REG , data_download_path)
+        self.raw_data = None
 
     def _create_dict_mapping(self) -> dict:
             """Create the hardcoded dict to map values from the official boundary files to the opus data
             """
 
             df_mapping = pd.DataFrame.\
-                from_dict(DownloadQcDissolvedMrc.DICT_MAPPING, orient='index').\
+                from_dict(DownloadQcDissolvedAdmReg.DICT_MAPPING, orient='index').\
                 reset_index()
 
             df_mapping.columns = ['MRS_NM_REG', 'DOMAINE_OPUS']
@@ -193,10 +234,10 @@ class DownloadQcDissolvedMrc(DownloadQcAdmBoundaries):
 
     @Cache_wrapper(path_cache=PATH_CACHE)
     def get_qc_administrative_boundaries(self) -> gpd.GeoDataFrame:
-        """Take the MRC polygons and dissolve them into the large regions we want (based on `MRS_NM_REG`)
+        """Take the ADM_REG polygons and dissolve them into the large regions we want (based on `MRS_NM_REG`)
 
         Dissolving is useful since there are arguably too many details in the dataset
-        For instance, there are many sub polygons associated with 'Cote-Nord', many of whom have the "Nouveau toponyme à venir" label (MRS_NM_MRC column) 
+        For instance, there are many sub polygons associated with 'Cote-Nord', many of whom have the "Nouveau toponyme à venir" label (MRS_NM_ADM_REG column) 
                 -> it is not extremelly useful to keep all these precise polygons
 
         Args:
@@ -208,22 +249,36 @@ class DownloadQcDissolvedMrc(DownloadQcAdmBoundaries):
         # Call the parent method to download the raw polygons
         shp_mrc_raw = super().get_qc_administrative_boundaries()
 
-        # Dissolve according to the large region names: MRS_NM_REG 
-        shp_mrc_dissolved = shp_mrc_raw[[DownloadQcDissolvedMrc.MRC_DISSOLVE_ID_COL,'geometry']].\
-                        dissolve(by=DownloadQcDissolvedMrc.MRC_DISSOLVE_ID_COL).\
-                        reset_index()
+        # Dissolve according to the large region names: MRS_NM_REG + MRS_CO_REG
+        cols_unique_id = [DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_ID_COL, DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_CODE_COL]
+        cols_unique_with_geo = [*cols_unique_id, 'geometry']
+
+        shp_mrc_dissolved = shp_mrc_raw[cols_unique_with_geo].\
+            dissolve(by=cols_unique_id).\
+            reset_index()
 
         # Map the opus values
         df_mapping = self._create_dict_mapping()
-        shp_mrc_dissolved_merged = shp_mrc_dissolved.merge(df_mapping, on=DownloadQcDissolvedMrc.MRC_DISSOLVE_ID_COL)
+        shp_mrc_dissolved_merged = shp_mrc_dissolved.merge(df_mapping, on=DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_ID_COL)
 
         return shp_mrc_dissolved_merged
 
 
+    def get_raw_data(self) -> gpd.GeoDataFrame:
+        """Convenience method/synctacic sugar for subclasses.
+
+        child.get_raw_data() same as child.__super__().get_qc_administrative_boundaries()
+
+        Returns:
+            gpd.GeoDataFrame: _description_
+        """
+        return super().get_qc_administrative_boundaries()
+
+
 if __name__ == '__main__':
 
-    qc_boundaries_extracter = DownloadQcAdmBoundaries(geo_level = DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MRC )
+    qc_boundaries_extracter = DownloadQcAdmBoundaries(geo_level = DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ADM_REG)
     shp_mrc_raw = qc_boundaries_extracter.get_qc_administrative_boundaries()
 
-    qc_mrc_dissolved_extracter = DownloadQcDissolvedMrc()
+    qc_mrc_dissolved_extracter = DownloadQcDissolvedAdmReg()
     shp_mrc = qc_mrc_dissolved_extracter.get_qc_administrative_boundaries()
