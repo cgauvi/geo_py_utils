@@ -46,8 +46,6 @@ geopandas = "*"
 pyproj = '3.4.1'
 ben_py_utils = { git = "https://github.com/cgauvi/ben_py_utils.git", branch = "master" }
 
-[tool.poetry.group.test.dependencies] 
-pytest = "*"
 
 [tool.poetry.optional-dependencies]
 notebooks = ["matplotlib",
@@ -57,6 +55,5 @@ notebooks = ["matplotlib",
     "contextily",
     "xyzservices"
 ] 
+test = ["pytest"]
 
-[tool.poetry.group.notebooks]
-optional = true
