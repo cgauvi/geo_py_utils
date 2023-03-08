@@ -47,13 +47,15 @@ pyproj = '3.4.1'
 ben_py_utils = { git = "https://github.com/cgauvi/ben_py_utils.git", branch = "master" }
 
 
-[tool.poetry.optional-dependencies]
-matplotlib = { version = "*", extras = ['notebooks']}
-seaborn = { version = "*", extras = ['notebooks']}
-folium = { version = "*", extras = ['notebooks']}
-mapclassify = { version = "*", extras = ['notebooks']}
-contextily = { version = "*", extras = ['notebooks']}
-xyzservices = { version = "*", extras = ['notebooks']}
-pytest = { version = "*", extras = ['tests']}
+[tool.poetry.extras]
+'notebooks' = [
+"matplotlib" ,
+"seaborn" ,
+"folium" ,
+"mapclassify" ,
+"contextily" ,
+"xyzservices"
+]
+"tests" = ["pytest"]
  
 
