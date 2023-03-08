@@ -50,7 +50,7 @@ ben_py_utils = { git = "https://github.com/cgauvi/ben_py_utils.git", branch = "m
 pytest = "*"
 
 [tool.poetry.optional-dependencies]
-extras = ["matplotlib",
+notebooks = ["matplotlib",
     "seaborn",
     "folium",
     "mapclassify",
