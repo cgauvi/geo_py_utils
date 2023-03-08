@@ -48,12 +48,12 @@ ben_py_utils = { git = "https://github.com/cgauvi/ben_py_utils.git", branch = "m
 
 
 [tool.poetry.optional-dependencies]
-notebooks = ["matplotlib",
-    "seaborn",
-    "folium",
-    "mapclassify",
-    "contextily",
-    "xyzservices"
-] 
-test = ["pytest"]
+matplotlib = { version = "*", extras = ['notebooks']}
+seaborn = { version = "*", extras = ['notebooks']}
+folium = { version = "*", extras = ['notebooks']}
+mapclassify = { version = "*", extras = ['notebooks']}
+contextily = { version = "*", extras = ['notebooks']}
+xyzservices = { version = "*", extras = ['notebooks']}
+pytest = { version = "*", extras = ['tests']}
+ 
 
