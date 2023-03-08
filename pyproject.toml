@@ -43,6 +43,7 @@ sqlalchemy = "*"
 snowflake-connector-python = "*"
 flake8 = "*"
 geopandas = "*"
+pyproj = '3.4.1'
 ben_py_utils = { git = "https://github.com/cgauvi/ben_py_utils.git", branch = "master" }
 
 [tool.poetry.group.test.dependencies] 
