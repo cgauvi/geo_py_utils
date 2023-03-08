@@ -1,3 +1,10 @@
+geo_py_utils 0.7.0
+
+==================
+
+- new packaging of python project with dependencies + fixed pyproj to version that seems to work.
+
+
 geo_py_utils 0.6.0
 
 ==================
