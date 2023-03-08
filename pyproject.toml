@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "geo_py_utils"
-version = "0.4.4"
+version = "0.7.0"
 description = "Python functions for generic geospatial manipulations"
 authors = ["Charles Gauvin"]
 
@@ -29,3 +29,33 @@ markers =[
         E251,
         W291
     """
+
+[tool.poetry.dependencies] 
+brotlipy = "*"
+psycopg2 = "*"
+pyarrow = "*"
+pyopenssl = "*"
+pysocks = "*"
+rtree = "*"
+unicodedata2 = "*"
+python-geohash = "*"
+sqlalchemy = "*"
+snowflake-connector-python = "*"
+flake8 = "*"
+geopandas = "*"
+pyproj = '3.4.1'
+ben_py_utils = { git = "https://github.com/cgauvi/ben_py_utils.git", branch = "master" }
+
+[tool.poetry.group.test.dependencies] 
+pytest = "*"
+
+[tool.poetry.group.notebooks.dependencies] 
+matplotlib = "*"
+seaborn = "*"
+folium = "*"
+mapclassify = "*"
+contextily = "*"
+xyzservices = "*"
+
+[tool.poetry.group.notebooks]
+optional = true

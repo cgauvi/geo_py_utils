@@ -30,6 +30,10 @@ def spatialite_db_to_gdf(db_name : Union[str, Path],
 
     with sqlite3.connect(db_name) as con:
 
+        # avoid fuckups with utf 
+        # https://stackoverflow.com/questions/22751363/sqlite3-operationalerror-could-not-decode-to-utf-8-column
+        con.text_factory = lambda b: b.decode(errors = 'ignore')
+
         # sqlite connection with extensions
         con.enable_load_extension(True)
         con.load_extension("mod_spatialite")

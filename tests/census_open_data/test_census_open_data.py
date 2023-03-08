@@ -6,7 +6,8 @@ from geo_py_utils.census_open_data.open_data import (
     download_qc_city_neighborhoods, 
     get_qc_city_bbox,
     DownloadQcAdmBoundaries,
-    DownloadQcDissolvedMrc
+    DownloadQcDissolvedAdmReg,
+    DownloadQcDissolvedMunicipalities
 )
 
  
@@ -20,30 +21,60 @@ def test_qc_city_bbox():
     assert dict_bbox['min_lng'] < dict_bbox['max_lng']
 
 
-def test_mrcs_dissolved():
+def test_admRegs_dissolved(clean_slate=False):
 
     # Make sure clean slate 
-    if exists(DownloadQcDissolvedMrc.PATH_CACHE):
-        remove(DownloadQcDissolvedMrc.PATH_CACHE)
+    if exists(DownloadQcDissolvedAdmReg.PATH_CACHE) and clean_slate:
+        remove(DownloadQcDissolvedAdmReg.PATH_CACHE)
 
-    qc_mrc_dissolved_extracter = DownloadQcDissolvedMrc()
-    shp_mrc = qc_mrc_dissolved_extracter.get_qc_administrative_boundaries()
+    qc_admReg_dissolved_extracter = DownloadQcDissolvedAdmReg()
+    shp_admReg = qc_admReg_dissolved_extracter.get_qc_administrative_boundaries()
 
-    assert shp_mrc.shape[0] == 17
+    assert shp_admReg.shape[0] == 17
 
-    assert np.all(np.isin([DownloadQcDissolvedMrc.MRC_DISSOLVE_ID_COL, 'DOMAINE_OPUS'], shp_mrc.columns))
+    assert np.all(np.isin([DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_ID_COL, 'DOMAINE_OPUS'], shp_admReg.columns))
+
+
+def test_muni_dissolved(clean_slate=False):
+
+
+    qc_admReg_dissolved_extracter = DownloadQcDissolvedMunicipalities()
+
+    # Make sure clean slate 
+    if exists(qc_admReg_dissolved_extracter.path_cache) and clean_slate:
+        remove(qc_admReg_dissolved_extracter.path_cache)
+
+    shp_admReg = qc_admReg_dissolved_extracter.get_qc_administrative_boundaries()
+
+    assert shp_admReg.shape[0] == 1338
+
+def test_muni_dissolved_raw(clean_slate=False):
+
+
+    qc_admReg_dissolved_extracter = DownloadQcDissolvedMunicipalities(filter_out_unknown_muni=False)
+
+    # Make sure clean slate 
+    if exists(qc_admReg_dissolved_extracter.path_cache) and clean_slate:
+        remove(qc_admReg_dissolved_extracter.path_cache)
+
+    shp_admReg = qc_admReg_dissolved_extracter.get_qc_administrative_boundaries()
+
+    assert shp_admReg.shape[0] == 1345
+    assert qc_admReg_dissolved_extracter.get_raw_data().shape[0] == shp_admReg.shape[0] + 2
+ 
+
 
 
 def test_qa_adm_boundaries():
 
     # Make sure clean slate 
-    if exists(DownloadQcDissolvedMrc.PATH_CACHE):
-        remove(DownloadQcDissolvedMrc.PATH_CACHE)
+    if exists(DownloadQcDissolvedAdmReg.PATH_CACHE):
+        remove(DownloadQcDissolvedAdmReg.PATH_CACHE)
 
     # For some reason the number of features is different bepending on the precision - 1/20 or 1/100
     dict_check_num_records = {
             DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_METRO: 2,
-            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MRC: 106,
+            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ADM_REG: 106,
             DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI: 1347
     }
     
@@ -62,5 +93,5 @@ def test_qa_adm_boundaries():
 
 
 if __name__== "__main__":
-    test_mrcs_dissolved()
-    test_qa_adm_boundaries()
+    test_muni_dissolved_raw()
+ 

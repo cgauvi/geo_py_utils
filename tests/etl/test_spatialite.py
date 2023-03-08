@@ -17,7 +17,8 @@ from geo_py_utils.etl.spatialite.db_utils import (
     is_spatial_index_enabled,
     is_spatial_index_enabled_valid,
     get_table_geometry_type,
-    promote_multi
+    promote_multi,
+    rename_columns
 )
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
@@ -48,6 +49,8 @@ def test_promot_to_multi():
 
 
 def test_geometry_type():
+
+    drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
     if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
         (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
         upload_qc_neigh_test_db()
@@ -59,6 +62,7 @@ def test_geometry_type():
 
 def test_spatial_index_enabled():
 
+    drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
     if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
         (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
         upload_qc_neigh_test_db()
@@ -72,6 +76,7 @@ def test_spatial_index_enabled():
 
 def test_spatial_index_valid():
 
+    drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
     if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
         (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
         upload_qc_neigh_test_db()
@@ -101,6 +106,28 @@ def test_read_gdf_spatialite_qc ():
     assert isinstance(df, gpd.GeoDataFrame)
     assert df.shape[0] == 10
 
+def test_spatialite_rename_cols():
+
+    drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
+    if not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH) or \
+       not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH) :
+        upload_qc_neigh_test_db()
+
+    rename_columns(
+        QcCityTestData.SPATIAL_LITE_DB_PATH,
+        QcCityTestData.SPATIAL_LITE_TBL_QC,
+        {'GEOMETRY': 'mishka'}
+        )
+
+    df_results = sql_to_df(
+        QcCityTestData.SPATIAL_LITE_DB_PATH, 
+        f'SELECT * from {QcCityTestData.SPATIAL_LITE_TBL_QC} limit 1'
+        )
+
+    assert 'mishka' in df_results.columns
+    assert 'GEOMETRY' not in df_results.columns
+
+    
 
 def test_spatialite_list_tables():
 
@@ -197,5 +224,5 @@ def test_drop_table():
 
 if __name__ == '__main__':
 
-    test_geometry_type()
-    #test_spatial_index()
+    test_spatialite_rename_cols()
+   
