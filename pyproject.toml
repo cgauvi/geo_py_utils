@@ -46,16 +46,16 @@ geopandas = "*"
 pyproj = '3.4.1'
 ben_py_utils = { git = "https://github.com/cgauvi/ben_py_utils.git", branch = "master" }
 
-[tool.poetry.group.test.dependencies] 
-pytest = "*"
 
-[tool.poetry.group.notebooks.dependencies] 
-matplotlib = "*"
-seaborn = "*"
-folium = "*"
-mapclassify = "*"
-contextily = "*"
-xyzservices = "*"
+[tool.poetry.extras]
+'notebooks' = [
+"matplotlib" ,
+"seaborn" ,
+"folium" ,
+"mapclassify" ,
+"contextily" ,
+"xyzservices"
+]
+"tests" = ["pytest"]
+ 
 
-[tool.poetry.group.notebooks]
-optional = true
