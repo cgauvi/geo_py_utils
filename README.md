@@ -38,20 +38,23 @@
 
 ## Installation 
 
-The project requires installing geopandas through `conda`. The rest of the dependencies can be installed manually with `pip`
+### General information 
+
+The project has been tested by installing geopandas through `conda`. The rest of the dependencies can be installed manually with `pip` or `poetry`. Conda was initially chosen in an attempt to reduce friction and avoid having to tweak environment variables and point to correct libs. In hindsight, this might not be the best approach since some libraries like `mod_spatialite` are not packaged with conda anyways and require some sort of manual sudo install on windows or linux/max. 
 
 ```bash
 conda create --name geo_py_utils python=3.9 geopandas
 conda activate geo_py_utils
 python -m pip install --upgrade pip
-pip install -r requirements.txt
+python -m pip install "geo_py_utils @ git+ssh://git@github.com/LaCapitale/geo_py_utils.git"
 ```
 
- ### Note
+### Details 
 
- The package depends on another [custom package](https://github.com/cgauvi/ben_py_utils). The following line was added to the `requirements.txt`:
- 
- `git+https://github.com/cgauvi/ben_py_utils.git@master`
+- It is possible to install extra optional dependencies. For instance if running notebooks and trying to plot/map/visualize results, it will be referable to run `python -m pip install  "geo_py_utils[notebooks] @ git+ssh://git@github.com/LaCapitale/geo_py_utils.git"` to install all required packages. 
+- It is also possible to select a specific version rather than taking the latest; for instance by using `"git+ssh://git@github.com/LaCapitale/geo_py_utils.git@v0.7.1"`.
+- Also note that `poetry` can be used as a drop-in replacement for `pip`: `poetry add "geo_py_utils[notebooks] @ git+ssh://git@github.com/LaCapitale/geo_py_utils.git@v0.7.1"`
+- The package depends on another [custom package](https://github.com/cgauvi/ben_py_utils). The following line was added to the `pyproject.toml`: `ben_py_utils = {git = "https://github.com/cgauvi/ben_py_utils.git", tag = "v0.2.1"  }`
 
 
 ## Testing
