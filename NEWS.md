@@ -1,3 +1,8 @@
+geo_py_utils 0.7.3
+
+- updates on installation details in readme
+
+==================
 
 geo_py_utils 0.7.2
 
