@@ -1,3 +1,10 @@
+
+geo_py_utils 0.7.2
+
+- snowflake connector slight refactor with new env vars
+
+==================
+
 geo_py_utils 0.7.0
 
 ==================
