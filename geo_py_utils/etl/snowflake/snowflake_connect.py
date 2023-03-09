@@ -26,11 +26,11 @@ def connnect_snowflake_ext_browser(role: str = "M_DATA_SCIENCE",
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
 
-        print(os.environ["USER_EMAIL"])
-
-        conn = snowflake.connector.connect(user=os.environ["USER_EMAIL"],
-                                            account="beneva-da",
-                                            authenticator="externalbrowser")
+        conn = snowflake.connector.connect(
+            user=os.environ["USER_EMAIL_SFKL"],
+            account=os.environ["USER_ACCOUNT_SFKL"],
+            authenticator="externalbrowser"
+        )
 
         # Point to the correct DB + schema
         # That way, no need to use statements like `select * from db.schema.table`
