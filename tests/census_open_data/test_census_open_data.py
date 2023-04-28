@@ -74,8 +74,9 @@ def test_qa_adm_boundaries():
     # For some reason the number of features is different bepending on the precision - 1/20 or 1/100
     dict_check_num_records = {
             DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_METRO: 2,
-            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ADM_REG: 106,
-            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI: 1347
+            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MRC: 106,
+            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI: 1347,
+            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ARROND: 41
     }
     
     dict_results_num_records = { 

@@ -51,22 +51,24 @@ class DownloadQcAdmBoundaries:
 
     Select one of the following by using constants 
 
-    - ADM_REG : "mrc_s":  DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI
-    - Municipalities: "munic_s": DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ADM_REG
+    - ADM_REG : "mrc_s":  DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MRC 
+    - Municipalities: "munic_s": DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI
     - Communauté urbaine: "comet_s": DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_METRO 
+    - Arrondissements: "arron_s": DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ARROND
 
     Attributes:
-        geo_level (_type_, optional): _description_. Defaults to QC_PROV_ADM_BOUND_ADM_REG.
+        geo_level (_type_, optional): _description_. Defaults to QC_PROV_ADM_BOUND_MRC.
         data_download_path (_type_, optional): _description_. Defaults to join(DATA_DIR, 'qc_adm_regions').
     """
     QC_PROV_ADM_BOUND_URL = "https://diffusion.mern.gouv.qc.ca/Diffusion/RGQ/Vectoriel/Theme/Local/SDA_20k/SHP/SHP.zip"
 
-    QC_PROV_ADM_BOUND_ADM_REG = "mrc_s"
+    QC_PROV_ADM_BOUND_MRC = "mrc_s"
     QC_PROV_ADM_BOUND_MUNI = "munic_s"
     QC_PROV_ADM_BOUND_METRO = "comet_s"
+    QC_PROV_ADM_BOUND_ARROND = "arron_s"
 
     def __init__(self,
-                geo_level=QC_PROV_ADM_BOUND_ADM_REG,
+                geo_level=QC_PROV_ADM_BOUND_MRC,
                 data_download_path=join(DATA_DIR, 'qc_adm_regions')
                 ) :
 
@@ -108,6 +110,49 @@ class DownloadQcAdmBoundaries:
 
  
         
+class DownloadQcBoroughs(DownloadQcAdmBoundaries):
+        
+    """Get the raw boroughs (arrondissements) 
+    
+    Boroughs only present in:
+
+    - Mtl
+    - Quebec
+    - Saguenay
+    - A few other places
+
+    Inherits from DownloadQcAdmBoundaries
+
+    No manipuliation/dissolving
+
+    Attributes:
+        data_download_path (_type_, optional): _description_. Defaults to join(DATA_DIR, 'qc_adm_regions').
+        filter_out_unknown_muni (bool, optional): Remove 'Toponyme à venir' . Defaults to True
+    """
+
+ 
+    def __init__(self,
+                data_download_path=join(DATA_DIR, 'qc_boroughs')
+                ) :
+
+
+        super().__init__(DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ARROND, data_download_path)
+
+
+    def get_raw_data(self) -> gpd.GeoDataFrame:
+        """Convenience method/synctacic sugar for subclasses.
+
+        child.get_raw_data() same as child.__super__().get_qc_administrative_boundaries()
+
+        Returns:
+            gpd.GeoDataFrame: _description_
+        """
+        return super().get_qc_administrative_boundaries()
+
+  
+    def get_qc_administrative_boundaries(self) -> gpd.GeoDataFrame:
+        
+        return self.get_raw_data()
 
 
 
@@ -179,7 +224,14 @@ class DownloadQcDissolvedMunicipalities(DownloadQcAdmBoundaries):
 
 class DownloadQcDissolvedAdmReg(DownloadQcAdmBoundaries):
         
-    """Get the dissolved 17 regions representing the 'usual' Quebec administrative boundaries
+    """Get the dissolved 17 regions representing the 'usual' Quebec administrative boundaries.
+
+    Convoluted: takes in the MRC data and then dissolves by MRS_CO_REG (adm region code)
+    Would also be possible to read in `Sda/version_courante/SHP/regio_s.shp` layer from DownloadQcAdmBoundaries and dissolve by  MRS_CO_REG
+
+    Dissolving not super important, but avoids having 1 extra polygon for Cote-Nord near Labrador
+     -> So we have 17 unique polygons rather than 18
+     -> Dissolving applicable whether we start from regio_s or mrc_s layers 
 
     Inherits from DownloadQcAdmBoundaries
 
@@ -217,7 +269,7 @@ class DownloadQcDissolvedAdmReg(DownloadQcAdmBoundaries):
                 ) :
 
 
-        super().__init__(DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ADM_REG , data_download_path)
+        super().__init__(DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MRC , data_download_path)
         self.raw_data = None
 
     def _create_dict_mapping(self) -> dict:
@@ -277,7 +329,7 @@ class DownloadQcDissolvedAdmReg(DownloadQcAdmBoundaries):
 
 if __name__ == '__main__':
 
-    qc_boundaries_extracter = DownloadQcAdmBoundaries(geo_level = DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ADM_REG)
+    qc_boundaries_extracter = DownloadQcAdmBoundaries(geo_level = DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MRC)
     shp_mrc_raw = qc_boundaries_extracter.get_qc_administrative_boundaries()
 
     qc_mrc_dissolved_extracter = DownloadQcDissolvedAdmReg()
