@@ -1,3 +1,9 @@
+geo_py_utils 0.8.0
+
+- new feature: getting boroughs (arrondissements) from the qc administrative data
+
+==================
+
 geo_py_utils 0.7.3
 
 - updates on installation details in readme
