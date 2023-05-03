@@ -6,7 +6,7 @@ import geopandas as gpd
 from os.path import join
 import logging
 import numpy as np
-
+from pathlib import Path
 
 from ben_py_utils.misc.cache import Cache_wrapper
 
@@ -213,10 +213,19 @@ def download_fsas(year : int = 2016,
             zip_download_url = "https://www12.statcan.gc.ca/census-recensement/2011/geo/bound-limit/files-fichiers/2016/lfsa000b16a_e.zip"  \
             if use_cartographic \
             else "https://www12.statcan.gc.ca/census-recensement/2011/geo/bound-limit/files-fichiers/2016/lfsa000a16a_e.zip"
+        elif year == 2021:
+            zip_download_url = "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/lfsa000b21a_e.zip"  \
+            if use_cartographic \
+            else "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/lfsa000a21a_e.zip"
         else:
             raise ValueError(f"Fatal error - inputed {year}, but only 2016 implemented")
 
-        shp_fsa_all = download_zip_shp(zip_download_url, data_download_path)
+        # Arg zipped file has different structure .. 
+        if year == 2016:        
+            shp_fsa_all = download_zip_shp(zip_download_url, data_download_path)
+        elif year == 2021:
+            shp_fsa_all = download_zip_shp(zip_download_url, join(data_download_path, Path(zip_download_url).stem) )
+
         shp_fsa_all_filtered = shp_fsa_all.loc[shp_fsa_all.PRUID.astype('str') == str(pr_code), ]
     
         logger.info(f"There are {shp_fsa_all_filtered.shape[0]} FSAs in {pr_code} for the 2016 census")
@@ -342,5 +351,6 @@ def download_prov_boundary(year: int = 2021,
 
 if __name__ == "__main__":
      #df = download_qc_city_fsa_2016() 
-     df_ca = download_ca_cmas(pr_code=24, new_crs = 4269) 
+     #df_ca = download_ca_cmas(pr_code=24, new_crs = 4269) 
+     download_fsas(2021,  24, use_cartographic=False)  
  

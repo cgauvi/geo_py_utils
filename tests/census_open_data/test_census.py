@@ -26,6 +26,9 @@ def download_compare(year, pr_code, use_cartographic=False):
     df_parquet = gpd.read_parquet(join(DATA_DIR, "cache",f"fsa_{year}_{pr_code}_carto_{use_cartographic}_crs_{crs_str}.parquet"))
     assert df_parquet.shape[0] == df.shape[0]
 
+def test_2021_fsa_qc():
+    # Quebec
+    download_compare(year = 2021, pr_code = "24")  
 
 def test_2016_fsa_qc():
     # Quebec
