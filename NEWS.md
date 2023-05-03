@@ -1,3 +1,9 @@
+geo_py_utils 0.9.0
+
+- new feature: getting 2021 FSA boundary shp files 
+
+==================
+
 geo_py_utils 0.8.0
 
 - new feature: getting boroughs (arrondissements) from the qc administrative data
