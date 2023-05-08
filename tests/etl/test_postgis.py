@@ -17,7 +17,16 @@ from geo_py_utils.etl.port import is_port_open
 #--
 from geo_py_utils.etl.postgis.load_sfkl_to_postgis import LoadSfklPostgis
 from geo_py_utils.etl.postgis.load_spatialite_to_postgis import LoadSqlitePostgis
-from geo_py_utils.etl.postgis.db_utils import pg_db_exists, pg_create_db, pg_list_tables, pg_drop_table, pg_create_engine
+from geo_py_utils.etl.postgis.db_utils import (
+    pg_db_exists, 
+    pg_create_db, 
+    pg_list_tables, 
+    pg_drop_table, 
+    pg_create_engine,
+    pg_create_ogr2ogr_str,
+    pg_create_connection_str
+)
+
 #--
 from geo_py_utils.etl.spatialite.utils_testing import upload_qc_neigh_test_db, QcCityTestData, write_regular_csv_db
 from geo_py_utils.etl.spatialite.db_utils import list_tables
@@ -54,6 +63,22 @@ class SfklTbl:
     POSTGIS_TBL_NAME = 'GEOSPATIAL_TEST_BUGS'
     GEOMETRY_COLUMN_NAME = 'GEOMETRY'
 
+
+def test_conn_str():
+
+    dict_str={
+        "db_name": RemotePostGIS.POSTGIS_DB,
+        "user": RemotePostGIS.USER,
+        "password": 'dummy_pass',
+        "host": RemotePostGIS.HOST,
+        "port": RemotePostGIS.PORT
+        }
+
+    assert pg_create_ogr2ogr_str(**dict_str) == f' "PG:host={RemotePostGIS.HOST} dbname={RemotePostGIS.POSTGIS_DB} user={RemotePostGIS.USER} password=dummy_pass port={RemotePostGIS.PORT}" '
+    assert pg_create_connection_str(**dict_str) == f'postgresql://{RemotePostGIS.USER}:dummy_pass@{RemotePostGIS.HOST}:{str(RemotePostGIS.PORT)}/{RemotePostGIS.POSTGIS_DB}'
+
+
+        
 
 @pytest.mark.requires_remote_pg_connection_sfkl_interactivity
 def test_sflk_to_postgis_remote():

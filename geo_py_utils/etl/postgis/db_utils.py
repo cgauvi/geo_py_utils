@@ -10,12 +10,60 @@ from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__file__)
   
-def pg_create_engine(db_name:str,
+
+def pg_create_connection_str(db_name:str,
                     user: str,
                     password: str,
                     host: str,
-                    port: Union[int,str]) -> sqlalchemy.engine.base.Engine:
-    """Super thin convenience wrapper around create_engine to abstract string details
+                    port: Union[int,str]) -> str:
+
+    """Super thin convenience wrapper to create connection string from credentials
+
+    Can be used with pg_create_engine
+
+    Args:
+        db_name (str): _description_
+        user (str): _description_
+        password (str): _description_
+        host (str): _description_
+        port (Union[int,str]): _description_
+
+    Returns:
+        str
+    """
+    
+    return f'postgresql://{user}:{password}@{host}:{str(port)}/{db_name}'
+
+
+def pg_create_ogr2ogr_str(
+    db_name:str,
+    user: str,
+    password: str,
+    host: str,
+    port: Union[int,str]
+    ) -> str:
+
+    """Super thin convenience wrapper to create string details - namely for ogr2ogr
+
+    Args:
+        db_name (str): _description_
+        user (str): _description_
+        password (str): _description_
+        host (str): _description_
+        port (Union[int,str]): _description_
+    """
+
+    return f' "PG:host={host} dbname={db_name} user={user} password={password} port={port}" '
+
+
+def pg_create_engine(
+    db_name:str,
+    user: str,
+    password: str,
+    host: str,
+    port: Union[int,str]) -> sqlalchemy.engine.base.Engine:
+
+    """Super thin convenience wrapper to create an abstract string details
 
     Args:
         db_name (str): _description_
@@ -27,7 +75,8 @@ def pg_create_engine(db_name:str,
     Returns:
         sqlalchemy.engine.base.Engine: _description_
     """
-    return create_engine(f'postgresql://{user}:{password}@{host}:{str(port)}/{db_name}')
+    return create_engine(pg_create_connection_str(db_name, user, password, host, port))
+
 
 def pg_db_exists(engine: sqlalchemy.engine.base.Engine, db_name: str) -> bool:
     """Check if a db exists
