@@ -1,3 +1,11 @@
+geo_py_utils 0.10.0
+
+- new feature: connection strings from postgres credentils
+    * ogr2ogr
+    * sqlalchemy
+
+==================
+
 geo_py_utils 0.9.0
 
 - new feature: getting 2021 FSA boundary shp files 
