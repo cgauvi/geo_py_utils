@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "geo_py_utils"
-version = "0.10.0"
+version = "0.11.0"
 description = "Python functions for generic geospatial manipulations"
 authors = ["Charles Gauvin"]
 

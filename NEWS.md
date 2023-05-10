@@ -1,6 +1,15 @@
+geo_py_utils 0.11.0
+
+- new features:  
+    * postgres connection object from .env file
+    * postres table listor
+    * postres backup to gpkg
+
+==================
+
 geo_py_utils 0.10.0
 
-- new feature: connection strings from postgres credentils
+- new feature: connection strings from postgres credentials
     * ogr2ogr
     * sqlalchemy
 
