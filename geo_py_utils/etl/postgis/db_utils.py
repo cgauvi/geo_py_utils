@@ -40,7 +40,7 @@ def pg_create_ogr2ogr_str(
     user: str,
     password: str,
     host: str,
-    port: Union[int,str]
+    port: Union[int, str]
     ) -> str:
 
     """Super thin convenience wrapper to create string details - namely for ogr2ogr
