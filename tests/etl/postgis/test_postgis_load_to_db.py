@@ -55,7 +55,7 @@ class RemotePostGIS:
     PASSWORD = os.getenv('PG_GIC_PASSWORD')
     POSTGIS_DB = 'test'
     HOST = os.getenv('PG_GIC_HOST')
-    PORT = "5052"
+    PORT = os.getenv('PG_GIC_PORT')
     SCHEMA = "public"
 
 class SfklTbl:
@@ -90,7 +90,7 @@ def test_sflk_to_postgis_remote():
 
     # Create db connection
     engine = pg_create_engine(
-        db_name=RemotePostGIS.POSTGIS_DB,
+        database=RemotePostGIS.POSTGIS_DB,
         user=RemotePostGIS.USER,
         password=RemotePostGIS.PASSWORD,
         host=RemotePostGIS.HOST,
@@ -131,7 +131,7 @@ def test_list_tables_postgis_remote():
 
     # Create db connection
     engine = pg_create_engine(
-        db_name=DB_NAME_DOES_NOT_EXIST,
+        database=DB_NAME_DOES_NOT_EXIST,
         user=RemotePostGIS.USER,
         password=RemotePostGIS.PASSWORD,
         host=RemotePostGIS.HOST,
@@ -162,7 +162,7 @@ def test_spatialite_local_to_postgis_remote():
 
     # Create db connection
     engine = pg_create_engine(
-        db_name=RemotePostGIS.POSTGIS_DB,
+        database=RemotePostGIS.POSTGIS_DB,
         user=RemotePostGIS.USER,
         password=RemotePostGIS.PASSWORD,
         host=RemotePostGIS.HOST,
@@ -172,7 +172,7 @@ def test_spatialite_local_to_postgis_remote():
     # Check if DB exists and create if not
     if not pg_db_exists(engine, RemotePostGIS.POSTGIS_DB):
         logger.info(f"DB {RemotePostGIS.POSTGIS_DB} on host {RemotePostGIS.HOST}:{RemotePostGIS.PORT}  does not exist: creating it..")
-        pg_create_db(db_name=RemotePostGIS.POSTGIS_DB,
+        pg_create_db(database=RemotePostGIS.POSTGIS_DB,
                     user=RemotePostGIS.USER,
                     password=RemotePostGIS.PASSWORD,
                     host=RemotePostGIS.HOST,
@@ -235,7 +235,7 @@ def test_sfkl_to_postgis_local_docker():
         return
 
     # Create db connection
-    engine = pg_create_engine(db_name=LocalDockerPostGIS.POSTGIS_DB,
+    engine = pg_create_engine(database=LocalDockerPostGIS.POSTGIS_DB,
                     user=LocalDockerPostGIS.USER,
                     password=LocalDockerPostGIS.PASSWORD,
                     host=LocalDockerPostGIS.HOST,
@@ -244,7 +244,7 @@ def test_sfkl_to_postgis_local_docker():
     # Check if DB exists and create if not
     if not pg_db_exists(engine, LocalDockerPostGIS.POSTGIS_DB):
         logger.info(f"DB {LocalDockerPostGIS.POSTGIS_DB} on host {LocalDockerPostGIS.HOST}:{LocalDockerPostGIS.PORT}  does not exist: creating it..")
-        pg_create_db(db_name=LocalDockerPostGIS.POSTGIS_DB,
+        pg_create_db(database=LocalDockerPostGIS.POSTGIS_DB,
                     user=LocalDockerPostGIS.USER,
                     password=LocalDockerPostGIS.PASSWORD,
                     host=LocalDockerPostGIS.HOST,
