@@ -22,7 +22,8 @@ class LoadGPKGPostgis:
                 password,
                 schema='public',
                 overwrite=True,
-                promote_to_multi=False):
+                promote_to_multi=False,
+                no_overwrite_append=True):
 
  
         self.gpkg_name = gpkg_name
@@ -37,6 +38,7 @@ class LoadGPKGPostgis:
  
         self.overwrite = overwrite
         self.promote_to_multi = promote_to_multi
+        self.no_overwrite_append = no_overwrite_append
  
         # Create the ogr2ogr connection string for the db
         self.ogr2ogr_dest_connection_str = pg_create_ogr2ogr_str(
@@ -62,13 +64,21 @@ class LoadGPKGPostgis:
 
         # ogr2ogr format: Dest Source
         # See https://gdal.org/programs/ogr2ogr.html
-        cmd += fr"  {self.ogr2ogr_dest_connection_str} '{self.gpkg_name}' " 
+        # Important: no '' around gpkg name: will fuck up in git bash on Windows otherwise
+        cmd += fr"  {self.ogr2ogr_dest_connection_str} {self.gpkg_name} " 
 
         # Additional commands 
         cmd += " -lco ENCODING=UTF-8 " 
 
         if self.promote_to_multi:
             cmd += " -nlt PROMOTE_TO_MULTI "
+
+        # Append or not
+        if not self.no_overwrite_append and not self.first_time_creating_db:
+            if self.overwrite:
+                cmd += " -overwrite"
+            else:
+                cmd += " -append"
     
         return cmd
 

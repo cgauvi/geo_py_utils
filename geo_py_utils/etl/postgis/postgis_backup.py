@@ -109,7 +109,7 @@ class PostGISDBBackupGPK(PostGISDBBackup):
 
         # ogr2ogr format: Dest Source
         # See https://gdal.org/programs/ogr2ogr.html
-        cmd += fr" '{self.dest_gpkg}' {self.ogr2ogr_src_connection_str} " 
+        cmd += fr" {self.dest_gpkg} {self.ogr2ogr_src_connection_str} " 
 
         # Additional commands 
         cmd += " -lco ENCODING=UTF-8 " 

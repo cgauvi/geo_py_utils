@@ -258,9 +258,9 @@ class Url_to_postgis(Url_to_db):
         # Hackish: only works by manually setting self.path_src_to_upload
         source = abspath(self.path_src_to_upload)
         if self.src_spatialite_tbl_name is not None:
-            cmd += fr" '{source}' {self.src_spatialite_tbl_name} " 
+            cmd += fr" {source} {self.src_spatialite_tbl_name} " 
         else:
-            cmd += fr" '{source}' " 
+            cmd += fr" {source} " 
 
         cmd += f' -lco SCHEMA={self.schema} ' \
             f" -nln {self.table_name} " \
