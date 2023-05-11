@@ -4,6 +4,9 @@ import logging
 import subprocess
 from pathlib import Path
 from os.path import abspath, dirname
+import sys
+
+sys.path.append("C:\\Users\\app12621\\Dev\\GIC_VEXCEL\\gic\\geo_py_utils") 
 
 from geo_py_utils.etl.postgis.db_utils import pg_create_ogr2ogr_str
 
@@ -62,7 +65,7 @@ class LoadGPKGPostgis:
 
         # ogr2ogr format: Dest Source
         # See https://gdal.org/programs/ogr2ogr.html
-        cmd += fr"  {self.ogr2ogr_dest_connection_str} '{self.gpkg_name}' " 
+        cmd += fr"  {self.ogr2ogr_dest_connection_str} {self.gpkg_name} " 
 
         # Additional commands 
         cmd += " -lco ENCODING=UTF-8 " 
