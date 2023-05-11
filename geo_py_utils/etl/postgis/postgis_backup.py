@@ -36,7 +36,11 @@ class PostGISDBBackup(ABC):
 
 
     @abstractmethod
-    def backup_to_destination(self):
+    def postgis_to_gpkg(self):
+        pass 
+
+    @abstractmethod
+    def gpkg_to_postgis(self):
         pass 
 
 
@@ -73,8 +77,57 @@ class PostGISDBBackupGPK(PostGISDBBackup):
             os.unlink(dest_gpkg)
 
 
-    def backup_to_destination(self):
-        """Main interface. 
+    def gpkg_to_postgis(self, pg_conn: PostGISDBConnection = None, overwrite_pg_tbl = False):
+        """(Re) load a local gpkg to a postgis DB.
+
+        Args:
+            pg_conn (PostGISDBConnection, optional): Connection object representing the target. Defaults to None. In which case the original DB is used - self.ogr2ogr_src_connection_str
+            overwrite_pg_tbl (bool, optional): _description_. Defaults to False.
+        """
+
+        # Point to the correct DB
+        if pg_conn is not None:
+            conn = pg_conn.get_pg_connection()
+            logger.info(f"Reloading gpkg to different DB: {conn['host']} - {conn['database']}..")
+            self.ogr2ogr_dest_connection_str = pg_create_ogr2ogr_str(**conn.get_credentials())
+        else:
+            logger.info(f"Reloading gpkg to same original DB..")
+            self.ogr2ogr_dest_connection_str = self.ogr2ogr_src_connection_str
+
+        # Actual system call
+        cmd_pg_gpkg = self._get_common_cmd_gpkg_to_pg(overwrite_pg_tbl = overwrite_pg_tbl)
+        subprocess.check_call(cmd_pg_gpkg, shell=True)  
+
+        logger.info(f"Successfully completed reload of gpkg -> postgis!")
+
+
+    def _get_common_cmd_gpkg_to_pg(self, overwrite_pg_tbl = False) -> str:
+
+        """Build the ogr2ogr string for gpkg -> postgis
+        
+        Args:
+            overwrite_pg_tbl (bool, optional): _description_. Defaults to False.
+        """
+
+        # Basic commands
+        cmd = "ogr2ogr  " \
+            ' -progress ' \
+            ' --config PG_USE_COPY YES ' 
+
+        # ogr2ogr format: Dest Source
+        # See https://gdal.org/programs/ogr2ogr.html
+        cmd += fr" {self.ogr2ogr_dest_connection_str} {self.dest_gpkg}  " 
+
+        # Additional commands 
+        cmd += " -lco ENCODING=UTF-8 " 
+
+        # Should fail if overwrite_pg_tbl False and the table exists
+        if overwrite_pg_tbl:
+            cmd += ' -overwrite '
+    
+
+    def postgis_to_gpkg(self):
+        """Dump a postgis DB to a local gpkg 
 
         Two options:
         
@@ -95,8 +148,8 @@ class PostGISDBBackupGPK(PostGISDBBackup):
 
 
 
-    def _get_common_cmd(self) -> str:
-        """Build the ogr2ogr string 
+    def _get_common_cmd_pg_to_gpkg(self) -> str:
+        """Build the ogr2ogr string for pg -> gpkg
 
         Returns:
             str:  ogr2ogr string to call with e.g. `subprocess.check_call`
@@ -124,7 +177,7 @@ class PostGISDBBackupGPK(PostGISDBBackup):
         """Builds the ogr2ogr str + calls it for each table
         """
 
-        cmd = self._get_common_cmd()
+        cmd = self._get_common_cmd_pg_to_gpkg()
 
         # Make sure we append new tables to the existing file/db
         cmd += " -append"
@@ -146,7 +199,7 @@ class PostGISDBBackupGPK(PostGISDBBackup):
         """Builds the ogr2ogr str + calls it ONCE
         """
 
-        cmd = self._get_common_cmd()
+        cmd = self._get_common_cmd_pg_to_gpkg()
 
         # Actual system call
         logger.info(cmd)
@@ -154,3 +207,6 @@ class PostGISDBBackupGPK(PostGISDBBackup):
 
 
 
+if __name__ == '__main__':
+
+    gpkg_to_postgis
