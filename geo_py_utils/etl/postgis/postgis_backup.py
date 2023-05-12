@@ -9,21 +9,13 @@ import pandas as pd
 import subprocess
 from abc import ABC, abstractmethod
 
-from gic.constants import ProjectPaths, GeoConstants
-from gic.logger import set_up_logger
 from geo_py_utils.etl.postgis.postgis_tables import PostGISDBTablesIdentifier, PostGISDBPublicTablesIdentifier
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
- 
-
-sys.path.append(os.path.join(ProjectPaths.PATH_TO_GIC, 'geo_py_utils')) # add this line to be able to import ths submodule directly  `git submodule add https://github.com/cgauvi/ben_py_utils.git`  (from within GIC_VEXCEL/gic)
-
 from geo_py_utils.etl.postgis.db_utils import pg_list_tables, pg_create_ogr2ogr_str, pg_create_engine
 
 
 # Logger
 logger = logging.getLogger(__file__)
-
-
 
 
 class PostGISDBBackup(ABC):
@@ -87,9 +79,9 @@ class PostGISDBBackupGPK(PostGISDBBackup):
 
         # Point to the correct DB
         if pg_conn is not None:
-            conn = pg_conn.get_pg_connection()
-            logger.info(f"Reloading gpkg to different DB: {conn['host']} - {conn['database']}..")
-            self.ogr2ogr_dest_connection_str = pg_create_ogr2ogr_str(**conn.get_credentials())
+            new_creds = pg_conn.get_credentials()
+            logger.info(f"Reloading gpkg to different DB: {new_creds['host']} - {new_creds['database']}..")
+            self.ogr2ogr_dest_connection_str = pg_create_ogr2ogr_str(**new_creds)
         else:
             logger.info(f"Reloading gpkg to same original DB..")
             self.ogr2ogr_dest_connection_str = self.ogr2ogr_src_connection_str
@@ -124,6 +116,8 @@ class PostGISDBBackupGPK(PostGISDBBackup):
         # Should fail if overwrite_pg_tbl False and the table exists
         if overwrite_pg_tbl:
             cmd += ' -overwrite '
+
+        return cmd
     
 
     def postgis_to_gpkg(self):
