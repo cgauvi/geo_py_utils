@@ -67,7 +67,7 @@ class SfklTbl:
 def test_conn_str():
 
     dict_str={
-        "db_name": RemotePostGIS.POSTGIS_DB,
+        "database": RemotePostGIS.POSTGIS_DB,
         "user": RemotePostGIS.USER,
         "password": 'dummy_pass',
         "host": RemotePostGIS.HOST,
