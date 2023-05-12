@@ -16,7 +16,7 @@ def connection_remote_ro():
     return PostGISDBConnection(HERE / 'config' / 'remote_pg_ro' / ".env")
 
 
-@pytest.mark.requires_remote_pg_connection
+@pytest.mark.requires_remote_pg_connection_prod
 def test_list_public_tables(connection_remote_ro):
 
     pg_table_identifier = PostGISDBPublicTablesIdentifier(connection_remote_ro)

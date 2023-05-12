@@ -119,7 +119,7 @@ def test_sflk_to_postgis_remote():
     sfkl_postgis_loader_agg_tbl.upload_url_to_database()
 
 
-@pytest.mark.requires_remote_pg_connection
+@pytest.mark.requires_remote_pg_connection_prod
 def test_list_tables_postgis_remote():
 
     # First check
@@ -142,7 +142,7 @@ def test_list_tables_postgis_remote():
 
     
 
-@pytest.mark.requires_remote_pg_connection
+@pytest.mark.requires_remote_pg_connection_prod
 def test_spatialite_local_to_postgis_remote():
 
     # First check
