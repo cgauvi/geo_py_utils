@@ -1,3 +1,10 @@
+geo_py_utils 0.11.1
+
+==================
+
+- debug/minor feature:
+    * aded - lco LAUNDER=NO in postgis backup to keep variable case
+
 geo_py_utils 0.11.0
 
 - new features:  
