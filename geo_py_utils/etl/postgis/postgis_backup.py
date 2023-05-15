@@ -47,6 +47,7 @@ class PostGISDBBackupGPK(PostGISDBBackup):
             pg_tables_identifier (PostGISDBTablesIdentifier): _description_
             overwrite (bool, optional): delete any pre existent db. Defaults to True.
             promote_to_multi (bool, optional): to limit error by casting e.g polygon to multipolygon. Defaults to False.
+            keep_col_name_case (bool, true): if True, will keep the original variable case - e.g. GEOMETRY. Otherwise, all get converted to lower case. Defaults to True
     """
 
     def __init__(
@@ -54,7 +55,8 @@ class PostGISDBBackupGPK(PostGISDBBackup):
         dest_gpkg: Path, 
         pg_tables_identifier: PostGISDBTablesIdentifier,
         overwrite: bool = True,
-        promote_to_multi: bool = False
+        promote_to_multi: bool = False,
+        keep_col_name_case=True
         ):
 
 
@@ -63,6 +65,7 @@ class PostGISDBBackupGPK(PostGISDBBackup):
         self.dest_gpkg = dest_gpkg
         self.overwrite = overwrite
         self.promote_to_multi = promote_to_multi
+        self.keep_col_name_case = keep_col_name_case
 
         if self.overwrite and os.path.exists(dest_gpkg):
             logger.info(f'Removing {dest_gpkg}')
@@ -116,6 +119,9 @@ class PostGISDBBackupGPK(PostGISDBBackup):
         # Should fail if overwrite_pg_tbl False and the table exists
         if overwrite_pg_tbl:
             cmd += ' -overwrite '
+
+        if self.keep_col_name_case:
+            cmd += " -lco LAUNDER=NO "
 
         return cmd
     
