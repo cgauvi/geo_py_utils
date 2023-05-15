@@ -9,14 +9,13 @@ import pandas as pd
 import subprocess
 from abc import ABC, abstractmethod
 
-from gic.constants import ProjectPaths, GeoConstants
-from gic.logger import set_up_logger
+import sys
+
+sys.path.append("C:\\Users\\app12621\\Dev\\GIC_VEXCEL\\gic\\geo_py_utils")
+
+from geo_py_utils.constants import ProjectPaths
 from geo_py_utils.etl.postgis.postgis_tables import PostGISDBTablesIdentifier, PostGISDBPublicTablesIdentifier
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
- 
-
-sys.path.append(os.path.join(ProjectPaths.PATH_TO_GIC, 'geo_py_utils')) # add this line to be able to import ths submodule directly  `git submodule add https://github.com/cgauvi/ben_py_utils.git`  (from within GIC_VEXCEL/gic)
-
 from geo_py_utils.etl.postgis.db_utils import pg_list_tables, pg_create_ogr2ogr_str, pg_create_engine
 
 
@@ -87,9 +86,9 @@ class PostGISDBBackupGPK(PostGISDBBackup):
 
         # Point to the correct DB
         if pg_conn is not None:
-            conn = pg_conn.get_pg_connection()
-            logger.info(f"Reloading gpkg to different DB: {conn['host']} - {conn['database']}..")
-            self.ogr2ogr_dest_connection_str = pg_create_ogr2ogr_str(**conn.get_credentials())
+            new_creds = pg_conn.get_credentials()
+            logger.info(f"Reloading gpkg to different DB: {new_creds['host']} - {new_creds['database']}..")
+            self.ogr2ogr_dest_connection_str = pg_create_ogr2ogr_str(**new_creds)
         else:
             logger.info(f"Reloading gpkg to same original DB..")
             self.ogr2ogr_dest_connection_str = self.ogr2ogr_src_connection_str
@@ -124,6 +123,8 @@ class PostGISDBBackupGPK(PostGISDBBackup):
         # Should fail if overwrite_pg_tbl False and the table exists
         if overwrite_pg_tbl:
             cmd += ' -overwrite '
+
+        return cmd
     
 
     def postgis_to_gpkg(self):
@@ -209,4 +210,77 @@ class PostGISDBBackupGPK(PostGISDBBackup):
 
 if __name__ == '__main__':
 
-    gpkg_to_postgis
+    from os.path import abspath, dirname , exists
+    from pathlib import Path
+    import geopandas as gpd
+    from shapely.geometry import Polygon
+    from psycopg2 import sql, connect
+
+
+    path_test_env = "C:\\Users\\app12621\\Dev\\GIC_VEXCEL\\gic\\geo_py_utils\\tests\\etl\\postgis\\config\\remote_pg_admin\\prod\\test.env"
+
+    from dotenv import load_dotenv
+    load_dotenv(path_test_env)
+
+    tbl_dummy_name = 'dummy_table'
+
+    HERE = Path("C:\\Users\\app12621\\Dev\\GIC_VEXCEL\\gic\\geo_py_utils\\tests\\etl\\postgis")
+
+    connection_remote_admin_prod=PostGISDBConnection(HERE / 'config' / 'remote_pg_admin' / "prod" / ".env")
+    connection_remote_admin_dev=PostGISDBConnection(HERE / 'config' / 'remote_pg_admin' / "dev" / ".env")
+
+    dumy_gdf = gpd.GeoDataFrame({'id': [0]},
+                           geometry=[Polygon(((-71.5, 46.5),
+                                              (-71.6, 46.4),
+                                              (-71.5, 46.7),
+                                              (-71.5, 46.5)))
+                                     ],
+                           crs=4326
+                           )
+
+    # List public tables
+    pg_list_public_tables = PostGISDBPublicTablesIdentifier(
+        connection_remote_admin_prod, 
+        list_tables=[tbl_dummy_name]
+    )
+
+    # Load a dummy table
+    engine = pg_list_public_tables.get_pg_connection().get_sql_alchemy_engine()
+    with engine.connect() as conn:
+        dumy_gdf.to_postgis(tbl_dummy_name, conn, if_exists='replace')
+
+    # Backup selected tables to gpkg 
+    db_backup_creator = PostGISDBBackupGPK(
+        dest_gpkg = HERE / "backuptest.gpkg", 
+        pg_tables_identifier = pg_list_public_tables,
+        overwrite=True
+    )
+
+    db_backup_creator.postgis_to_gpkg()
+
+    # Teardown
+    # Drop table - prod
+    creds = pg_list_public_tables.get_pg_connection().get_credentials()
+    with connect(**creds) as conn:
+        cur = conn.cursor()
+        cur.execute(sql.SQL('DROP TABLE IF EXISTS %s' % tbl_dummy_name))
+
+    assert exists(HERE / "backuptest.gpkg")
+
+    # Reload back  to different DB
+    db_backup_creator.gpkg_to_postgis(connection_remote_admin_dev, overwrite_pg_tbl =True)
+
+    pg_list_public_tables_dev = PostGISDBPublicTablesIdentifier(
+        connection_remote_admin_dev, 
+        list_tables=[tbl_dummy_name]
+    )
+    assert tbl_dummy_name in pg_list_public_tables_dev.get_df_tables().tablename.values 
+
+    # Drop table - dev
+    creds = pg_list_public_tables_dev.get_pg_connection().get_credentials()
+    with connect(**creds) as conn:
+        cur = conn.cursor()
+        cur.execute(sql.SQL('DROP TABLE IF EXISTS %s' % tbl_dummy_name))
+
+    # Delete gpkg
+    (HERE / "backuptest.gpkg").unlink()
