@@ -61,6 +61,10 @@ python -m pip install "geo_py_utils @ git+ssh://git@github.com/LaCapitale/geo_py
 
 Tests are implemented with `pytest`. By default tests that require some sort of database connectivity are disabled in the `pyproject.toml`. Running `pytest` from within `geo_py_utils` root will skip these tests with the `-m` markers. This ensures that unit tests run in github actions or other similar framewrosk which might not necessarily have access to a given DB do not fail and crash the rest of the pipeline. 
  
-If you want to run a given test on a machine that meets the connectivity requirements, run someething like `pytest tests -m "requires_remote_pg_connection"`. See `pyproject.toml` for other registered `pytest.marks` that are exclude by default.
+If you want to run a given test on a machine that meets the connectivity requirements, run someething like `pytest tests -m "requires_remote_pg_connection_prod"`. See `pyproject.toml` for other registered `pytest.marks` that are excluded by default. 
+
+To be on the safe side, explicitely exclude markers when there are many E.g.:
+
+`pytest tests/ -m 'requires_remote_pg_connection_prod and not requires_remote_pg_connection_dev'` to run the postgis backup tests on workbench which has access to the prod db, but not the dev db.
 
  
