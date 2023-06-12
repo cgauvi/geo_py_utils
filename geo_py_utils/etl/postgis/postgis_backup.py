@@ -56,7 +56,8 @@ class PostGISDBBackupGPK(PostGISDBBackup):
         pg_tables_identifier: PostGISDBTablesIdentifier,
         overwrite: bool = True,
         promote_to_multi: bool = False,
-        keep_col_name_case=True
+        keep_col_name_case=True,
+        preserve_fid=True
         ):
 
 
@@ -66,6 +67,7 @@ class PostGISDBBackupGPK(PostGISDBBackup):
         self.overwrite = overwrite
         self.promote_to_multi = promote_to_multi
         self.keep_col_name_case = keep_col_name_case
+        self.preserve_fid = preserve_fid
 
         if self.overwrite and os.path.exists(dest_gpkg):
             logger.info(f'Removing {dest_gpkg}')
@@ -108,6 +110,9 @@ class PostGISDBBackupGPK(PostGISDBBackup):
         cmd = "ogr2ogr  " \
             ' -progress ' \
             ' --config PG_USE_COPY YES ' 
+
+        if self.preserve_fid:
+            cmd += " -preserve_fid "
 
         # ogr2ogr format: Dest Source
         # See https://gdal.org/programs/ogr2ogr.html
@@ -159,6 +164,9 @@ class PostGISDBBackupGPK(PostGISDBBackup):
         cmd = "ogr2ogr  " \
             ' -progress ' \
             ' --config PG_USE_COPY YES ' 
+        
+        if self.preserve_fid:
+            cmd += " -preserve_fid "
 
         # ogr2ogr format: Dest Source
         # See https://gdal.org/programs/ogr2ogr.html
