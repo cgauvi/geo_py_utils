@@ -1,3 +1,11 @@
+geo_py_utils 0.11.2
+
+==================
+
+- debug/minor feature:
+    * added -preserve_fid in postgis backup to avoid error when writing pg -> gpkg and a table has fid column which is not unique 
+
+
 geo_py_utils 0.11.1
 
 ==================
