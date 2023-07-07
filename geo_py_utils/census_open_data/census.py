@@ -3,17 +3,17 @@
 """ Functions to download and cache polygon boundaries for select census/canada post regions """
 
 import geopandas as gpd
-from os.path import join
 import logging
 import numpy as np
+from os.path import join
 from pathlib import Path
 
-from ben_py_utils.misc.cache import Cache_wrapper
-
-from geo_py_utils.etl.download_zip import download_zip_shp
-from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import download_qc_city_neighborhoods
+from geo_py_utils.etl.download_zip import download_zip_shp
 from geo_py_utils.geo_general.crs import get_crs_str
+from geo_py_utils.misc.cache import Cache_wrapper
+from geo_py_utils.misc.constants import DATA_DIR
+
 
 logger = logging.getLogger(__file__)
 
@@ -218,16 +218,14 @@ def download_fsas(year : int = 2016,
             if use_cartographic \
             else "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/lfsa000a21a_e.zip"
         else:
-            raise ValueError(f"Fatal error - inputed {year}, but only 2016 implemented")
+            raise ValueError(f"Fatal error - inputed {year}, but only 2016 and 2021 implemented")
 
-        # Arg zipped file has different structure .. 
-        if year == 2016:        
-            shp_fsa_all = download_zip_shp(zip_download_url, data_download_path)
-        elif year == 2021:
-            shp_fsa_all = download_zip_shp(zip_download_url, join(data_download_path, Path(zip_download_url).stem) )
-
+        # Download zip + unzip  look for shp file    
+        shp_fsa_all = download_zip_shp(zip_download_url, data_download_path, extension='.shp')
+   
+        # Filter by province
         shp_fsa_all_filtered = shp_fsa_all.loc[shp_fsa_all.PRUID.astype('str') == str(pr_code), ]
-    
+            
         logger.info(f"There are {shp_fsa_all_filtered.shape[0]} FSAs in {pr_code} for the 2016 census")
 
         # Transform
@@ -270,28 +268,7 @@ def download_qc_city_fsa_2016(buffer_degrees=0.1, **fsa_fun_kwargs) -> gpd.GeoDa
 
     return shp_2016_fsas_qc_city
 
-
-"""
-@Cache_wrapper(path_cache=join(DATA_DIR,"qc_city_fsaldu_2016_df.parquet"))
-def download_qc_city_fsaldu_2016_df(**kwargs)-> pd.DataFrame:
-
-    # Select only the fsaldu within the fsa within the city
-    shp_2016_fsas_qc_city = download_qc_city_fsa_2016(**kwargs)
-
-    # Get the pccf file
-    df_pccf = get_df_pccf()
-
-    # Extract the FSA
-    df_pccf['FSA'] = df_pccf.POSTCODE.str[:3]
-
-    # Join to filter by province (PCCF has all Canadian PCs)
-    df_pccf_qc_city = pd.merge(df_pccf,
-            shp_2016_fsas_qc_city[['CFSAUID']]   ,
-            left_on = 'FSA' ,
-            right_on =  'CFSAUID')
-
-    return df_pccf_qc_city
-"""
+ 
 
 
  

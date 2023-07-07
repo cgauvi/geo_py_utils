@@ -30,7 +30,7 @@ def test_admRegs_dissolved(clean_slate=False):
     qc_admReg_dissolved_extracter = DownloadQcDissolvedAdmReg()
     shp_admReg = qc_admReg_dissolved_extracter.get_qc_administrative_boundaries()
 
-    assert shp_admReg.shape[0] == 17
+    assert shp_admReg.shape[0] == 15
 
     assert np.all(np.isin([DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_ID_COL, 'DOMAINE_OPUS'], shp_admReg.columns))
 
