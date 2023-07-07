@@ -21,7 +21,7 @@ from geo_py_utils.etl.spatialite.db_utils import (
     rename_columns
 )
 from geo_py_utils.misc.constants import DATA_DIR
-from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
+from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
 from geo_py_utils.census_open_data.census import FSA_2016_URL
 from geo_py_utils.etl.spatialite.utils_testing import upload_qc_neigh_test_db, QcCityTestData
 
@@ -179,7 +179,7 @@ def test_spatialite_local_file():
         os.remove(QcCityTestData.SPATIAL_LITE_DB_PATH)
 
     # Read the shp file from the url + write to disk before uploading to spatialite
-    shp_qc = gpd.read_file(QC_CITY_NEIGH_URL)
+    shp_qc = gpd.read_file(DEFAULT_QC_CITY_NEIGH_URL)
     tmp_dir = tempfile.mkdtemp()
     path_shp_file_local = join(tmp_dir, 'tmp.shp')
     shp_qc.to_file(path_shp_file_local)

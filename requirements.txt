@@ -15,4 +15,3 @@ python-geohash
 sqlalchemy
 snowflake-connector-python
 flake8
-git+https://github.com/cgauvi/ben_py_utils.git@master

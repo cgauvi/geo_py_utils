@@ -10,7 +10,7 @@ logger = logging.getLogger(__file__)
 
 from geo_py_utils.misc.constants import DATA_DIR
 #--
-from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
+from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
 #--
 from geo_py_utils.etl.db_etl import Url_to_postgis
 from geo_py_utils.etl.port import is_port_open
@@ -284,7 +284,7 @@ def test_local_shp_to_postgis_local_db_qc():
         with Url_to_postgis(
             db_name = LocalPostGIS.POSTGIS_DB,
             table_name = LocalPostGIS.TBL_NAME,
-            download_url = QC_CITY_NEIGH_URL,
+            download_url = DEFAULT_QC_CITY_NEIGH_URL,
             download_destination = DATA_DIR,
             host = LocalPostGIS.HOST,
             port = LocalPostGIS.PORT,
