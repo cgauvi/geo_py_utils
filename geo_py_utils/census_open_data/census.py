@@ -6,7 +6,6 @@ import geopandas as gpd
 import logging
 import numpy as np
 from os.path import join
-from pathlib import Path
 
 from geo_py_utils.census_open_data.open_data import download_qc_city_neighborhoods
 from geo_py_utils.etl.download_zip import download_zip_shp

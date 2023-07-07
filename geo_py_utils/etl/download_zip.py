@@ -59,7 +59,7 @@ def download_zip_shp(url: str,
 
     # Only unzip
     if not return_shp_file:
-        logger.warning(f"Only unzipping file to {path_data_dir_unzipped_shp}")
+        logger.warning(f"Only unzipping file to {path_data_dir_unzipped}")
         return None
 
     # Look for geo file 

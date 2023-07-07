@@ -195,16 +195,17 @@ def test_spatialite_local_file():
         spatialite_etl.upload_url_to_database()
 
     
-    shp_test = spatialite_db_to_gdf( QcCityTestData.SPATIAL_LITE_DB_PATH,
-     QcCityTestData.SPATIAL_LITE_TBL_QC
-     )
+    shp_test = spatialite_db_to_gdf ( 
+        QcCityTestData.SPATIAL_LITE_DB_PATH,
+        QcCityTestData.SPATIAL_LITE_TBL_QC
+        )
 
     assert shp_qc.shape[0] == shp_test.shape[0]
  
 
 def test_drop_table():
 
-     # Make sure table exists initially
+    # Make sure table exists initially
     if not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH):
         upload_qc_neigh_test_db()
 
@@ -216,11 +217,10 @@ def test_drop_table():
 
     # Drop ALL
     drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, QcCityTestData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME)
-    list_aux_tables_to_drop_suff = ['','_rowid', '_node', '_parent']
-    list_aux_tables_to_drop =  [ f"{QcCityTestData.SPATIAL_LITE_TBL_QC}_{QcCityTestData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME}{suffix};" \
+    list_aux_tables_to_drop_suff = ['', '_rowid', '_node', '_parent']
+    list_aux_tables_to_drop = [ f"{QcCityTestData.SPATIAL_LITE_TBL_QC}_{QcCityTestData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME}{suffix};"
                                  for suffix in list_aux_tables_to_drop_suff]
-    assert not np.any(np.isin(np.array(list_aux_tables_to_drop), list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)   ))
-   
+    assert not np.any(np.isin(np.array(list_aux_tables_to_drop), list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)))
 
 if __name__ == '__main__':
 

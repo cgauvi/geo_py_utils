@@ -1,10 +1,8 @@
 import dotenv
 import os
 from pathlib import Path
-import sys
 
- 
-from geo_py_utils.etl.postgis.db_utils import pg_list_tables, pg_create_ogr2ogr_str, pg_create_engine
+from geo_py_utils.etl.postgis.db_utils import pg_create_engine
 from geo_py_utils.constants import ProjectPaths
 
 class PostGISDBConnection:

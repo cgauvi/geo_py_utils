@@ -1,17 +1,13 @@
 
-
-import dotenv
-import os
-import logging
-import sys
-from pathlib import Path
-import pandas as pd
-import subprocess
 from abc import ABC, abstractmethod
+import logging
+import os
+from pathlib import Path
+import subprocess
 
-from geo_py_utils.etl.postgis.postgis_tables import PostGISDBTablesIdentifier, PostGISDBPublicTablesIdentifier
+from geo_py_utils.etl.postgis.postgis_tables import PostGISDBTablesIdentifier
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
-from geo_py_utils.etl.postgis.db_utils import pg_list_tables, pg_create_ogr2ogr_str, pg_create_engine
+from geo_py_utils.etl.postgis.db_utils import pg_create_ogr2ogr_str
 
 
 # Logger
@@ -88,14 +84,14 @@ class PostGISDBBackupGPK(PostGISDBBackup):
             logger.info(f"Reloading gpkg to different DB: {new_creds['host']} - {new_creds['database']}..")
             self.ogr2ogr_dest_connection_str = pg_create_ogr2ogr_str(**new_creds)
         else:
-            logger.info(f"Reloading gpkg to same original DB..")
+            logger.info("Reloading gpkg to same original DB..")
             self.ogr2ogr_dest_connection_str = self.ogr2ogr_src_connection_str
 
         # Actual system call
         cmd_pg_gpkg = self._get_common_cmd_gpkg_to_pg(overwrite_pg_tbl = overwrite_pg_tbl)
         subprocess.check_call(cmd_pg_gpkg, shell=True)  
 
-        logger.info(f"Successfully completed reload of gpkg -> postgis!")
+        logger.info("Successfully completed reload of gpkg -> postgis!")
 
 
     def _get_common_cmd_gpkg_to_pg(self, overwrite_pg_tbl = False) -> str:
@@ -149,7 +145,7 @@ class PostGISDBBackupGPK(PostGISDBBackup):
             self._backup_select_tables()
 
         
-        logger.info(f'Successfully backed up all tables!')
+        logger.info('Successfully backed up all tables!')
 
 
 
@@ -214,7 +210,4 @@ class PostGISDBBackupGPK(PostGISDBBackup):
         subprocess.check_call(cmd, shell=True)  
 
 
-
-if __name__ == '__main__':
-
-    gpkg_to_postgis
+ 

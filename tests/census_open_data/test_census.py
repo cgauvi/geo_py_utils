@@ -1,7 +1,7 @@
 import geopandas as gpd
 from os.path import isdir, join
+from os import makedirs
 from shutil import rmtree
-from unittest.mock import patch
 
 from geo_py_utils.misc.utils_test import create_mock_cache_dir
 from geo_py_utils.census_open_data import census
@@ -23,7 +23,7 @@ class MockCache:
         self.mocked_dir = create_mock_cache_dir()
         
     def __enter__(self):
-        if not isdir(self.mocked_dir): mkdir(self.mocked_dir)
+        if not isdir(self.mocked_dir): makedirs(self.mocked_dir)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
