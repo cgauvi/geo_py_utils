@@ -15,4 +15,4 @@ python-geohash
 sqlalchemy
 snowflake-connector-python
 flake8
-dotenv
+python-dotenv
