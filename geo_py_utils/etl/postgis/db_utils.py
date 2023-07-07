@@ -10,15 +10,63 @@ from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__file__)
   
-def pg_create_engine(db_name:str,
+
+def pg_create_connection_str(database:str,
                     user: str,
                     password: str,
                     host: str,
-                    port: Union[int,str]) -> sqlalchemy.engine.base.Engine:
-    """Super thin convenience wrapper around create_engine to abstract string details
+                    port: Union[int,str]) -> str:
+
+    """Super thin convenience wrapper to create connection string from credentials
+
+    Can be used with pg_create_engine
 
     Args:
-        db_name (str): _description_
+        database (str): _description_
+        user (str): _description_
+        password (str): _description_
+        host (str): _description_
+        port (Union[int,str]): _description_
+
+    Returns:
+        str
+    """
+    
+    return f'postgresql://{user}:{password}@{host}:{str(port)}/{database}'
+
+
+def pg_create_ogr2ogr_str(
+    database:str,
+    user: str,
+    password: str,
+    host: str,
+    port: Union[int, str]
+    ) -> str:
+
+    """Super thin convenience wrapper to create string details - namely for ogr2ogr
+
+    Args:
+        database (str): _description_
+        user (str): _description_
+        password (str): _description_
+        host (str): _description_
+        port (Union[int,str]): _description_
+    """
+
+    return f' "PG:host={host} dbname={database} user={user} password={password} port={port}" '
+
+
+def pg_create_engine(
+    database: str,
+    user: str,
+    password: str,
+    host: str,
+    port: Union[int, str]) -> sqlalchemy.engine.base.Engine:
+
+    """Super thin convenience wrapper to create an abstract string details
+
+    Args:
+        database (str): _description_
         user (str): _description_
         password (str): _description_
         host (str): _description_
@@ -27,14 +75,15 @@ def pg_create_engine(db_name:str,
     Returns:
         sqlalchemy.engine.base.Engine: _description_
     """
-    return create_engine(f'postgresql://{user}:{password}@{host}:{str(port)}/{db_name}')
+    return create_engine(pg_create_connection_str(database, user, password, host, port))
 
-def pg_db_exists(engine: sqlalchemy.engine.base.Engine, db_name: str) -> bool:
+
+def pg_db_exists(engine: sqlalchemy.engine.base.Engine, database: str) -> bool:
     """Check if a db exists
 
     Args:
         engine (sqlalchemy.engine.base.Engine)
-        db_name (str): _description_
+        database (str): _description_
 
     Returns:
         bool: True if db exists
@@ -44,7 +93,7 @@ def pg_db_exists(engine: sqlalchemy.engine.base.Engine, db_name: str) -> bool:
     query_exists = f"""
                 SELECT datname 
                 FROM pg_catalog.pg_database 
-                WHERE lower(datname) = lower('{db_name}');
+                WHERE lower(datname) = lower('{database}');
                 """
     # Trying to connect to non-existent db raises OperationalError
     # https://stackoverflow.com/questions/15062208/how-to-search-for-the-existence-of-a-database-with-sqlalchemy
@@ -53,12 +102,12 @@ def pg_db_exists(engine: sqlalchemy.engine.base.Engine, db_name: str) -> bool:
             df_results = pd.read_sql(query_exists, conn)
         db_exists = df_results.shape[0] > 0
     except OperationalError:
-        logger.info(f'{db_name} does not seem to exist')
+        logger.info(f'{database} does not seem to exist')
 
     return db_exists
 
 
-def pg_create_db(db_name: str, 
+def pg_create_db(database: str, 
                 user: str,
                 password: str, 
                 host: str,
@@ -68,7 +117,7 @@ def pg_create_db(db_name: str,
     Sets user as owner
 
     Args:
-        db_name (_type_): _description_
+        database (_type_): _description_
         user (_type_): _description_
         password (_type_): _description_
         host (_type_): _description_
@@ -76,10 +125,10 @@ def pg_create_db(db_name: str,
     """
 
     # Inspect all DBs
-    engine_db_specific = create_engine(f'postgresql://{user}:{password}@{host}:{str(port)}/{db_name}')
+    engine_db_specific = create_engine(f'postgresql://{user}:{password}@{host}:{str(port)}/{database}')
 
     # Db does not exist
-    if not pg_db_exists(engine_db_specific, db_name):
+    if not pg_db_exists(engine_db_specific, database):
 
         # Conenct to generic posrgres db
         engine_generic = create_engine(f'postgresql://{user}:{password}@{host}:{str(port)}/postgres')
@@ -91,7 +140,7 @@ def pg_create_db(db_name: str,
             #Preparing query to create a database - make sure it is a POSTGIS DB
             session.\
                 execute(f"""
-                CREATE database {db_name} 
+                CREATE database {database} 
                 WITH 
                     OWNER = {user}
                     ENCODING = 'UTF8'
@@ -109,25 +158,25 @@ def pg_create_db(db_name: str,
                 )
 
 
-        logger.info(f"Successfully created postgres db {db_name} & enabled postigs extension")
+        logger.info(f"Successfully created postgres db {database} & enabled postigs extension")
     else:
-        logger.info(f"{db_name} already exists")
+        logger.info(f"{database} already exists")
 
 
-def pg_list_tables(engine: sqlalchemy.engine.base.Engine, db_name: str) -> List[str]:
+def pg_list_tables(engine: sqlalchemy.engine.base.Engine, database: str) -> List[str]:
     """ List tables in a postgres db
 
     Args:
         engine (sqlalchemy.engine.base.Engine)
-        db_name (str)
+        database (str)
     Returns:
         list of table names : list: will return an empty list if db does not exist
 
     """
     
     list_tables = []
-    if not pg_db_exists(engine, db_name):
-        logger.info(f"DB {db_name} does not exist!")
+    if not pg_db_exists(engine, database):
+        logger.info(f"DB {database} does not exist!")
         return list_tables
 
     query = """
@@ -146,18 +195,18 @@ def pg_list_tables(engine: sqlalchemy.engine.base.Engine, db_name: str) -> List[
 
 
   
-def pg_drop_table(engine: sqlalchemy.engine.base.Engine, db_name: str, tbl_name: str):
+def pg_drop_table(engine: sqlalchemy.engine.base.Engine, database: str, tbl_name: str):
     """Drop a table in a postgres db if it exists.
 
     Args:
         engine (sqlalchemy.engine.base.Engine)
-        db_name (str): name of db
+        database (str): name of db
         tbl_name(str):  name of table to drop
     Returns:
 
     """
-    if not pg_db_exists(engine, db_name):
-        logger.info(f'Not running pg_drop_table {db_name} does not exist')
+    if not pg_db_exists(engine, database):
+        logger.info(f'Not running pg_drop_table {database} does not exist')
         return 
 
     with engine.connect() as conn:
@@ -200,7 +249,7 @@ def pg_get_table_rows(engine: sqlalchemy.engine.base.Engine, tbl_name: str) -> i
     Transfers query to pg_sql_to_df
 
     Args:
-        db_name (sqlalchemy.engine.base.Engine): _description_
+        database (sqlalchemy.engine.base.Engine): _description_
         tbl_name (str): _description_
 
     Returns:

@@ -1,8 +1,7 @@
 import geopandas as gpd
 import geohash
 from shapely.geometry import Polygon, Point
-from os.path import join
-
+ 
 from geo_py_utils.geo_general.bbox import get_list_coordinates_from_bbox
 from geo_py_utils.geo_general.geo_utils import get_geodataframe_from_list_coord
 from geo_py_utils.geo_general.geohash_utils import (
@@ -76,6 +75,8 @@ def test_get_max_precision():
 
 def test_recursive_geohash_refines():
 
+    max_prec = 4
+    min_num_points = 1
 
     shp_all_1 = gpd.GeoDataFrame(
         {
@@ -86,13 +87,19 @@ def test_recursive_geohash_refines():
     crs = 4326
     )
 
-    shp_part, _ = recursively_partition_geohash_cells(shp_all_1,
+    shp_part, dict_shps = recursively_partition_geohash_cells(shp_all_1,
                                                     count_column_name='counts',
-                                                    min_num_points=1,
-                                                    max_precision=4)
+                                                    min_num_points=min_num_points,
+                                                    max_precision=max_prec)
 
-    assert shp_part[shp_part['counts'] > 0].shape[0] == shp_all_1.shape[0]-1 # aggregated 2 geohashes into one (last 2 points)
+    # aggregated 2 geohashes into one (last 2 points)
+    assert shp_part[shp_part['counts'] > 0].shape[0] == shp_all_1.shape[0]-1 
+    assert max(dict_shps.keys()) <= max_prec
 
+    # Make sure the cells that are suff refined (low geohash prec) respect the num of points constraint
+    for k in dict_shps.keys():
+        if k < max_prec:
+            dict_shps[k].counts.max() <= min_num_points
 
 def test_recursive_geohash_does_nothing():
 
@@ -119,4 +126,3 @@ def test_recursive_geohash_does_nothing():
 if __name__ == '__main__':
 
     test_recursive_geohash_refines()
- 

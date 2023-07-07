@@ -40,7 +40,7 @@ class LoadSqlitePostgis:
  
     
     def upload_url_to_database(self):
-        """Extract parcel data and load into a spatialite DB
+        """Extract spatialite table to postgis
         """
 
         # QA

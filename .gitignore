@@ -1,3 +1,6 @@
+# .env files 
+.env
+
 # tox files for testing
 .tox
 

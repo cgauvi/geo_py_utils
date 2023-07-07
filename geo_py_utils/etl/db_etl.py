@@ -46,7 +46,7 @@ class Url_to_db(ABC):
         # Use tmp dir + delete at the edn
         if download_destination is None:
             download_destination = tempfile.mkdtemp()
-            path_src_to_upload =  tempfile.mkdtemp() # point to dir where we will extract the data
+            path_src_to_upload = tempfile.mkdtemp() # point to dir where we will extract the data
             self.delete_download_destination = True
         else:
             path_src_to_upload = join(download_destination, f"{table_name}_post_curl")
@@ -258,9 +258,9 @@ class Url_to_postgis(Url_to_db):
         # Hackish: only works by manually setting self.path_src_to_upload
         source = abspath(self.path_src_to_upload)
         if self.src_spatialite_tbl_name is not None:
-            cmd += fr" '{source}' {self.src_spatialite_tbl_name} " 
+            cmd += fr" {source} {self.src_spatialite_tbl_name} " 
         else:
-            cmd += fr" '{source}' " 
+            cmd += fr" {source} " 
 
         cmd += f' -lco SCHEMA={self.schema} ' \
             f" -nln {self.table_name} " \
@@ -283,7 +283,7 @@ class Url_to_postgis(Url_to_db):
 
         # Inspect all DBs
         pg_create_db(
-            db_name= self.db_name, 
+            database= self.db_name, 
             user = self.user, 
             password = self.password , 
             host = self.host, 

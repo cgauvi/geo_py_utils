@@ -1,3 +1,62 @@
+geo_py_utils 1.0.0
+
+==================
+
+- major:
+    * removed the dependency on ben_py_utils
+- debug/minor feature:
+    * created a mock tmp cache for more robust debugging
+
+
+geo_py_utils 0.11.2
+
+==================
+
+- debug/minor feature:
+    * added -preserve_fid in postgis backup to avoid error when writing pg -> gpkg and a table has fid column which is not unique 
+
+
+geo_py_utils 0.11.1
+
+==================
+
+- debug/minor feature:
+    * added - lco LAUNDER=NO in postgis backup to keep variable case
+
+geo_py_utils 0.11.0
+
+- new features:  
+    * postgres connection object from .env file
+    * postres table listor
+    * postres backup to gpkg
+
+==================
+
+geo_py_utils 0.10.0
+
+- new feature: connection strings from postgres credentials
+    * ogr2ogr
+    * sqlalchemy
+
+==================
+
+geo_py_utils 0.9.0
+
+- new feature: getting 2021 FSA boundary shp files 
+
+==================
+
+geo_py_utils 0.8.0
+
+- new feature: getting boroughs (arrondissements) from the qc administrative data
+
+==================
+
+geo_py_utils 0.7.3
+
+- updates on installation details in readme
+
+==================
 
 geo_py_utils 0.7.2
 
