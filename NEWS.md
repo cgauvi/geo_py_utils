@@ -1,3 +1,11 @@
+geo_py_utils 1.1.0
+
+==================
+
+- minor feature:
+    * created a mock tmp cache for more robust debugging (open data)
+    
+
 geo_py_utils 1.0.0
 
 ==================
@@ -5,7 +13,7 @@ geo_py_utils 1.0.0
 - major:
     * removed the dependency on ben_py_utils
 - debug/minor feature:
-    * created a mock tmp cache for more robust debugging
+    * created a mock tmp cache for more robust debugging (census)
 
 
 geo_py_utils 0.11.2
