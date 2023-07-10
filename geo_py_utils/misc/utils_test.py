@@ -16,7 +16,7 @@ class MockTmpCache:
         self.mocked_dir = self._create_mock_cache_dir()
         
     def __enter__(self):
-        if not isdir(self.mocked_dir): makedirs(self.mocked_dir)
+        if not isdir(self.mocked_dir): mkdir(self.mocked_dir)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):

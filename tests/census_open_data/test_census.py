@@ -1,16 +1,10 @@
 import geopandas as gpd
-from os.path import isdir, join
-from os import makedirs
-from shutil import rmtree
+from os.path import join
 import inspect
-
-
 
 from geo_py_utils.misc.utils_test import MockTmpCache
 from geo_py_utils.census_open_data import census
  
-
-
 
 class MockCacheCensus(MockTmpCache):
     """Class to manually implement unittest.patch which never actually works
@@ -126,7 +120,7 @@ def test_2016_cma_ca_qc():
     
     with MockCacheCensus() as mocked_cache:
         df = mocked_cache.download_compare_cache_ca_cmas(pr_code=24) 
-
+    assert df is not None
 
 def test_2016_cma_ca_qc_force_spatial_join():
     with MockCacheCensus() as mocked_cache:
@@ -151,7 +145,7 @@ def test_2016_cma_ca_qc_crs():
 def test_2021_nb_da ():
     with MockCacheCensus() as mocked_cache:
         df = mocked_cache.download_compare_cache_das(pr_code=13)
- 
+    assert df is not None
 
 if __name__ == "__main__":
     test_2021_fsa_qc()
