@@ -1,6 +1,6 @@
 import numpy as np
-from os import remove, makedirs
-from os.path import exists, join
+from os import makedirs
+from os.path import join
 
 from geo_py_utils.misc.utils_test import MockTmpCache
 
