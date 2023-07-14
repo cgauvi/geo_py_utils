@@ -139,10 +139,11 @@ class PostGISDBBackupGPK(PostGISDBBackup):
 
         if (self.pg_tables_identifier.selected_tables is None):
             logger.info("No tables selected -> extracting ALL tables")
-            self._backup_all()
         else :
             logger.info("Extracting only select tables")
-            self._backup_select_tables()
+        
+        
+        self._backup_select_tables()
 
         
         logger.info('Successfully backed up all tables!')
@@ -198,16 +199,6 @@ class PostGISDBBackupGPK(PostGISDBBackup):
                         """)
             subprocess.check_call(cmd_tbl, shell=True)  
 
-
-    def _backup_all(self):
-        """Builds the ogr2ogr str + calls it ONCE
-        """
-
-        cmd = self._get_common_cmd_pg_to_gpkg()
-
-        # Actual system call
-        logger.info(cmd)
-        subprocess.check_call(cmd, shell=True)  
 
 
  
