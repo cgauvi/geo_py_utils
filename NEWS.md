@@ -1,3 +1,12 @@
+geo_py_utils 1.1.2
+
+==================
+
+
+- minor:
+    * new `get_df_geometry_columns` method in `PostGISDBTablesIdentifier` to get the geometry columns from a given schema and table
+
+
 geo_py_utils 1.1.1
 
 ==================
