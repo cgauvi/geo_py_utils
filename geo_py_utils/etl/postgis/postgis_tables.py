@@ -34,10 +34,47 @@ class PostGISDBTablesIdentifier:
     def get_pg_connection(self):
         return self.pg_connect
 
+    def get_df_geometry_columns(self) -> pd.DataFrame:
+        """Get a df with details on geometry columns in db
+        Returns:
+            pd.DataFrame: dataframe with tablename, schemaname columns
+        """
+
+        query = """ 
+            SELECT 
+                f_table_catalog,
+                f_table_name tablename,  
+                f_table_schema schemaname, 
+                f_geometry_column, 
+                srid, 
+                type
+            FROM geometry_columns
+            """
+
+        # Schema filter
+        if self.selected_schemas is not None:
+            schema_str = ", ".join([f"'{str(ss)}'" for ss in self.selected_schemas])
+            query += f"""
+                WHERE f_table_schema in ({schema_str})
+            """
+
+        # Table filter
+        if self.selected_tables is not None:
+            table_str = ", ".join([f"'{str(st)}'" for st in self.selected_tables])
+            query += f"""
+                AND f_table_name in ({table_str});
+            """
+         
+        # Read in results
+        engine = self.pg_connect.get_sql_alchemy_engine()
+        with engine.connect() as conn:
+            df_results = pd.read_sql(query, conn)
+
+        return df_results
+
+
     def get_df_tables(self) -> pd.DataFrame:
         """Get a df with details on tables in db
-        Args:
-            selected_schemas (List[str]): List of schemas to consider - e.g. ['public', 'postgistfw']. Defaults to None - in which case considers all schemas 
         Returns:
             pd.DataFrame: dataframe with tablename, schemaname columns
         """
@@ -89,6 +126,9 @@ class PostGISDBPublicTablesIdentifier(PostGISDBTablesIdentifier):
 
     def get_df_tables(self):
         return super().get_df_tables()
+
+    def get_df_geometry_columns(self):
+        return super().get_df_geometry_columns()
 
         
 
