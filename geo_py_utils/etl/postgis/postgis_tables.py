@@ -1,17 +1,10 @@
 
 
-import dotenv
-import os
 import logging
-import sys
-from pathlib import Path
 import pandas as pd
 from typing import List
-from abc import ABC, abstractmethod
 
-from geo_py_utils.constants import ProjectPaths
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
-from geo_py_utils.etl.postgis.db_utils import pg_list_tables, pg_create_ogr2ogr_str, pg_create_engine
 
 # Logger
 logger = logging.getLogger(__file__)

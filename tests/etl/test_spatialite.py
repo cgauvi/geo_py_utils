@@ -21,7 +21,7 @@ from geo_py_utils.etl.spatialite.db_utils import (
     rename_columns
 )
 from geo_py_utils.misc.constants import DATA_DIR
-from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
+from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
 from geo_py_utils.census_open_data.census import FSA_2016_URL
 from geo_py_utils.etl.spatialite.utils_testing import upload_qc_neigh_test_db, QcCityTestData
 
@@ -179,7 +179,7 @@ def test_spatialite_local_file():
         os.remove(QcCityTestData.SPATIAL_LITE_DB_PATH)
 
     # Read the shp file from the url + write to disk before uploading to spatialite
-    shp_qc = gpd.read_file(QC_CITY_NEIGH_URL)
+    shp_qc = gpd.read_file(DEFAULT_QC_CITY_NEIGH_URL)
     tmp_dir = tempfile.mkdtemp()
     path_shp_file_local = join(tmp_dir, 'tmp.shp')
     shp_qc.to_file(path_shp_file_local)
@@ -195,16 +195,17 @@ def test_spatialite_local_file():
         spatialite_etl.upload_url_to_database()
 
     
-    shp_test = spatialite_db_to_gdf( QcCityTestData.SPATIAL_LITE_DB_PATH,
-     QcCityTestData.SPATIAL_LITE_TBL_QC
-     )
+    shp_test = spatialite_db_to_gdf ( 
+        QcCityTestData.SPATIAL_LITE_DB_PATH,
+        QcCityTestData.SPATIAL_LITE_TBL_QC
+        )
 
     assert shp_qc.shape[0] == shp_test.shape[0]
  
 
 def test_drop_table():
 
-     # Make sure table exists initially
+    # Make sure table exists initially
     if not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH):
         upload_qc_neigh_test_db()
 
@@ -216,11 +217,10 @@ def test_drop_table():
 
     # Drop ALL
     drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, QcCityTestData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME)
-    list_aux_tables_to_drop_suff = ['','_rowid', '_node', '_parent']
-    list_aux_tables_to_drop =  [ f"{QcCityTestData.SPATIAL_LITE_TBL_QC}_{QcCityTestData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME}{suffix};" \
+    list_aux_tables_to_drop_suff = ['', '_rowid', '_node', '_parent']
+    list_aux_tables_to_drop = [ f"{QcCityTestData.SPATIAL_LITE_TBL_QC}_{QcCityTestData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME}{suffix};"
                                  for suffix in list_aux_tables_to_drop_suff]
-    assert not np.any(np.isin(np.array(list_aux_tables_to_drop), list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)   ))
-   
+    assert not np.any(np.isin(np.array(list_aux_tables_to_drop), list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)))
 
 if __name__ == '__main__':
 

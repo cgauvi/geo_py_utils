@@ -3,7 +3,7 @@ from os.path import join
 import sqlite3
 
 from geo_py_utils.misc.constants import DATA_DIR
-from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
+from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
 from geo_py_utils.etl.db_etl import Url_to_spatialite
 from geo_py_utils.etl.spatialite.gdf_load import spatialite_db_to_gdf
 
@@ -12,7 +12,7 @@ class QcCityTestData:
     SPATIAL_LITE_DB_PATH = join(DATA_DIR, "test.db")
     SPATIAL_LITE_TBL_QC = "qc_city_test_tbl"
     SQL_LITE_TBL_CSV_QC = 'csv_qc_city_test_tbl'
-    QC_CITY_NEIGH_URL = QC_CITY_NEIGH_URL
+    QC_CITY_NEIGH_URL = DEFAULT_QC_CITY_NEIGH_URL
     SPATIAL_LITE_TBL_GEOMETRY_COL_NAME = 'GEOMETRY'
 
 

@@ -1,9 +1,35 @@
+geo_py_utils 1.1.0
+
+==================
+
+- minor feature:
+    * created a mock tmp cache for more robust debugging (open data)
+    
+
+geo_py_utils 1.0.0
+
+==================
+
+- major:
+    * removed the dependency on ben_py_utils
+- debug/minor feature:
+    * created a mock tmp cache for more robust debugging (census)
+
+
+geo_py_utils 0.11.2
+
+==================
+
+- debug/minor feature:
+    * added -preserve_fid in postgis backup to avoid error when writing pg -> gpkg and a table has fid column which is not unique 
+
+
 geo_py_utils 0.11.1
 
 ==================
 
 - debug/minor feature:
-    * aded - lco LAUNDER=NO in postgis backup to keep variable case
+    * added - lco LAUNDER=NO in postgis backup to keep variable case
 
 geo_py_utils 0.11.0
 

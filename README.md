@@ -54,7 +54,6 @@ python -m pip install "geo_py_utils @ git+ssh://git@github.com/LaCapitale/geo_py
 - It is possible to install extra optional dependencies. For instance if running notebooks and trying to plot/map/visualize results, it will be referable to run `python -m pip install  "geo_py_utils[notebooks] @ git+ssh://git@github.com/LaCapitale/geo_py_utils.git"` to install all required packages. 
 - It is also possible to select a specific version rather than taking the latest; for instance by using `"git+ssh://git@github.com/LaCapitale/geo_py_utils.git@v0.7.1"`.
 - Also note that `poetry` can be used as a drop-in replacement for `pip`: `poetry add "geo_py_utils[notebooks] @ git+ssh://git@github.com/LaCapitale/geo_py_utils.git@v0.7.1"`
-- The package depends on another [custom package](https://github.com/cgauvi/ben_py_utils). The following line was added to the `pyproject.toml`: `ben_py_utils = {git = "https://github.com/cgauvi/ben_py_utils.git", tag = "v0.2.1"  }`
 
 
 ## Testing

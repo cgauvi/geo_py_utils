@@ -4,40 +4,45 @@ import geopandas as gpd
 from os.path import join, exists
 import logging 
 
-from ben_py_utils.misc.cache import Cache_wrapper
- 
-from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.etl.download_zip import download_zip_shp
+from geo_py_utils.misc.cache import Cache_wrapper
+from geo_py_utils.misc.constants import DATA_DIR
 
-QC_CITY_NEIGH_URL = "https://www.donneesquebec.ca/recherche/dataset/5b1ae6f2-6719-46df-bd2f-e57a7034c917/resource/436c85aa-88d9-4e57-9095-b72b776a71a0/download/vdq-quartier.geojson"
+
+DEFAULT_QC_CITY_NEIGH_URL = "https://www.donneesquebec.ca/recherche/dataset/5b1ae6f2-6719-46df-bd2f-e57a7034c917/resource/436c85aa-88d9-4e57-9095-b72b776a71a0/download/vdq-quartier.geojson"
 
 logger = logging.getLogger(__file__)
 
 @Cache_wrapper(path_cache=join(DATA_DIR, "cache", "qc_neighborhoods.parquet"))
-def download_qc_city_neighborhoods():
+def download_qc_city_neighborhoods(url_qc_city = DEFAULT_QC_CITY_NEIGH_URL) -> gpd.GeoDataFrame:
+
     """ Download the neighborhood polygons for Qc City (city proper only - corresponds to census sub division) 
+    Args: 
+        url_qc_city (str, optional): url to qc open data
+    Returns:
+       shp_qc:  gpd.GeoDataFrame 
     """
-    url_qc_city = QC_CITY_NEIGH_URL
+    
     shp_qc_city = gpd.read_file(url_qc_city).to_crs(4326)        
 
     return shp_qc_city
 
 
 
-def get_qc_city_bbox()-> dict : 
+def get_qc_city_bbox(**qc_city_kwargs)-> dict : 
 
     """ Build a spatial clause: take only policies within Quebec City bounding box. 
-
+    Args:
+        qc_city_kwargs
     Returns:
         bounding box: dict representing qc city bounding box
     """
 
     # Get the qc city neighborhoods
-    shp_qc_city = download_qc_city_neighborhoods()
+    shp_qc_city = download_qc_city_neighborhoods(**qc_city_kwargs)
 
     # Take only policies within Quebec City bounding box
     min_lng, min_lat, max_lng, max_lat = shp_qc_city.total_bounds
-
 
     return {"min_lng": min_lng, 
             "min_lat": min_lat, 
@@ -95,7 +100,7 @@ class DownloadQcAdmBoundaries:
         """
 
         # point to data path of unzipped folder
-        path_shp = join(DATA_DIR, 'qc_adm_regions', 'SHP','Sda', 'version_courante','SHP', f'{self.geo_level}.shp')
+        path_shp = join(self.data_download_path, 'SHP','Sda', 'version_courante','SHP', f'{self.geo_level}.shp')
 
         # Unzip if required
         if not exists(path_shp):
@@ -132,11 +137,12 @@ class DownloadQcBoroughs(DownloadQcAdmBoundaries):
 
  
     def __init__(self,
-                data_download_path=join(DATA_DIR, 'qc_boroughs')
+                data_download_path=join(DATA_DIR, 'qc_boroughs'),
+                **kwargs
                 ) :
 
 
-        super().__init__(DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ARROND, data_download_path)
+        super().__init__(DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ARROND, data_download_path, **kwargs)
 
 
     def get_raw_data(self) -> gpd.GeoDataFrame:
@@ -176,6 +182,7 @@ class DownloadQcDissolvedMunicipalities(DownloadQcAdmBoundaries):
  
     def __init__(self,
                 data_download_path=join(DATA_DIR, 'qc_adm_regions'),
+                path_cache_root=join(DATA_DIR, "cache"),
                 filter_out_unknown_muni=True
                 ) :
 
@@ -183,7 +190,7 @@ class DownloadQcDissolvedMunicipalities(DownloadQcAdmBoundaries):
         super().__init__(DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI, data_download_path)
 
         self.filter_out_unknown_muni = filter_out_unknown_muni
-        self.path_cache = join(DATA_DIR, "cache", f"qc_adm_regions_MUNI_DISSOLVED_{filter_out_unknown_muni}.parquet")
+        self.path_cache = join(path_cache_root, f"qc_adm_regions_MUNI_DISSOLVED_{filter_out_unknown_muni}.parquet")
 
     def get_raw_data(self) -> gpd.GeoDataFrame:
         """Convenience method/synctacic sugar for subclasses.
@@ -242,8 +249,6 @@ class DownloadQcDissolvedAdmReg(DownloadQcAdmBoundaries):
     ADM_REG_DISSOLVE_ID_COL = "MRS_NM_REG"  # 'typical' names we are used to seeing: correspond to the keys in DICT_MAPPING
     ADM_REG_DISSOLVE_CODE_COL = "MRS_CO_REG"
 
-    PATH_CACHE = join(DATA_DIR, "cache", "qc_adm_regions_ADM_REG_DISSOLVED_17.parquet")
-
     DICT_MAPPING={
                 "Abitibi-Témiscamingue":    None,
                 "Bas-Saint-Laurent": None,
@@ -265,11 +270,14 @@ class DownloadQcDissolvedAdmReg(DownloadQcAdmBoundaries):
         }
 
     def __init__(self,
-                data_download_path=join(DATA_DIR, 'qc_adm_regions')
+                data_download_path=join(DATA_DIR, 'qc_adm_regions'),
+                path_cache_root=join(DATA_DIR, "cache")
                 ) :
 
-
         super().__init__(DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MRC , data_download_path)
+
+        self.path_cache_root = path_cache_root
+        self.path_cache = join(self.path_cache_root, "qc_adm_regions_ADM_REG_DISSOLVED_17.parquet")
         self.raw_data = None
 
     def _create_dict_mapping(self) -> dict:
@@ -284,8 +292,11 @@ class DownloadQcDissolvedAdmReg(DownloadQcAdmBoundaries):
 
             return df_mapping
 
-    @Cache_wrapper(path_cache=PATH_CACHE)
     def get_qc_administrative_boundaries(self) -> gpd.GeoDataFrame:
+        fun = Cache_wrapper(path_cache=self.path_cache)(self.get_qc_administrative_boundaries_wrappee)
+        return fun()
+        
+    def get_qc_administrative_boundaries_wrappee(self) -> gpd.GeoDataFrame:
         """Take the ADM_REG polygons and dissolve them into the large regions we want (based on `MRS_NM_REG`)
 
         Dissolving is useful since there are arguably too many details in the dataset

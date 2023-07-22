@@ -547,7 +547,7 @@ def recursively_partition_geohash_cells(shp_points,
             # Still append the cells even if they are not suff precise
             list_complete.append(shp_count_by_hash_not_suff_precise)
             if p in dict_layers.keys():
-                dict_layers[p].append(shp_count_by_hash_not_suff_precise)
+                dict_layers[p] = pd.concat([dict_layers[p], shp_count_by_hash_not_suff_precise])
             else:
                 dict_layers[p] = shp_count_by_hash_not_suff_precise
 

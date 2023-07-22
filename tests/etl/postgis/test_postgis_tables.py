@@ -1,5 +1,4 @@
-from os.path import exists, abspath, dirname
-import os
+from os.path import abspath, dirname
 import pytest
 from pathlib import Path
 
