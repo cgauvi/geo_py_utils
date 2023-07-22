@@ -83,7 +83,6 @@ def test_backup_to_gpkg_dev_prod(connection_remote_admin_prod, connection_remote
     tbl_dummy_name = 'dummy_table'
 
     # List public tables
-   # List public tables
     pg_list_public_tables = PostGISDBPublicTablesIdentifier(
         connection_remote_admin_prod, 
         list_tables=[tbl_dummy_name]

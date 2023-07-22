@@ -1,9 +1,19 @@
-geo_py_utils 1.1.0
+geo_py_utils 1.1.2
 
 ==================
 
-- minor feature:
-    * created a mock tmp cache for more robust debugging (open data)
+
+- minor:
+    * new `get_df_geometry_columns` method in `PostGISDBTablesIdentifier` to get the geometry columns from a given schema and table
+
+
+geo_py_utils 1.1.1
+
+==================
+
+
+- patch:
+    * use the same interface for the pg backup regardless of if we select ALL or only a SUBSET of tables - no use in having a different function since we iterate over tables anyhowcreated a mock tmp cache for more robust debugging (open data)
     
 
 geo_py_utils 1.0.0
