@@ -74,7 +74,7 @@ class PostGISDBTablesIdentifier:
         # Anti join on views
         if exclude_views:
             df_views = self.get_df_views(exclude_system_views=False)
-            df_merge = df_tables.merge(df_views, how='outer', on = 'tablename', indicator=True)
+            df_merge = df_tables.merge(df_views, how='outer', on = ['tablename','schemaname'], indicator=True)
             df_results= df_merge[(df_merge._merge == 'left_only')].drop('_merge', axis=1)
         else:
             df_results = df_tables
@@ -96,14 +96,19 @@ class PostGISDBTablesIdentifier:
 			 from INFORMATION_SCHEMA.views
              '''
 
+        if exclude_system_views or self.selected_schemas is not None:
+            query +=  'WHERE '
+
+        string_to_add=''
         if exclude_system_views:
-            query += 'WHERE table_schema = ANY (current_schemas(false))'
+             query += 'table_schema = ANY (current_schemas(false))'
+             string_to_add=' AND '
 
         # Schema filter
         if self.selected_schemas is not None:
             schema_str = ", ".join([f"'{str(ss)}'" for ss in self.selected_schemas])
             query += f"""
-                WHERE table_schema in ({schema_str})
+                {string_to_add} table_schema in ({schema_str})
             """
 
         # Read in results
