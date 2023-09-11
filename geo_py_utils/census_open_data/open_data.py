@@ -137,7 +137,7 @@ class DownloadQcBoroughs(DownloadQcAdmBoundaries):
 
  
     def __init__(self,
-                data_download_path=join(DATA_DIR, 'qc_boroughs'),
+                data_download_path=join(DATA_DIR, 'qc_adm_regions'),
                 **kwargs
                 ) :
 
