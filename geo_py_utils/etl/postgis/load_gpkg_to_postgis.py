@@ -4,6 +4,9 @@ import logging
 import subprocess
 from pathlib import Path
 from os.path import abspath, dirname
+import sys
+
+sys.path.append("C:\\Users\\app12621\\Dev\\GIC_VEXCEL\\gic\\geo_py_utils") 
 
 from geo_py_utils.etl.postgis.db_utils import pg_create_ogr2ogr_str
 
