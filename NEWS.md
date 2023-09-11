@@ -1,3 +1,10 @@
+geo_py_utils 1.1.3
+
+==================
+
+- patch:
+    * changed default arg of borough download
+
 geo_py_utils 1.1.2
 
 ==================
