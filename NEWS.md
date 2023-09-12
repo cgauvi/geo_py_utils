@@ -1,3 +1,13 @@
+geo_py_utils 1.2.0
+
+==================
+
+- minor:
+    * spatialite renaming of column
+    * pg & spatialite set column name with ogr2ogr
+
+
+
 geo_py_utils 1.1.3
 
 ==================
