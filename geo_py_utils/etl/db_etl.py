@@ -34,13 +34,15 @@ class Url_to_db(ABC):
                 db_name, 
                 table_name, 
                 download_url, 
+                layer_name = None,
                 download_destination = None,
                 force_download: bool = False,
                 overwrite: bool = False,
                 target_projection: str = None,
                 remove_tmp_download_files = True,
                 no_overwrite_append = False,
-                promote_to_multi=True):
+                promote_to_multi=True,
+                new_geom_name=None):
 
         # Download and unzipped directories 
         # Use tmp dir + delete at the edn
@@ -56,7 +58,8 @@ class Url_to_db(ABC):
         self.curl_download = join(download_destination, f"{table_name}_curl")
         self.path_src_to_upload = path_src_to_upload
 
-
+        self.new_geom_name = new_geom_name
+        self.layer_name = layer_name
         self.db_name = db_name
         self.table_name = table_name
         self.download_url = download_url
@@ -67,6 +70,7 @@ class Url_to_db(ABC):
         self.remove_tmp_download_files = remove_tmp_download_files # if download_destination is not None, this has precedence and we dont delete the folder 
         self.no_overwrite_append = no_overwrite_append
         self.promote_to_multi = promote_to_multi
+
 
 
 
@@ -188,15 +192,22 @@ class Url_to_spatialite(Url_to_db):
         cmd  +=  f" {dest} {source} "\
             f" -nln {self.table_name}" \
             " -lco ENCODING=UTF-8 " 
+        
+        if self.new_geom_name is not None:
+            cmd += f"-lco GEOMETRY_NAME='{self.new_geom_name}'"
 
         if self.promote_to_multi:
-             cmd +=  " -nlt PROMOTE_TO_MULTI "
+             cmd += " -nlt PROMOTE_TO_MULTI "
 
         if not self.no_overwrite_append and not self.first_time_creating_db:
             if self.overwrite:
                 cmd += " -overwrite"
             else:
-                cmd += " -append"
+                cmd += " -update"
+
+        # This can be useful with e.g. fgdb where there are multiple layers that could be written as tables
+        if self.layer_name is not None:
+            cmd += f" {self.layer_name} "
 
         # Make sure we are starting from scratch
         # Avoid weird bugs where query to non-existent db creates the file and trying to write after creates error
@@ -223,6 +234,7 @@ class Url_to_postgis(Url_to_db):
                 src_spatialite_tbl_name=None,
                 **kwargs):
 
+ 
         self.host = host
         self.port = port
         self.user = user
@@ -238,8 +250,7 @@ class Url_to_postgis(Url_to_db):
     
     def _ogr2gr(self):
 
-        
-        
+    
         # Make sure db exists
         self._create_db()
 
@@ -265,6 +276,9 @@ class Url_to_postgis(Url_to_db):
         cmd += f' -lco SCHEMA={self.schema} ' \
             f" -nln {self.table_name} " \
             " -lco ENCODING=UTF-8 " 
+
+        if self.new_geom_name is not None:
+            cmd += f"-lco GEOMETRY_NAME='{self.new_geom_name}'"
 
         if self.promote_to_multi:
              cmd +=  " -nlt PROMOTE_TO_MULTI "
