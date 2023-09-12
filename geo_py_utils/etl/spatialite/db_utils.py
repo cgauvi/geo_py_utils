@@ -2,11 +2,12 @@
     
 from os.path import exists
 import logging
-from typing import Union
+from typing import Union, List
 import pandas as pd
 import sqlite3
 from pathlib import Path
 import numpy as np 
+ 
 
 logger = logging.getLogger(__file__)
   
@@ -120,6 +121,22 @@ def sql_to_df(db_name: Union[Path, str], query: str) -> pd.DataFrame:
         df = pd.read_sql(query, conn)
 
     return df
+
+
+def get_table_geometries_name(db_name: Union[Path, str], tbl_name: str) -> List[str]: 
+
+    query = f"select f_geometry_column from geometry_columns where f_table_name = '{tbl_name}'"
+    df_geom_type = sql_to_df(db_name, query)
+
+    if df_geom_type.shape[0] == 0 :
+        raise ValueError(f'Fatal error! there are no geometry columns in db {db_name} - tbl {tbl_name}!')
+
+    geom_names = df_geom_type['f_geometry_column'].values.tolist()
+
+    if len(geom_names) != 1:
+        logger.warn(f'Warning! There are {len(geom_names)} geometry columns in {tbl_name}')
+
+    return geom_names
 
 
 def get_table_geometry_type(db_name: Union[Path, str], tbl_name: str) -> str: 
@@ -326,10 +343,11 @@ def drop_table(db_name: Union[Path, str], tbl_name: str):
         logger.info(f'Not running drop_table {db_name} does not exist')
         return 
 
-    with sqlite3.connect(db_name) as conn:
+    with sqlite3.connect(db_name, isolation_level=None) as conn:
         try:
             cursor = conn.cursor()
             cursor.execute(f"DROP TABLE if exists {tbl_name}")
+            conn.commit()
         except Exception as e:
             logger.warning(f"Warning! Failed to drop table tbl_name - {e}" )
 
@@ -348,7 +366,7 @@ def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> Non
         logger.info(f'Not running drop_geometry_columns {db_name} does not exist')
         return
 
-    with sqlite3.connect(db_name) as con:
+    with sqlite3.connect(db_name, isolation_level=None) as con:
         con.enable_load_extension(True)
         con.load_extension("mod_spatialite")
 
@@ -357,7 +375,7 @@ def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> Non
             cur.execute(f" SELECT DiscardGeometryColumn('{tbl_name}', '{geometry_name}'); ")
             con.commit()
         except Exception as e:
-            logger.warning(f"Warning! Failed too discard geometryon table {tbl_name} -> geometry {geometry_name} - {e}" )
+            logger.warning(f"Warning! Failed to discard geometry on table {tbl_name} -> geometry {geometry_name} - {e}" )
 
 
         for t in ['geom_cols_ref_sys', 'geometry_columns']:
@@ -380,30 +398,42 @@ def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> Non
 
 def rename_columns(db_name: str, tbl_name: str, dict_rename: dict) -> None:
 
-    for k, v in dict_rename.items():
-        query_rename=f"""
-        ALTER TABLE {tbl_name}
-        RENAME COLUMN {k} TO {v}
-        """
 
-        with sqlite3.connect(db_name) as con:
-            con.enable_load_extension(True)
-            con.load_extension("mod_spatialite")
+    with sqlite3.connect(db_name, isolation_level=None) as con:
+        con.enable_load_extension(True)
+        con.load_extension("mod_spatialite")
+
+        geom_cols = get_table_geometries_name(db_name, tbl_name)
+
+        for k, v in dict_rename.items():
+            if v in geom_cols:
+                raise ValueError(f'Fatal error! Cannot rename geometry column {v} wih rename_columns. Create a new geo column with `AddGeometryColumn` and remove old with `DiscardGeometryColumn`')
+            
+            query_rename=f"""
+                ALTER TABLE {tbl_name}
+                RENAME COLUMN {k} TO {v};
+            """
 
             cur = con.cursor()
             cur.execute(query_rename)
             con.commit()
                 
-    # Print message
-    renamed_cols_str = ",".join(dict_rename.keys())
-    new_cols_str = ",".join(dict_rename.values())
+    # QA + print message
+    unchanged_cols = np.setdiff1d(list(dict_rename.values()), get_table_column_names(db_name, tbl_name))
+    unchanged_cols_str = ",".join(unchanged_cols)
 
-    logger.info(
-        f"""
-        Successfully renamed columns {renamed_cols_str}
-        to -> {new_cols_str}
-        """
-        )
+    if len(unchanged_cols) != 0:
+        logger.warn(f'Warning! {unchanged_cols_str} columns not changed!')
+    else:
+        renamed_cols_str = ",".join(dict_rename.keys())
+        new_cols_str = ",".join(dict_rename.values())
+
+        logger.info(
+            f"""
+            Successfully renamed columns {renamed_cols_str}
+            to -> {new_cols_str}
+            """
+            )
     
 
 
@@ -515,14 +545,15 @@ def get_table_column_all_metadata(db_name: str, tbl_name: str) -> pd.DataFrame:
 if __name__ == "__main__":
 
     import os
-    from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
+    from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
     from geo_py_utils.misc.constants import DATA_DIR
     from geo_py_utils.etl.db_etl import  Url_to_spatialite 
  
+    DB_PATH = os.path.join(DATA_DIR, "test.db")
 
-    def upload_qc_neigh_db(db_name = os.path.join(DATA_DIR, "test.db"),
+    def upload_qc_neigh_db(db_name = DB_PATH,
                             tbl_name = "qc_city_test_tbl",
-                            download_url = QC_CITY_NEIGH_URL):
+                            download_url = DEFAULT_QC_CITY_NEIGH_URL):
         
         with Url_to_spatialite(
             db_name = db_name, 
@@ -533,10 +564,10 @@ if __name__ == "__main__":
 
             uploader.upload_url_to_database()
 
-    drop_geo_table_all(os.path.join(DATA_DIR, "test.db"),"qc_city_test_tbl",'GEOMETRY' )
+    drop_geo_table_all(DB_PATH, "qc_city_test_tbl",'GEOMETRY' )
 
-    if (not os.path.exists(os.path.join(DATA_DIR, "test.db"))) or \
-        (not "qc_city_test_tbl" in list_tables(os.path.join(DATA_DIR, "test.db"))) :
+    if (not os.path.exists(DB_PATH)) or \
+        (not "qc_city_test_tbl" in list_tables(DB_PATH)) :
         upload_qc_neigh_db()
     
-    promote_multi(os.path.join(DATA_DIR, "test.db"),"qc_city_test_tbl")
+    promote_multi(DB_PATH, "qc_city_test_tbl")
