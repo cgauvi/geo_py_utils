@@ -3,7 +3,7 @@ geo_py_utils 1.3.0
 ==================
 
 - minor:
-    * new - minor:z
+    * new - minor: can rename geo column
 
 geo_py_utils 1.2.0
 
