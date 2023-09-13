@@ -497,12 +497,17 @@ def rename_geom_column(
     create_index = True
     ) -> None:
 
-    # Get the curent gemetry name
+    # Get the curent geometry name
     if old_geom is None:
         logger.info('Trying to guess the old geom name and taking the first if there are many..')
         geom_cols = get_table_geometries_name(db_name, tbl_name)
         old_geom = geom_cols[0]
     
+    # watch out for case sensitiviy, safer to do nothing if same when dropping case
+    if old_geom.lower() == new_geom.lower():
+        logger.warn('Warning! same geometry, but different case! Not doing anything since unsafe!')
+        return 
+
     # Get the srid
     srid = get_table_crs(db_name, tbl_name, return_srid=True)
 
