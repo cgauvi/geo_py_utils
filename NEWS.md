@@ -1,3 +1,10 @@
+geo_py_utils 1.3.0
+
+==================
+
+- minor:
+    * new - minor:z
+
 geo_py_utils 1.2.0
 
 ==================
