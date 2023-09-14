@@ -1,4 +1,13 @@
 
+geo_py_utils 1.3.2
+
+==================
+
+
+- patch:
+    * added a safe check for valid geom col name in spatialite_db_to_gdf
+
+
 geo_py_utils 1.3.1
 
 ==================
