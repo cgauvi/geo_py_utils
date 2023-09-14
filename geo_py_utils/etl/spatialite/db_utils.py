@@ -123,7 +123,9 @@ def sql_to_df(db_name: Union[Path, str], query: str) -> pd.DataFrame:
     return df
 
 
-
+class GeomColumnAbsentError(Exception):
+    def __init__(self, message):
+        self.message = message
 
 def get_table_geometries_name(db_name: Union[Path, str], tbl_name: str) -> List[str]: 
     """Get the geometry columns in a given table.
@@ -137,7 +139,7 @@ def get_table_geometries_name(db_name: Union[Path, str], tbl_name: str) -> List[
         tbl_name (str): _description_
 
     Raises:
-        ValueError: error if no geometry present
+        GeomColumnAbsentError: error if no geometry present
 
     Returns:
         List[str]: list of geometry columns 
@@ -148,7 +150,7 @@ def get_table_geometries_name(db_name: Union[Path, str], tbl_name: str) -> List[
     df_geom_type = sql_to_df(db_name, query)
 
     if df_geom_type.shape[0] == 0 :
-        raise ValueError(f'Fatal error! there are no geometry columns in db {db_name} - tbl {tbl_name}!')
+        raise GeomColumnAbsentError(f'Fatal error! there are no geometry columns in db {db_name} - tbl {tbl_name}!')
 
     geom_names = df_geom_type['f_geometry_column'].values.tolist()
 
@@ -556,13 +558,31 @@ def rename_geom_column(
 
 
 def rename_columns(db_name: str, tbl_name: str, dict_rename: dict) -> None:
+    """Rename columns safely (dont touch)
 
+    Args:
+        db_name : database
+        tbl_name: name of table
+        dict_rename: {old: new}
+    Returns:
+       None
+
+    Raises:
+        ValueError if we try to rename a geometry column. Should use the specialized rename_geom_column instead which requires add arguments
+
+    """
+
+    if len(get_table_column_names(db_name, tbl_name)) == 0:
+        raise ValueError(f'Fatal error! {tbl_name} has no columns!')
 
     with sqlite3.connect(db_name, isolation_level=None) as con:
         con.enable_load_extension(True)
         con.load_extension("mod_spatialite")
 
-        geom_cols = get_table_geometries_name(db_name, tbl_name)
+        try:
+            geom_cols = get_table_geometries_name(db_name, tbl_name)
+        except GeomColumnAbsentError:
+            geom_cols = [] # no geometry
 
         for k, v in dict_rename.items():
             if v in geom_cols:
@@ -570,7 +590,7 @@ def rename_columns(db_name: str, tbl_name: str, dict_rename: dict) -> None:
             
             query_rename=f"""
                 ALTER TABLE {tbl_name}
-                RENAME COLUMN {k} TO {v};
+                RENAME COLUMN {k} TO '{v}';
             """
 
             cur = con.cursor()
