@@ -156,6 +156,22 @@ def test_read_gdf_spatialite_qc ():
     assert isinstance(df, gpd.GeoDataFrame)
     assert df.shape[0] == 10
 
+
+def test_read_gdf_error_geom ():
+
+    if not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH):
+        upload_qc_neigh_test_db()
+
+    with pytest.raises(Exception):
+        df = spatialite_db_to_gdf(db_name = QcCityTestData.SPATIAL_LITE_DB_PATH,
+                                tbl_name = QcCityTestData.SPATIAL_LITE_TBL_QC,
+                                current_geo_col_name='somecolumnthatclearlydoesnotexist',
+                                additional_where_limit_causes = "LIMIT 10"
+        ) 
+
+ 
+
+
 def test_spatialite_rename_cols():
 
     drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
