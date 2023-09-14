@@ -1,3 +1,11 @@
+
+geo_py_utils 1.3.1
+
+==================
+
+- patch:
+    * fix for geo renaming: throw and catch GeomColumnAbsentError when geo col absent + ALTER TABLE RENAME with '' for new name string.
+
 geo_py_utils 1.3.0
 
 ==================
