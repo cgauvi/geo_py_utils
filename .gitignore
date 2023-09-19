@@ -1,6 +1,7 @@
 # .env files 
 *.env
 
+__pycache__
 
 # tox files for testing
 .tox
