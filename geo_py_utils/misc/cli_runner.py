@@ -7,19 +7,19 @@ from pathlib import PurePosixPath
 
 from geo_py_utils.misc.constants import DEFAULT_GIT_BASH_PATH
 
-class WindowsCLIRunner:
+class CLIRunner:
 
-    """Basic convenience class to run a command using bash in windows.
+    """Basic convenience class to run a CLI on windows or linux using subprocess.
         
     Goal is to facilitate compatibility with initial unix code
 
-    With powershell, you can run pretty much any command directly: 
+    With powershell(windows), you can run pretty much any command directly: 
     For instance: 
     
     - `WindowsBashRunner(use_bash=False).run_cmd(" ls .")` will list the current dir
     - `WindowsBashRunner(use_bash=False).run_cmd(f" ls $PATH_TO_GIC")` will work with an environment variable PATH_TO_GIC
 
-    With git-bash, you can run commands as you would in the git-bash terminal so this is reproducible.  
+    With git-bash (windows), you can run commands as you would in the git-bash terminal so this is reproducible.  
     Very finicky so not used by default. Works when calling scripts (.sh files) - e.g. 
     -  `WindowsBashRunner(use_bash=True).run_cmd(Path(path.dirname(__file__ )) / 'success.sh')`
 
@@ -66,7 +66,7 @@ class WindowsCLIRunner:
 
     def run_cmd(self, cmd: str) -> str:
         """
-        Run the CLI command in Windows
+        Run the CLI command
 
         Args:
             cmd (str): cli cmd to run
@@ -78,13 +78,18 @@ class WindowsCLIRunner:
             output if `capture_std_out=True`
         """
 
-        if self.use_bash:
-            shell_exe = self.git_bash_path
-            shell_name = 'bash'
-            cmd = PurePosixPath(f"{cmd}")
+        if 'win' in sys.platform:
+            if self.use_bash:
+                shell_exe = self.git_bash_path
+                shell_name = 'bash'
+                cmd = PurePosixPath(f"{cmd}")
+            else:
+                shell_exe = 'powershell'
+                shell_name = 'powershell'
+                cmd = f'{cmd}'
         else:
-            shell_exe = 'powershell'
-            shell_name = 'powershell'
+            shell_exe = 'bash'
+            shell_name = 'bash_unix'
             cmd = f'{cmd}'
         
         p = subprocess.Popen(   
