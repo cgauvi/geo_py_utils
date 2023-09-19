@@ -1,14 +1,10 @@
-
 from os.path import exists
 import logging
-import subprocess
 from pathlib import Path
 from os.path import abspath, dirname
-import sys
-
-sys.path.append("C:\\Users\\app12621\\Dev\\GIC_VEXCEL\\gic\\geo_py_utils") 
 
 from geo_py_utils.etl.postgis.db_utils import pg_create_ogr2ogr_str
+from geo_py_utils.misc.cli_runner import CLIRunner
 
 # Logger
 logger = logging.getLogger(__file__)
@@ -100,19 +96,7 @@ class LoadGPKGPostgis:
         # Actual system call
         logger.info(ogr_cmd)
         
-        if 'win' in sys.platform:
-            p = subprocess.Popen(
-                ['powershell', ogr_cmd], stdout=sys.stdout,stderr=sys.stderr,shell=True)
-
-            outs, errs = p.communicate()
-            code = p.returncode
-
-            if code != 0:
-                raise ValueError(f'Fatal error trying to run windows cmd {ogr_cmd}: {errs}')
-        else:
-            subprocess.check_call(ogr_cmd, shell=True)
-       
- 
+        CLIRunner().run_cmd(ogr_cmd)
 
         logger.info(f"Successfully uploaded entire gpkg {self.gpkg_name} to {self.host}:{self.port}/{self.postgis_db_name}")
 

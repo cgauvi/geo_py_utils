@@ -4,17 +4,16 @@
  
 from os.path import join, exists, abspath
 from os import listdir, environ, makedirs
-import subprocess
 from abc import ABC
 from pathlib import Path
 import tempfile
 import shutil
 import logging
 from sqlalchemy import create_engine
-import sys
 
 from geo_py_utils.etl.port import is_port_open
 from geo_py_utils.etl.postgis.db_utils import pg_create_db, pg_db_exists
+from geo_py_utils.misc.cli_runner import CLIRunner
 
 logger = logging.getLogger(__file__)
 
@@ -127,7 +126,7 @@ class Url_to_db(ABC):
             try:
                 cmd =f"""curl {self.download_url} --output {self.curl_download}"""
                 logger.info(cmd)
-                subprocess.check_call(cmd, shell=True)
+                CLIRunner().run_cmd(cmd)
             except Exception as e:
                 
                 if exists(self.download_url):
@@ -141,7 +140,7 @@ class Url_to_db(ABC):
             if not exists(self.path_src_to_upload) or len(listdir(self.path_src_to_upload)) == 0:
                 cmd = f"unzip -o {self.curl_download} -d {self.path_src_to_upload}"
                 logger.info(cmd)
-                subprocess.check_call(cmd, shell=True)
+                CLIRunner().run_cmd(cmd)
 
             # We might have unzipped a new folder xxx to self.path_src_to_upload/xxx
             # Need to point to self.path_src_to_upload/xxx
@@ -215,21 +214,11 @@ class Url_to_spatialite(Url_to_db):
             if exists(dest):
                 os.remove(dest)
 
-        # Actual ogr2ogr call
+        
         logger.info(cmd)
 
-
-        if 'win' in sys.platform:
-            p = subprocess.Popen(
-                ['powershell', cmd], stdout=sys.stdout,stderr=sys.stderr,shell=True)
-
-            outs, errs = p.communicate()
-            code = p.returncode
-
-            if code != 0:
-                raise ValueError(f'Fatal error trying to run windows cmd {cmd}: {errs}')
-        else:
-            subprocess.check_call(cmd, shell=True)
+        # Actual ogr2ogr call - windows or linux
+        CLIRunner().run_cmd(cmd)
  
 
 
@@ -303,17 +292,7 @@ class Url_to_postgis(Url_to_db):
 
         logger.info(cmd)
         
-        if 'win' in sys.platform:
-            p = subprocess.Popen(
-                ['powershell', cmd], stdout=sys.stdout,stderr=sys.stderr,shell=True)
-
-            outs, errs = p.communicate()
-            code = p.returncode
-
-            if code != 0:
-                raise ValueError(f'Fatal error trying to run windows cmd {cmd}: {errs}')
-        else:
-            subprocess.check_call(cmd, shell=True)
+        CLIRunner().run_cmd(cmd)
  
 
     def _create_db(self):
