@@ -21,7 +21,8 @@ markers =[
     "requires_remote_pg_connection_prod: requires a remote postgis db set up accepting connections on scoring:5052",
     "requires_remote_pg_connection_dev: requires a remote postgis db set up accepting connections on training:5053",
     "requires_remote_pg_connection_sfkl_interactivity:  requires a remote postgis db + sfkl interactive external browser auth USE `-s`  ",
-    "requires_or2ogr: requires a working gdal and ogr2ogr executable which can be found"
+    "requires_or2ogr: requires a working gdal and ogr2ogr executable which can be found",
+    "windows_specific: used to test windows compatibility"
     ]
 
 [tool.flake8]
