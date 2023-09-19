@@ -7,9 +7,12 @@ authors = ["Charles Gauvin"]
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
-
+ 
 [tool.pytest.ini_options]
 minversion = "6.0"
+pythonpath = [
+  "."
+]
 testpaths = ["tests"]
 addopts =  "-v -m 'not requires_local_pg_connection and not requires_local_docker_pg_connection and not requires_remote_pg_connection_prod and not requires_remote_pg_connection_dev and not requires_remote_pg_connection_sfkl_interactivity' "
 markers =[
