@@ -1,3 +1,8 @@
+geo_py_utils 1.3.3
+
+==================
+- patch:
+    * ogr2ogr shell call works on Windows through powershell 
 
 geo_py_utils 1.3.2
 
