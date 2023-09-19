@@ -48,8 +48,7 @@ class CLIRunner:
         self.stdout = subprocess.PIPE if capture_std_out else sys.stdout
         self.stderr = subprocess.PIPE if capture_std_err else sys.stderr
 
-        if use_bash:
-            self.check_windows_git_bash()
+
        
     def check_windows_git_bash(self):
         """
@@ -80,6 +79,9 @@ class CLIRunner:
 
         if 'win' in sys.platform:
             if self.use_bash:
+                self.check_windows_git_bash()
+
+            if self.use_bash:
                 shell_exe = self.git_bash_path
                 shell_name = 'bash'
                 cmd = PurePosixPath(f"{cmd}")
@@ -88,12 +90,11 @@ class CLIRunner:
                 shell_name = 'powershell'
                 cmd = f'{cmd}'
         else:
-            shell_exe = 'bash'
             shell_name = 'bash_unix'
             cmd = f'{cmd}'
         
         p = subprocess.Popen(   
-                    [shell_exe, cmd],
+                    [ cmd],
                     stdout=self.stdout,
                     stderr=self.stderr,
                     shell=True,
@@ -117,18 +118,18 @@ class CLIRunner:
 
         if code != 0:
             if self.capture_std_err:
-                raise ValueError(f'Fatal error trying to run windows cmd `{cmd}` with shell {shell_name} - error: {errs}')
+                raise ValueError(f'Fatal error trying to run {sys.platform} cmd `{cmd}` with shell {shell_name} - error: {errs}')
             else:
-                raise ValueError(f'Fatal error trying to run windows cmd `{cmd}` with shell {shell_name}')
+                raise ValueError(f'Fatal error trying to run  {sys.platform} cmd `{cmd}` with shell {shell_name}')
 
         return outs
 
 if __name__ == '__main__':
 
-
-    str_out=WindowsCLIRunner(use_bash=False, capture_std_out=True).run_cmd(f" ls {Path(__file__)}")
-
-
-    WindowsCLIRunner(use_bash=False).run_cmd(" ls .")
-    
+    if 'win' in sys.platform:
+        str_out=CLIRunner(use_bash=False, capture_std_out=True).run_cmd(f" ls {Path(__file__)}")
+        CLIRunner(use_bash=False).run_cmd(" ls .")
+    elif 'linux' in sys.platform:
+        str_out=CLIRunner(use_bash=False, capture_std_out=True).run_cmd(f" ls {Path(__file__)}")
+        CLIRunner(use_bash=False).run_cmd(" ls .")
      
