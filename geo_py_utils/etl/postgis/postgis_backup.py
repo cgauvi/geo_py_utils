@@ -4,6 +4,7 @@ import logging
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 from geo_py_utils.etl.postgis.postgis_tables import PostGISDBTablesIdentifier
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
@@ -89,7 +90,19 @@ class PostGISDBBackupGPK(PostGISDBBackup):
 
         # Actual system call
         cmd_pg_gpkg = self._get_common_cmd_gpkg_to_pg(overwrite_pg_tbl = overwrite_pg_tbl)
-        subprocess.check_call(cmd_pg_gpkg, shell=True)  
+
+        if 'win' in sys.platform:
+            p = subprocess.Popen(
+                ['powershell', cmd_pg_gpkg], stdout=sys.stdout,stderr=sys.stderr,shell=True)
+
+            outs, errs = p.communicate()
+            code = p.returncode
+
+            if code != 0:
+                raise ValueError(f'Fatal error trying to run windows cmd {cmd_pg_gpkg}: {errs}')
+        else:
+            subprocess.check_call(cmd_pg_gpkg, shell=True)
+    
 
         logger.info("Successfully completed reload of gpkg -> postgis!")
 
@@ -197,7 +210,18 @@ class PostGISDBBackupGPK(PostGISDBBackup):
                         Backuping table {row['tablename']}... 
                         Running {cmd_tbl}
                         """)
-            subprocess.check_call(cmd_tbl, shell=True)  
+
+            if 'win' in sys.platform:
+                p = subprocess.Popen(
+                    ['powershell', cmd_tbl], stdout=sys.stdout,stderr=sys.stderr,shell=True)
+
+                outs, errs = p.communicate()
+                code = p.returncode
+
+                if code != 0:
+                    raise ValueError(f'Fatal error trying to run windows cmd {cmd_tbl}: {errs}')
+            else:
+                subprocess.check_call(cmd_tbl, shell=True)
 
 
 

@@ -11,7 +11,7 @@ import tempfile
 import shutil
 import logging
 from sqlalchemy import create_engine
-
+import sys
 
 from geo_py_utils.etl.port import is_port_open
 from geo_py_utils.etl.postgis.db_utils import pg_create_db, pg_db_exists
@@ -189,7 +189,7 @@ class Url_to_spatialite(Url_to_db):
         if self.target_projection is not None:
             cmd += f"-t_srs EPSG:{self.target_projection}" 
 
-        cmd  +=  f" {dest} {source} "\
+        cmd  +=  f" '{dest}' '{source}' "\
             f" -nln {self.table_name}" \
             " -lco ENCODING=UTF-8 " 
         
@@ -213,11 +213,23 @@ class Url_to_spatialite(Url_to_db):
         # Avoid weird bugs where query to non-existent db creates the file and trying to write after creates error
         if self.first_time_creating_db:
             if exists(dest):
-                subprocess.check_call(f"rm {dest}", shell=True)
+                os.remove(dest)
 
         # Actual ogr2ogr call
         logger.info(cmd)
-        subprocess.check_call(cmd, shell=True)
+
+
+        if 'win' in sys.platform:
+            p = subprocess.Popen(
+                ['powershell', cmd], stdout=sys.stdout,stderr=sys.stderr,shell=True)
+
+            outs, errs = p.communicate()
+            code = p.returncode
+
+            if code != 0:
+                raise ValueError(f'Fatal error trying to run windows cmd {cmd}: {errs}')
+        else:
+            subprocess.check_call(cmd, shell=True)
  
 
 
@@ -269,9 +281,9 @@ class Url_to_postgis(Url_to_db):
         # Hackish: only works by manually setting self.path_src_to_upload
         source = abspath(self.path_src_to_upload)
         if self.src_spatialite_tbl_name is not None:
-            cmd += fr" {source} {self.src_spatialite_tbl_name} " 
+            cmd += fr" '{source}' '{self.src_spatialite_tbl_name}' " 
         else:
-            cmd += fr" {source} " 
+            cmd += fr" '{source}' " 
 
         cmd += f' -lco SCHEMA={self.schema} ' \
             f" -nln {self.table_name} " \
@@ -290,7 +302,18 @@ class Url_to_postgis(Url_to_db):
                 cmd += " -append"
 
         logger.info(cmd)
-        subprocess.check_call(cmd, shell=True)
+        
+        if 'win' in sys.platform:
+            p = subprocess.Popen(
+                ['powershell', cmd], stdout=sys.stdout,stderr=sys.stderr,shell=True)
+
+            outs, errs = p.communicate()
+            code = p.returncode
+
+            if code != 0:
+                raise ValueError(f'Fatal error trying to run windows cmd {cmd}: {errs}')
+        else:
+            subprocess.check_call(cmd, shell=True)
  
 
     def _create_db(self):

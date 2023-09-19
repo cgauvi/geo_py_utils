@@ -99,7 +99,19 @@ class LoadGPKGPostgis:
 
         # Actual system call
         logger.info(ogr_cmd)
-        subprocess.check_call(ogr_cmd, shell=True)  
+        
+        if 'win' in sys.platform:
+            p = subprocess.Popen(
+                ['powershell', ogr_cmd], stdout=sys.stdout,stderr=sys.stderr,shell=True)
+
+            outs, errs = p.communicate()
+            code = p.returncode
+
+            if code != 0:
+                raise ValueError(f'Fatal error trying to run windows cmd {ogr_cmd}: {errs}')
+        else:
+            subprocess.check_call(ogr_cmd, shell=True)
+       
  
 
         logger.info(f"Successfully uploaded entire gpkg {self.gpkg_name} to {self.host}:{self.port}/{self.postgis_db_name}")
