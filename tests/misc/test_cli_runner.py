@@ -44,3 +44,12 @@ def test_gitbash_capture_stdout():
 
 
 
+
+@pytest.mark.linux_specific
+def test_gitbash_capture_stdout():
+    if 'win' not in sys.platform:
+        success_script_path = Path(path.dirname(__file__ )) / 'success.sh'
+
+        str_return = CLIRunner(use_bash=True, capture_std_out=True).run_cmd(success_script_path)
+        assert str_return.strip() == 'Success!'
+        assert CLIRunner(use_bash=True).run_cmd(success_script_path) is None
