@@ -1,9 +1,10 @@
 
 from pathlib import Path
 from os import path
-from geo_py_utils.misc.cli_runner import CLIRunner
 import pytest
 import sys
+
+from geo_py_utils.misc.cli_runner import CLIRunner
 
 @pytest.mark.windows_specific
 def test_powershell_envvars():
