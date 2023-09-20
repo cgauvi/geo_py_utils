@@ -5,8 +5,6 @@ import tempfile
 import numpy as np
 import pytest
 
-import sys; from os import environ; sys.path.append(os.path.join(environ['PATH_TO_GIC'],'gic','geo_py_utils'))
-
 
 from geo_py_utils.etl.db_etl import  Url_to_spatialite
 from geo_py_utils.etl.spatialite.gdf_load import spatialite_db_to_gdf
