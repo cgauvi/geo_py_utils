@@ -3,10 +3,6 @@ import distutils.spawn
 import subprocess
 import sys
 
-import sys
-from os import environ
-sys.path.append(f"{Path(environ['PATH_TO_GIC']) / 'gic' / 'geo_py_utils'}") 
-
 from geo_py_utils.misc.constants import DEFAULT_GIT_BASH_PATH
 
 class CLIRunner:
