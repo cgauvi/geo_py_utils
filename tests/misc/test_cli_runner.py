@@ -1,15 +1,17 @@
 
-from pathlib import Path
+from pathlib import Path, PurePosixPath, WindowsPath
 from os import path
 import pytest
 import sys
+
+import os; import sys; from os import environ; sys.path.append(os.path.join(Path(environ['PATH_TO_GIC']),'gic','geo_py_utils'))
 
 from geo_py_utils.misc.cli_runner import CLIRunner
 
 @pytest.mark.windows_specific
 def test_powershell_envvars():
     if 'win' in sys.platform:
-        assert CLIRunner(use_bash=False).run_cmd("ls ~") is None # no output
+        assert CLIRunner(use_bash=False).run_cmd(" ls ~ ") is None  # ~ resolved
 
 @pytest.mark.windows_specific
 def test_powershell_script_capture_stdout ():
@@ -17,31 +19,36 @@ def test_powershell_script_capture_stdout ():
         str_return=CLIRunner(use_bash=False, capture_std_out=True).run_cmd(" ls ~")
         assert len(str_return) > 0
 
+
 @pytest.mark.windows_specific
 def test_gitbash_fails_wrong_call():
+
+    # Try to call a script with windows path within bash shell will fail
     if 'win' in sys.platform:
-        #'This will fail with No such file or directory: trying to find `ls xxx`'
         with pytest.raises(Exception):
-            CLIRunner(use_bash=True).run_cmd(" ls ~")
+            success_script_path = Path(path.dirname(__file__ )) / 'success.sh'
+            CLIRunner(use_bash=True).run_cmd(WindowsPath(success_script_path))
 
 @pytest.mark.windows_specific
 def test_gitbash_capture_stderr():
     if 'win' in sys.platform:
         try:
             error_script_path = Path(path.dirname(__file__ )) / 'error.sh'
-            CLIRunner(use_bash=True, capture_std_err=True).run_cmd(error_script_path)
+            CLIRunner(use_bash=True, capture_std_err=True).run_cmd(PurePosixPath(error_script_path))
         except Exception as e :
-            print('This will fail')
+            print('This will fail because the error.sh scripts returns an error')
             assert  "error: Failure!" in str(e)
 
 @pytest.mark.windows_specific
 def test_gitbash_capture_stdout_windows():
+
     if 'win' in sys.platform:
         success_script_path = Path(path.dirname(__file__ )) / 'success.sh'
 
-        str_return = CLIRunner(use_bash=True, capture_std_out=True).run_cmd(success_script_path)
+        str_return = CLIRunner(use_bash=True, capture_std_out=True).run_cmd(PurePosixPath(success_script_path))
         assert str_return.strip() == 'Success!'
-        assert CLIRunner(use_bash=True).run_cmd(success_script_path) is None
+
+        assert CLIRunner(use_bash=True).run_cmd(PurePosixPath(success_script_path)) is None
 
 
 
@@ -54,3 +61,7 @@ def test_gitbash_capture_stdout_linux():
         str_return = CLIRunner(use_bash=True, capture_std_out=True).run_cmd(success_script_path)
         assert str_return.strip() == 'Success!'
         assert CLIRunner(use_bash=True).run_cmd(success_script_path) is None
+
+
+if __name__ == '__main__':
+    test_powershell_error_not_all_linux_utils()
