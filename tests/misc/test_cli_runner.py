@@ -22,7 +22,7 @@ def test_gitbash_fails_wrong_call():
     if 'win' in sys.platform:
         #'This will fail with No such file or directory: trying to find `ls xxx`'
         with pytest.raises(Exception):
-            CLIRunner(use_bash=True).run_cmd(f" ls ~")
+            CLIRunner(use_bash=True).run_cmd(" ls ~")
 
 @pytest.mark.windows_specific
 def test_gitbash_capture_stderr():
@@ -35,7 +35,7 @@ def test_gitbash_capture_stderr():
             assert  "error: Failure!" in str(e)
 
 @pytest.mark.windows_specific
-def test_gitbash_capture_stdout():
+def test_gitbash_capture_stdout_windows():
     if 'win' in sys.platform:
         success_script_path = Path(path.dirname(__file__ )) / 'success.sh'
 
@@ -47,7 +47,7 @@ def test_gitbash_capture_stdout():
 
 
 @pytest.mark.linux_specific
-def test_gitbash_capture_stdout():
+def test_gitbash_capture_stdout_linux():
     if 'win' not in sys.platform:
         success_script_path = Path(path.dirname(__file__ )) / 'success.sh'
 

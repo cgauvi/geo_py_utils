@@ -269,7 +269,7 @@ class Url_to_postgis(Url_to_db):
         # Source DB
         # Special treatment fro spatialite to postgis
         # Hackish: only works by manually setting self.path_src_to_upload
-        source = WindowsPath(self.path_src_to_upload) if 'win' in sys.platform else PurePosixPath(source)
+        source = WindowsPath(self.path_src_to_upload) if 'win' in sys.platform else PurePosixPath(self.path_src_to_upload)
         if self.src_spatialite_tbl_name is not None:
             cmd += fr" '{source}' '{self.src_spatialite_tbl_name}' " 
         else:

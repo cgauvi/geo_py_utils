@@ -120,7 +120,7 @@ def test_sflk_to_postgis_remote():
 
 
 @pytest.mark.requires_remote_pg_connection_prod
-def test_list_tables_postgis_remote():
+def test_list_tables_postgis_remote_prod():
 
     # First check
     if not is_port_open(RemotePostGIS.HOST, RemotePostGIS.PORT):
@@ -308,7 +308,7 @@ def connection_remote_prod_ro():
     return PostGISDBConnection(HERE / 'config' / 'remote_pg_ro' / "prod" / ".env")
 
 @pytest.mark.requires_remote_pg_connection_dev
-def test_list_tables_postgis_remote(connection_remote_prod_ro):
+def test_list_tables_postgis_remote_dev(connection_remote_prod_ro):
 
  
     DB_NAME_DOES_NOT_EXIST = "RANDOMTBLDOESNOTEXIST"

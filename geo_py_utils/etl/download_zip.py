@@ -8,8 +8,7 @@ import requests
 from shutil import rmtree
 from typing import Union
 import zipfile
-import sys
-
+ 
 from geo_py_utils.misc.constants import DATA_DIR
 
 logger = logging.getLogger(__file__)

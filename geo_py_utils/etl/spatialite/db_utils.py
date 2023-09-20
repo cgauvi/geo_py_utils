@@ -517,7 +517,7 @@ def rename_geom_column(
     try:
         geom_type = get_table_geometry_group_classes(db_name, tbl_name, old_geom)
     except GeomTypeError as e:
-        logger.warn('Could not identify poygon type: might have some nulls: returning GEOMETRYCOLLECTION')
+        logger.warn(f'Could not identify poygon type: might have some nulls: returning GEOMETRYCOLLECTION - {e}')
         geom_type= "GEOMETRYCOLLECTION"
 
     cast_to_multi=False
