@@ -2,8 +2,10 @@ from pathlib import Path
 import distutils.spawn
 import subprocess
 import sys
-from pathlib import PurePosixPath
- 
+
+import sys
+from os import environ
+sys.path.append(f"{Path(environ['PATH_TO_GIC']) / 'gic' / 'geo_py_utils'}") 
 
 from geo_py_utils.misc.constants import DEFAULT_GIT_BASH_PATH
 
@@ -33,7 +35,7 @@ class CLIRunner:
     def __init__(
         self, 
         git_bash_path: Path = DEFAULT_GIT_BASH_PATH,
-        use_bash = False,
+        use_bash = True,
         capture_std_out=False,
         capture_std_err=False
         ):
@@ -84,17 +86,19 @@ class CLIRunner:
             if self.use_bash:
                 shell_exe = self.git_bash_path
                 shell_name = 'bash'
-                cmd = PurePosixPath(f"{cmd}")
+
+                cmd_list = [shell_exe, '-c' , cmd]
             else:
                 shell_exe = 'powershell'
                 shell_name = 'powershell'
-                cmd = f'{cmd}'
+
+                cmd_list = [shell_exe, cmd]
         else:
             shell_name = 'bash_unix'
-            cmd = f'{cmd}'
+            cmd_list = [cmd]
         
         p = subprocess.Popen(   
-                    [ cmd],
+                    cmd_list,
                     stdout=self.stdout,
                     stderr=self.stderr,
                     shell=True,
@@ -129,6 +133,9 @@ if __name__ == '__main__':
     if 'win' in sys.platform:
         str_out=CLIRunner(use_bash=False, capture_std_out=True).run_cmd(f" ls {Path(__file__)}")
         CLIRunner(use_bash=False).run_cmd(" ls .")
+
+        str_out=CLIRunner(capture_std_out=True).run_cmd(f" ls '{Path(__file__)}'")
+        CLIRunner().run_cmd(" ls .")
     elif 'linux' in sys.platform:
         str_out=CLIRunner(use_bash=False, capture_std_out=True).run_cmd(f" ls {Path(__file__)}")
         CLIRunner(use_bash=False).run_cmd(" ls .")

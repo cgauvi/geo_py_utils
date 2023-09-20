@@ -2,7 +2,8 @@
 from abc import ABC, abstractmethod
 import logging
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath, WindowsPath
+import sys
 
 from geo_py_utils.etl.postgis.postgis_tables import PostGISDBTablesIdentifier
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
@@ -58,7 +59,7 @@ class PostGISDBBackupGPK(PostGISDBBackup):
 
         super().__init__(pg_tables_identifier)
 
-        self.dest_gpkg = dest_gpkg
+        self.dest_gpkg = Path(dest_gpkg)
         self.overwrite = overwrite
         self.promote_to_multi = promote_to_multi
         self.keep_col_name_case = keep_col_name_case
@@ -89,7 +90,7 @@ class PostGISDBBackupGPK(PostGISDBBackup):
         # Actual system call
         cmd_pg_gpkg = self._get_common_cmd_gpkg_to_pg(overwrite_pg_tbl = overwrite_pg_tbl)
 
-        CLIRunner().run_cmd(cmd_pg_gpkg)
+        CLIRunner(use_bash=False).run_cmd(cmd_pg_gpkg)
 
         logger.info("Successfully completed reload of gpkg -> postgis!")
 
@@ -112,7 +113,10 @@ class PostGISDBBackupGPK(PostGISDBBackup):
 
         # ogr2ogr format: Dest Source
         # See https://gdal.org/programs/ogr2ogr.html
-        cmd += fr" {self.ogr2ogr_dest_connection_str} {self.dest_gpkg}  " 
+        source =  WindowsPath(self.dest_gpkg) if 'win' in sys.platform else PurePosixPath(self.dest_gpkg)
+        dest = WindowsPath(self.ogr2ogr_dest_connection_str) if 'win' in sys.platform else PurePosixPath(self.ogr2ogr_dest_connection_str)
+
+        cmd += fr" {dest} {source}  " 
 
         # Additional commands 
         cmd += " -lco ENCODING=UTF-8 " 
@@ -167,7 +171,10 @@ class PostGISDBBackupGPK(PostGISDBBackup):
 
         # ogr2ogr format: Dest Source
         # See https://gdal.org/programs/ogr2ogr.html
-        cmd += fr" {self.dest_gpkg} {self.ogr2ogr_src_connection_str} " 
+        source =  WindowsPath(self.ogr2ogr_src_connection_str) if 'win' in sys.platform else PurePosixPath(self.ogr2ogr_src_connection_str)
+        dest = WindowsPath(self.dest_gpkg) if 'win' in sys.platform else PurePosixPath(self.dest_gpkg)
+
+        cmd += fr" {dest} {source} " 
 
         # Additional commands 
         cmd += " -lco ENCODING=UTF-8 " 
@@ -198,7 +205,7 @@ class PostGISDBBackupGPK(PostGISDBBackup):
                         Running {cmd_tbl}
                         """)
 
-            CLIRunner().run_cmd(cmd_tbl)
+            CLIRunner(use_bash=False).run_cmd(cmd_tbl)
 
 
 

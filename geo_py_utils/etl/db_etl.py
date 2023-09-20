@@ -2,14 +2,16 @@
 
 
  
-from os.path import join, exists, abspath
+from os.path import join, exists
 from os import listdir, environ, makedirs
+ 
 from abc import ABC
-from pathlib import Path
+from pathlib import Path, PurePosixPath, WindowsPath
 import tempfile
 import shutil
 import logging
 from sqlalchemy import create_engine
+import sys
 
 from geo_py_utils.etl.port import is_port_open
 from geo_py_utils.etl.postgis.db_utils import pg_create_db, pg_db_exists
@@ -50,16 +52,16 @@ class Url_to_db(ABC):
             path_src_to_upload = tempfile.mkdtemp() # point to dir where we will extract the data
             self.delete_download_destination = True
         else:
-            path_src_to_upload = join(download_destination, f"{table_name}_post_curl")
+            path_src_to_upload = Path(download_destination) / f"{table_name}_post_curl"
             makedirs(path_src_to_upload, exist_ok = True)
             self.delete_download_destination = False
 
-        self.curl_download = join(download_destination, f"{table_name}_curl")
+        self.curl_download =  Path(download_destination) / f"{table_name}_curl"
         self.path_src_to_upload = path_src_to_upload
 
         self.new_geom_name = new_geom_name
         self.layer_name = layer_name
-        self.db_name = db_name
+        self.db_name = Path(db_name)
         self.table_name = table_name
         self.download_url = download_url
         self.download_destination = download_destination
@@ -124,9 +126,9 @@ class Url_to_db(ABC):
 
         if not exists(self.curl_download) or self.force_download:
             try:
-                cmd =f"""curl {self.download_url} --output {self.curl_download}"""
+                cmd =f"curl '{PurePosixPath(self.download_url)}' --output '{PurePosixPath(self.curl_download)}'" # always use curl + bash (no equivalent in powershell)
                 logger.info(cmd)
-                CLIRunner().run_cmd(cmd)
+                CLIRunner(use_bash=True, capture_std_err=True).run_cmd(cmd)
             except Exception as e:
                 
                 if exists(self.download_url):
@@ -138,7 +140,7 @@ class Url_to_db(ABC):
 
         try:
             if not exists(self.path_src_to_upload) or len(listdir(self.path_src_to_upload)) == 0:
-                cmd = f"unzip -o {self.curl_download} -d {self.path_src_to_upload}"
+                cmd = f"unzip -o '{PurePosixPath(self.curl_download)}' -d '{PurePosixPath(self.path_src_to_upload)}'" # unzip + bash
                 logger.info(cmd)
                 CLIRunner().run_cmd(cmd)
 
@@ -147,7 +149,7 @@ class Url_to_db(ABC):
             # This only works for 2 use cases, but seems impossibly complex to code in general if there are more than 1 level of nested directories
             sub_dirs = listdir(self.path_src_to_upload)
             if len(sub_dirs) == 1:
-                self.path_src_to_upload = join(self.path_src_to_upload, sub_dirs[0])
+                self.path_src_to_upload = Path(self.path_src_to_upload) / sub_dirs[0]
                 logger.debug(f"In _try_unzip: {self.path_src_to_upload} contains a single sub dir/files -> point to {sub_dirs[0]}")
             elif len(sub_dirs) > 1:
                 logger.debug(f"In _try_unzip: {self.path_src_to_upload} contains many directories -> point to {self.path_src_to_upload}")
@@ -177,8 +179,8 @@ class Url_to_spatialite(Url_to_db):
 
     def _ogr2gr(self):
 
-        source = abspath(self.path_src_to_upload)
-        dest = abspath(self.db_name)
+        source =  WindowsPath(self.path_src_to_upload) if 'win' in sys.platform else PurePosixPath(self.path_src_to_upload)
+        dest = WindowsPath(self.db_name) if 'win' in sys.platform else PurePosixPath(self.db_name)
 
         cmd = "ogr2ogr " \
             " -progress " \
@@ -188,7 +190,7 @@ class Url_to_spatialite(Url_to_db):
         if self.target_projection is not None:
             cmd += f"-t_srs EPSG:{self.target_projection}" 
 
-        cmd  +=  f" '{dest}' '{source}' "\
+        cmd  +=  f" {dest} {source} "\
             f" -nln {self.table_name}" \
             " -lco ENCODING=UTF-8 " 
         
@@ -214,11 +216,10 @@ class Url_to_spatialite(Url_to_db):
             if exists(dest):
                 os.remove(dest)
 
-        
+        # Actual ogr2ogr call
         logger.info(cmd)
 
-        # Actual ogr2ogr call - windows or linux
-        CLIRunner().run_cmd(cmd)
+        CLIRunner(use_bash =False).run_cmd(cmd)
  
 
 
@@ -268,7 +269,7 @@ class Url_to_postgis(Url_to_db):
         # Source DB
         # Special treatment fro spatialite to postgis
         # Hackish: only works by manually setting self.path_src_to_upload
-        source = abspath(self.path_src_to_upload)
+        source = WindowsPath(self.path_src_to_upload) if 'win' in sys.platform else PurePosixPath(source)
         if self.src_spatialite_tbl_name is not None:
             cmd += fr" '{source}' '{self.src_spatialite_tbl_name}' " 
         else:
@@ -292,7 +293,7 @@ class Url_to_postgis(Url_to_db):
 
         logger.info(cmd)
         
-        CLIRunner().run_cmd(cmd)
+        CLIRunner(use_bash=False).run_cmd(cmd)
  
 
     def _create_db(self):
