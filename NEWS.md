@@ -1,3 +1,10 @@
+geo_py_utils 1.3.4
+
+==================
+- patch:
+    * PostGISDBConnection can load multiple env files
+    
+
 geo_py_utils 1.3.3
 
 ==================
