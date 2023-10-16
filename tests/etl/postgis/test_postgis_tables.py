@@ -1,12 +1,7 @@
-from os.path import abspath, dirname, join
+from os.path import abspath, dirname
 import pytest
 from pathlib import Path
-import sys
 
-from os import environ
-sys.path.insert(0, 
-    join(Path(environ['PATH_TO_GIC']), "gic", "geo_py_utils")
-    )
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
 from geo_py_utils.etl.postgis.postgis_tables import PostGISDBPublicTablesIdentifier, PostGISDBTablesIdentifier
 

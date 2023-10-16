@@ -4,8 +4,6 @@ from os import path
 import pytest
 import sys
 
-import os; import sys; from os import environ; sys.path.append(os.path.join(Path(environ['PATH_TO_GIC']),'gic','geo_py_utils'))
-
 from geo_py_utils.misc.cli_runner import CLIRunner
 
 @pytest.mark.windows_specific
@@ -63,5 +61,4 @@ def test_gitbash_capture_stdout_linux():
         assert CLIRunner(use_bash=True).run_cmd(success_script_path) is None
 
 
-if __name__ == '__main__':
-    test_powershell_error_not_all_linux_utils()
+ 
