@@ -2,11 +2,12 @@
     
 from os.path import exists
 import logging
-from typing import Union
+from typing import Union, List
 import pandas as pd
 import sqlite3
 from pathlib import Path
 import numpy as np 
+ 
 
 logger = logging.getLogger(__file__)
   
@@ -122,7 +123,116 @@ def sql_to_df(db_name: Union[Path, str], query: str) -> pd.DataFrame:
     return df
 
 
-def get_table_geometry_type(db_name: Union[Path, str], tbl_name: str) -> str: 
+class GeomColumnAbsentError(Exception):
+    def __init__(self, message):
+        self.message = message
+
+def get_table_geometries_name(db_name: Union[Path, str], tbl_name: str) -> List[str]: 
+    """Get the geometry columns in a given table.
+
+    Returns the list of ALL ORIGINAL columns in the table (if these were properly registered with AddGeometryColumn). 
+    This does NOT return the columns registered in geometry_columns which are always lowercase.
+    So this function is case sensitive
+
+    Args:
+        db_name (Union[Path, str]): _description_
+        tbl_name (str): _description_
+
+    Raises:
+        GeomColumnAbsentError: error if no geometry present
+
+    Returns:
+        List[str]: list of geometry columns 
+    """
+
+    # Cols in geometry_columns all lower case, not necessarily the case in the original table..
+    query = f"select f_geometry_column from geometry_columns where f_table_name = '{tbl_name}'"
+    df_geom_type = sql_to_df(db_name, query)
+
+    if df_geom_type.shape[0] == 0 :
+        raise GeomColumnAbsentError(f'Fatal error! there are no geometry columns in db {db_name} - tbl {tbl_name}!')
+
+    geom_names = df_geom_type['f_geometry_column'].values.tolist()
+
+    if len(geom_names) != 1:
+        logger.warn(f'Warning! There are {len(geom_names)} geometry columns in {tbl_name}')
+
+    true_col_names = get_table_column_names(db_name, tbl_name)
+    true_geo_col_names = [n for n in true_col_names if n.lower() in geom_names]
+
+    return true_geo_col_names
+
+
+class GeomTypeError(Exception):
+    def __init__(self, message):
+        self.message = message
+
+
+def get_table_geometries_classes(db_name: Union[Path, str], tbl_name: str, geom_col:str = 'GEOMETRY') -> np.array:
+    """Get the geometry clases where classes is in [POINT, MULTILINESTRING, ..] for the entire geometry coumn
+
+    See https://www.gaia-gis.it/gaia-sins/spatialite-manual-2.3.1.html#t2.3. 
+
+    Args:
+        db_name (Union[Path, str]): _description_
+        tbl_name (str): _description_
+        geom_col (str, optional): _description_. Defaults to 'GEOMETRY'.
+
+    Raises:
+        ValueError: error if no class found for any geom in column
+
+    Returns:
+        np.array: unique classes - typically 1 or 2
+    """
+
+    with sqlite3.connect(db_name) as con:
+        con.enable_load_extension(True)
+        con.load_extension("mod_spatialite") 
+
+        df_type = pd.read_sql(f'select GeometryType({geom_col}) geomtype from {tbl_name}', con)
+
+    if df_type[['geomtype']].dropna().shape[0] == 0:
+        raise ValueError(f'Fatal error! no geometry type for {geom_col}')
+    
+    return df_type.geomtype.values
+
+
+def get_table_geometry_group_classes(db_name: Union[Path, str], tbl_name: str, geom_col:str = 'GEOMETRY') -> str:
+    """Using the unique geometry classes of the class, return a str representig the type.
+
+    Safe: always returns the multi version if single and many.
+
+    Args:
+        db_name (Union[Path, str]): _description_
+        tbl_name (str): _description_
+        geom_col (str, optional): _description_. Defaults to 'GEOMETRY'.
+
+    Returns:
+        str: class e.g. `MULTIPOINT`
+    """
+
+    df_types_all = get_table_geometries_classes(db_name, tbl_name, geom_col)
+    df_types_unique = np.unique(df_types_all)
+    df_types_unique = sorted(df_types_unique) # order important: could convert to set also
+
+    if len(df_types_unique) == 1:
+        return df_types_unique[0] 
+        
+    logger.warning('More than one type of geometry')
+ 
+    if np.array_equal(['LINESTRING', 'MULTILINESTRING'],  df_types_unique):
+        return 'MULTILINESTRING' 
+    elif np.array_equal(['MULTIPOINT', 'POINT'], df_types_unique) :
+        return 'MULTIPOINT' 
+    elif np.array_equal(['MULTIPOLYGON', 'POLYGON'], df_types_unique):
+        return 'MULTIPOLYGON'
+    else:
+        logger.warning('Mixed geometries, cant find a fixe group, returning GEOMETRYCOLLECTION')
+        return 'GEOMETRYCOLLECTION'
+
+
+
+def get_table_geometry_type(db_name: Union[Path, str], tbl_name: str, return_int = False) -> str: 
     """Get the goemtry type
 
     See https://r-spatial.github.io/sf/articles/sf1.html
@@ -151,25 +261,27 @@ def get_table_geometry_type(db_name: Union[Path, str], tbl_name: str) -> str:
         raise ValueError(f"Fatal error table {tbl_name} does not have an associated geometry!")
 
     if df_geom_type['geometry_type'].values[0] == 1:
-        return 'POINT'
+        return 1 if return_int else 'POINT'
     elif df_geom_type['geometry_type'].values[0] == 2:
-        return 'LINESTRING'
+        return 2 if return_int else  'LINESTRING'
     elif df_geom_type['geometry_type'].values[0] == 3:
-        return 'POLYGON'
+        return 3 if return_int else  'POLYGON'
     elif df_geom_type['geometry_type'].values[0] == 4:
-        return 'MULTIPOINT'
+        return 4 if return_int else  'MULTIPOINT'
     elif df_geom_type['geometry_type'].values[0] == 5:
-        return 'MULTILINESTRING'
+        return 5 if return_int else  'MULTILINESTRING'
     elif df_geom_type['geometry_type'].values[0] == 6:
-        return 'MULTIPOLYGON'
+        return 6 if return_int else  'MULTIPOLYGON'
     elif df_geom_type['geometry_type'].values[0] == 7:
-        return 'GEOMETRYCOLLECTION'
+        return 7 if return_int else 'GEOMETRYCOLLECTION'
     else:
-        raise ValueError(f"""
+        raise GeomTypeError(f"""
             Fatal error! cannot determine geoemtry type, 
             got {df_geom_type['geometry_type'].values[0]} as code
             """
         )
+
+        
 
 def get_table_rows(db_name: Union[Path, str], tbl_name: str) -> int: 
     """Count the number of rows.
@@ -326,10 +438,11 @@ def drop_table(db_name: Union[Path, str], tbl_name: str):
         logger.info(f'Not running drop_table {db_name} does not exist')
         return 
 
-    with sqlite3.connect(db_name) as conn:
+    with sqlite3.connect(db_name, isolation_level=None) as conn:
         try:
             cursor = conn.cursor()
             cursor.execute(f"DROP TABLE if exists {tbl_name}")
+            conn.commit()
         except Exception as e:
             logger.warning(f"Warning! Failed to drop table tbl_name - {e}" )
 
@@ -348,7 +461,7 @@ def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> Non
         logger.info(f'Not running drop_geometry_columns {db_name} does not exist')
         return
 
-    with sqlite3.connect(db_name) as con:
+    with sqlite3.connect(db_name, isolation_level=None) as con:
         con.enable_load_extension(True)
         con.load_extension("mod_spatialite")
 
@@ -357,7 +470,7 @@ def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> Non
             cur.execute(f" SELECT DiscardGeometryColumn('{tbl_name}', '{geometry_name}'); ")
             con.commit()
         except Exception as e:
-            logger.warning(f"Warning! Failed too discard geometryon table {tbl_name} -> geometry {geometry_name} - {e}" )
+            logger.warning(f"Warning! Failed to discard geometry on table {tbl_name} -> geometry {geometry_name} - {e}" )
 
 
         for t in ['geom_cols_ref_sys', 'geometry_columns']:
@@ -378,32 +491,128 @@ def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> Non
                 logger.warning(f"Warning! Failed to drop record from vector_layers{suff} for table {tbl_name} - {e}" )
 
 
+def rename_geom_column(
+    db_name: str, 
+    tbl_name: str, 
+    new_geom: str="GEOMETRY", 
+    old_geom: Union[str,None] = None,
+    create_index = True
+    ) -> None:
+
+    # Get the curent geometry name
+    if old_geom is None:
+        logger.info('Trying to guess the old geom name and taking the first if there are many..')
+        geom_cols = get_table_geometries_name(db_name, tbl_name)
+        old_geom = geom_cols[0]
+    
+    # watch out for case sensitiviy, safer to do nothing if same when dropping case
+    if old_geom.lower() == new_geom.lower():
+        logger.warn('Warning! same geometry, but different case! Not doing anything since unsafe!')
+        return 
+
+    # Get the srid
+    srid = get_table_crs(db_name, tbl_name, return_srid=True)
+
+    # Get the geometry class: e.g. MULTIPOINT
+    try:
+        geom_type = get_table_geometry_group_classes(db_name, tbl_name, old_geom)
+    except GeomTypeError as e:
+        logger.warn(f'Could not identify poygon type: might have some nulls: returning GEOMETRYCOLLECTION - {e}')
+        geom_type= "GEOMETRYCOLLECTION"
+
+    cast_to_multi=False
+    if geom_type in ["GEOMETRYCOLLECTION", "MULTIPOLYGON", "MULTILINESTRING", "MULTIPOINT"  ]:
+        cast_to_multi =True
+
+    # 1. Add a blank geom col
+    # 2. Populate by copying from old geom
+    # 3. Create an index (optional)
+    # 4. Remove the old geom from the tbl + aux geometry columns
+    with sqlite3.connect(db_name, isolation_level=None) as con:
+        con.enable_load_extension(True)
+        con.load_extension("mod_spatialite")
+    
+        cur = con.cursor()
+
+        cur.execute(f"SELECT AddGeometryColumn('{tbl_name}', '{new_geom}', {srid}, '{geom_type}', 'XY', 0);")
+        con.commit()
+        
+        if cast_to_multi:
+            cur.execute(f'UPDATE {tbl_name} SET "{new_geom}" = CastToMulti("{old_geom}");')
+        else:
+            cur.execute(f'UPDATE {tbl_name} SET "{new_geom}" = "{old_geom}";')
+        con.commit()
+    
+        if create_index:
+            cur.execute(f"SELECT CreateSpatialIndex('{tbl_name}', '{new_geom}');")
+            con.commit()
+        
+        cur.execute(f"SELECT DiscardGeometryColumn('{tbl_name}', '{old_geom}');")
+        con.commit()
+
+        cur.execute(f"ALTER TABLE '{tbl_name}' DROP COLUMN '{old_geom}';")
+        con.commit()
+    
+
+    logger.info(f'Successfully renamed column {old_geom} to {new_geom} in table {tbl_name}')
+
+
 def rename_columns(db_name: str, tbl_name: str, dict_rename: dict) -> None:
+    """Rename columns safely (dont touch)
 
-    for k, v in dict_rename.items():
-        query_rename=f"""
-        ALTER TABLE {tbl_name}
-        RENAME COLUMN {k} TO {v}
-        """
+    Args:
+        db_name : database
+        tbl_name: name of table
+        dict_rename: {old: new}
+    Returns:
+       None
 
-        with sqlite3.connect(db_name) as con:
-            con.enable_load_extension(True)
-            con.load_extension("mod_spatialite")
+    Raises:
+        ValueError if we try to rename a geometry column. Should use the specialized rename_geom_column instead which requires add arguments
+
+    """
+
+    if len(get_table_column_names(db_name, tbl_name)) == 0:
+        raise ValueError(f'Fatal error! {tbl_name} has no columns!')
+
+    with sqlite3.connect(db_name, isolation_level=None) as con:
+        con.enable_load_extension(True)
+        con.load_extension("mod_spatialite")
+
+        try:
+            geom_cols = get_table_geometries_name(db_name, tbl_name)
+        except GeomColumnAbsentError:
+            geom_cols = [] # no geometry
+
+        for k, v in dict_rename.items():
+            if v in geom_cols:
+                raise ValueError(f'Fatal error! Cannot rename geometry column {v} wih rename_columns. Use `rename_geom_column`')
+            
+            query_rename=f"""
+                ALTER TABLE {tbl_name}
+                RENAME COLUMN {k} TO '{v}';
+            """
 
             cur = con.cursor()
             cur.execute(query_rename)
             con.commit()
                 
-    # Print message
-    renamed_cols_str = ",".join(dict_rename.keys())
-    new_cols_str = ",".join(dict_rename.values())
+    # QA + print message
+    unchanged_cols = np.setdiff1d(list(dict_rename.values()), get_table_column_names(db_name, tbl_name))
+    unchanged_cols_str = ",".join(unchanged_cols)
 
-    logger.info(
-        f"""
-        Successfully renamed columns {renamed_cols_str}
-        to -> {new_cols_str}
-        """
-        )
+    if len(unchanged_cols) != 0:
+        logger.warn(f'Warning! {unchanged_cols_str} columns not changed!')
+    else:
+        renamed_cols_str = ",".join(dict_rename.keys())
+        new_cols_str = ",".join(dict_rename.values())
+
+        logger.info(
+            f"""
+            Successfully renamed columns {renamed_cols_str}
+            to -> {new_cols_str}
+            """
+            )
     
 
 
@@ -515,14 +724,15 @@ def get_table_column_all_metadata(db_name: str, tbl_name: str) -> pd.DataFrame:
 if __name__ == "__main__":
 
     import os
-    from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
+    from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
     from geo_py_utils.misc.constants import DATA_DIR
     from geo_py_utils.etl.db_etl import  Url_to_spatialite 
  
+    DB_PATH = os.path.join(DATA_DIR, "test.db")
 
-    def upload_qc_neigh_db(db_name = os.path.join(DATA_DIR, "test.db"),
+    def upload_qc_neigh_db(db_name = DB_PATH,
                             tbl_name = "qc_city_test_tbl",
-                            download_url = QC_CITY_NEIGH_URL):
+                            download_url = DEFAULT_QC_CITY_NEIGH_URL):
         
         with Url_to_spatialite(
             db_name = db_name, 
@@ -533,10 +743,10 @@ if __name__ == "__main__":
 
             uploader.upload_url_to_database()
 
-    drop_geo_table_all(os.path.join(DATA_DIR, "test.db"),"qc_city_test_tbl",'GEOMETRY' )
+    drop_geo_table_all(DB_PATH, "qc_city_test_tbl",'GEOMETRY' )
 
-    if (not os.path.exists(os.path.join(DATA_DIR, "test.db"))) or \
-        (not "qc_city_test_tbl" in list_tables(os.path.join(DATA_DIR, "test.db"))) :
+    if (not os.path.exists(DB_PATH)) or \
+        (not "qc_city_test_tbl" in list_tables(DB_PATH)) :
         upload_qc_neigh_db()
     
-    promote_multi(os.path.join(DATA_DIR, "test.db"),"qc_city_test_tbl")
+    promote_multi(DB_PATH, "qc_city_test_tbl")

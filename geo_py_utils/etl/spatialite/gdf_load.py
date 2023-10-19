@@ -6,6 +6,7 @@ from typing import Union
 from pathlib import Path
 import logging
 
+from geo_py_utils.etl.spatialite.db_utils import get_table_geometries_name
 
 logger = logging.getLogger(__file__)
 
@@ -25,6 +26,11 @@ def spatialite_db_to_gdf(db_name : Union[str, Path],
        gpd.GeoDataFrame  : table result
 
     """
+
+    # Quick QA
+    current_geo_cols = get_table_geometries_name(db_name, tbl_name)
+    if current_geo_col_name.lower() not in [s.lower() for s in current_geo_cols]:
+        raise ValueError(f'Fatal error! geo column {current_geo_cols} not found (wither lower or upper case) in {tbl_name}! Specify the correct geometry!')
 
     tmp_col = "geometry_123somerandom_not_dup"
 
@@ -88,6 +94,14 @@ if __name__ == "__main__":
     from geo_py_utils.misc.constants import DATA_DIR
 
     
+    spatialite_db_to_gdf(
+        os.path.join(os.environ['PATH_TO_GIC'], 'addresses_qc_city.db') , 
+        'geo_arrond_regions',
+        current_geo_col_name='geometry ', 
+        new_geo_col_name = 'geom', 
+        additional_where_limit_causes= ' limit 10')
+
+
     df = spatialite_db_to_gdf(db_name = os.path.join(DATA_DIR, "test.db"),
                             tbl_name = "qc_city_test_tbl",
                             additional_where_limit_causes = "LIMIT 10"

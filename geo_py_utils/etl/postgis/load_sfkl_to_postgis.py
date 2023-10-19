@@ -7,7 +7,7 @@ from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.etl.db_etl import Url_to_postgis
 from geo_py_utils.etl.snowflake.snowflake_connect import connnect_snowflake_ext_browser
 from geo_py_utils.etl.snowflake.snowflake_read import sfkl_to_gpd
- 
+
 
 # Logger
 logger = logging.getLogger(__file__)

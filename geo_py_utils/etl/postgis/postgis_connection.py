@@ -16,6 +16,15 @@ class PostGISDBConnection:
 
         assert dotenv.load_dotenv(path_env_file , override=True), 'Failure to load .env! Cannot determine DB parameters'
         
+        # Read in the environment variables at instantiation 
+        # This ensures we can have multiple credential dictionnaries alive at the same time
+        self.creds = {    
+            "host": os.environ['POSTGRES_HOST'] ,
+            "database": os.environ['POSTGRES_DBNAME'],
+            "user": os.environ['POSTGRES_USER'] ,
+            "password": os.environ['POSTGRES_PASSWORD'] ,
+            "port": os.environ['POSTGRES_PORT']
+        }
 
     def get_credentials(self) -> dict :
         """Get a dict with connection string credentials 
@@ -30,13 +39,7 @@ class PostGISDBConnection:
             dict: 
         """
 
-        return {    
-            "host": os.environ['POSTGRES_HOST'] ,
-            "database": os.environ['POSTGRES_DBNAME'],
-            "user": os.environ['POSTGRES_USER'] ,
-            "password": os.environ['POSTGRES_PASSWORD'] ,
-            "port": os.environ['POSTGRES_PORT']
-        }
+        return self.creds
     
     def get_sql_alchemy_engine(self):
         return pg_create_engine(**self.get_credentials())

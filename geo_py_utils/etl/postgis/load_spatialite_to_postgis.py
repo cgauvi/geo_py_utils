@@ -44,8 +44,10 @@ class LoadSqlitePostgis:
         """
 
         # QA
-        assert exists(self.sqlite_db_name)
-        assert self.sqlite_tbl_name in list_tables(self.sqlite_db_name)
+        if not exists(self.sqlite_db_name):
+            raise ValueError(f'Fatal error! db {self.sqlite_db_name} not found!')
+        if not self.sqlite_tbl_name in list_tables(self.sqlite_db_name):
+            raise ValueError(f'Fatal error! tbl {self.sqlite_tbl_name} not found!')
    
         # Call ogr2ogr
         # No `With` to avoid deleting the db .. -> there is an automatic cleanup at object deletion 

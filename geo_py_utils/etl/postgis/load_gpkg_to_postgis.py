@@ -1,11 +1,10 @@
-
-from os.path import exists
+from os.path import exists, abspath, dirname
 import logging
-import subprocess
-from pathlib import Path
-from os.path import abspath, dirname
+from pathlib import Path, PurePosixPath, WindowsPath
+import sys
 
 from geo_py_utils.etl.postgis.db_utils import pg_create_ogr2ogr_str
+from geo_py_utils.misc.cli_runner import CLIRunner
 
 # Logger
 logger = logging.getLogger(__file__)
@@ -26,7 +25,7 @@ class LoadGPKGPostgis:
                 no_overwrite_append=True):
 
  
-        self.gpkg_name = gpkg_name
+        self.gpkg_name = Path(gpkg_name)
         self.postgis_db_name = database
  
         self.host = host
@@ -64,8 +63,10 @@ class LoadGPKGPostgis:
 
         # ogr2ogr format: Dest Source
         # See https://gdal.org/programs/ogr2ogr.html
-        # Important: no '' around gpkg name: will fuck up in git bash on Windows otherwise
-        cmd += fr"  {self.ogr2ogr_dest_connection_str} {self.gpkg_name} " 
+        source =  WindowsPath(self.gpkg_name) if 'win' in sys.platform else PurePosixPath(self.gpkg_name)
+        dest = WindowsPath(self.ogr2ogr_dest_connection_str) if 'win' in sys.platform else PurePosixPath(self.ogr2ogr_dest_connection_str)
+
+        cmd += fr" {dest} {source} " 
 
         # Additional commands 
         cmd += " -lco ENCODING=UTF-8 " 
@@ -74,7 +75,7 @@ class LoadGPKGPostgis:
             cmd += " -nlt PROMOTE_TO_MULTI "
 
         # Append or not
-        if not self.no_overwrite_append and not self.first_time_creating_db:
+        if not self.no_overwrite_append:
             if self.overwrite:
                 cmd += " -overwrite"
             else:
@@ -96,8 +97,8 @@ class LoadGPKGPostgis:
 
         # Actual system call
         logger.info(ogr_cmd)
-        subprocess.check_call(ogr_cmd, shell=True)  
- 
+        
+        CLIRunner(use_bash=False).run_cmd(ogr_cmd)
 
         logger.info(f"Successfully uploaded entire gpkg {self.gpkg_name} to {self.host}:{self.port}/{self.postgis_db_name}")
 

@@ -1,10 +1,10 @@
-from os.path import exists
+from os.path import exists, abspath, dirname
 import os
 import numpy as np
 import pytest
 import subprocess
 import logging
-
+from pathlib import Path
 
 logger = logging.getLogger(__file__)
 
@@ -26,12 +26,12 @@ from geo_py_utils.etl.postgis.db_utils import (
     pg_create_ogr2ogr_str,
     pg_create_connection_str
 )
-
+from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
 #--
 from geo_py_utils.etl.spatialite.utils_testing import upload_qc_neigh_test_db, QcCityTestData, write_regular_csv_db
 from geo_py_utils.etl.spatialite.db_utils import list_tables
  
-
+HERE = Path(abspath(dirname(__file__)))
 
 class LocalPostGIS:
     USER = os.getenv('PG_LOCAL_USER')
@@ -120,7 +120,7 @@ def test_sflk_to_postgis_remote():
 
 
 @pytest.mark.requires_remote_pg_connection_prod
-def test_list_tables_postgis_remote():
+def test_list_tables_postgis_remote_prod():
 
     # First check
     if not is_port_open(RemotePostGIS.HOST, RemotePostGIS.PORT):
@@ -277,6 +277,8 @@ def test_local_shp_to_postgis_local_db_qc():
     """Run test against a local DB - presumably on local linux machine
     """
 
+
+    # Check that psql exists, dont actualy run a cmd. Should work on windows + unix
     psql_exists_results = subprocess.run(["which","psql"], stdout=subprocess.PIPE)
     if len(psql_exists_results.stdout) > 0:
 
@@ -300,6 +302,21 @@ def test_local_shp_to_postgis_local_db_qc():
     else:
         logger.warning("Skipping test_postgis: did not find psql on system")
 
+
+@pytest.fixture
+def connection_remote_prod_ro():
+    return PostGISDBConnection(HERE / 'config' / 'remote_pg_ro' / "prod" / ".env")
+
+@pytest.mark.requires_remote_pg_connection_dev
+def test_list_tables_postgis_remote_dev(connection_remote_prod_ro):
+
+ 
+    DB_NAME_DOES_NOT_EXIST = "RANDOMTBLDOESNOTEXIST"
+
+    # Create db connection
+    engine = pg_create_engine(**connection_remote_prod_ro.get_credentials())
+
+    assert pg_list_tables(engine, DB_NAME_DOES_NOT_EXIST) == []
 
 if __name__ == '__main__':
 

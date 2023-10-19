@@ -5,6 +5,7 @@ import tempfile
 import numpy as np
 import pytest
 
+
 from geo_py_utils.etl.db_etl import  Url_to_spatialite
 from geo_py_utils.etl.spatialite.gdf_load import spatialite_db_to_gdf
 from geo_py_utils.etl.spatialite.db_utils import (
@@ -18,7 +19,11 @@ from geo_py_utils.etl.spatialite.db_utils import (
     is_spatial_index_enabled_valid,
     get_table_geometry_type,
     promote_multi,
-    rename_columns
+    rename_columns,
+    rename_geom_column,
+    get_table_geometries_name,
+    get_table_column_names
+
 )
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
@@ -26,6 +31,42 @@ from geo_py_utils.census_open_data.census import FSA_2016_URL
 from geo_py_utils.etl.spatialite.utils_testing import upload_qc_neigh_test_db, QcCityTestData
 
 
+def test_rename_geo():
+
+    # Make sure we start from scratch, and dont defacto promot to multipolygon
+    drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
+    if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
+        (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
+        upload_qc_neigh_test_db(promote_to_multi=False)
+    
+    geo_cols = get_table_geometries_name(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+    rename_geom_column(
+        QcCityTestData.SPATIAL_LITE_DB_PATH, 
+        QcCityTestData.SPATIAL_LITE_TBL_QC,
+        new_geom=geo_cols[0] + 'new'
+        )
+
+    assert geo_cols[0] + 'new' in get_table_column_names(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+    assert geo_cols[0] + 'new' in get_table_geometries_name(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+
+    assert geo_cols[0] not in get_table_column_names(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+    assert geo_cols[0] not in get_table_geometries_name(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+
+def test_rename():
+    # Make sure we start from scratch, and dont defacto promot to multipolygon
+    drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
+    if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
+        (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
+        upload_qc_neigh_test_db(promote_to_multi=False)
+    
+    geo_cols = get_table_geometries_name(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+    try:
+        rename_columns(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, {geo_cols[0]: 'ssGEOMsss'})
+    except :
+        print("Got error as expected")
+
+    rename_columns(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, {'nom': 'new_nom'})
+    assert 'new_nom' in get_table_column_names(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
 
 def test_promot_to_multi():
 
@@ -40,6 +81,16 @@ def test_promot_to_multi():
     promote_multi(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
 
     shp_after = spatialite_db_to_gdf(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+
+    # Column renaming creates a new geom column and so needs to infer type
+    geo_cols = get_table_geometries_name(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+    rename_geom_column(
+        QcCityTestData.SPATIAL_LITE_DB_PATH, 
+        QcCityTestData.SPATIAL_LITE_TBL_QC,
+        new_geom=geo_cols[0] + 'new'
+        )
+    
+    assert geo_cols[0] + 'new' in get_table_column_names(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
 
     # The geometry is not properly set in the aux geometry_columns table, but the geometry might still be successfully changed
     assert len(shp_before.geometry.type.unique()) == 2
@@ -105,6 +156,22 @@ def test_read_gdf_spatialite_qc ():
 
     assert isinstance(df, gpd.GeoDataFrame)
     assert df.shape[0] == 10
+
+
+def test_read_gdf_error_geom ():
+
+    if not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH):
+        upload_qc_neigh_test_db()
+
+    with pytest.raises(Exception):
+        _ = spatialite_db_to_gdf(db_name = QcCityTestData.SPATIAL_LITE_DB_PATH,
+                                tbl_name = QcCityTestData.SPATIAL_LITE_TBL_QC,
+                                current_geo_col_name='somecolumnthatclearlydoesnotexist',
+                                additional_where_limit_causes = "LIMIT 10"
+        ) 
+
+ 
+
 
 def test_spatialite_rename_cols():
 
@@ -224,5 +291,6 @@ def test_drop_table():
 
 if __name__ == '__main__':
 
-    test_spatialite_rename_cols()
+    test_rename_geo()
+
    

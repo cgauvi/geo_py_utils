@@ -3,9 +3,11 @@ from os.path import join, isdir
 from os import mkdir
 from shutil import rmtree
 import string
+import logging
 
 from geo_py_utils.misc.constants import DATA_DIR
 
+logger = logging.getLogger(__file__)
 
 class MockTmpCache:
     """Callable class to create a tmp mock cache dir at init and remove it at teardown
@@ -20,7 +22,10 @@ class MockTmpCache:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if isdir(self.mocked_dir): rmtree(self.mocked_dir)
+        try:
+            if isdir(self.mocked_dir): rmtree(self.mocked_dir)
+        except Exception as e:
+            logger.warn(f'Warning! Couldnt delete mocked cache dir: {self.mocked_dir} at teardown: prob windows permission issue: {e}')
 
 
     def _create_mock_cache_dir(self) -> str:
@@ -35,7 +40,11 @@ class MockTmpCache:
 
         random_string = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(10))
         mocked_data_dir = join(self.path_to_mock, random_string)
-        if isdir(mocked_data_dir): rmtree(mocked_data_dir)
-        mkdir(mocked_data_dir)
+
+        try:
+            if isdir(mocked_data_dir): rmtree(mocked_data_dir)
+            mkdir(mocked_data_dir)
+        except Exception as e:
+            logger.warn(f'Warning! Couldnt delete mocked cache dir: {mocked_data_dir} at teardown: prob windows permission issue: {e}')
 
         return mocked_data_dir

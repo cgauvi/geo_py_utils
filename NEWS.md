@@ -1,3 +1,65 @@
+geo_py_utils 1.3.4
+
+==================
+- patch:
+    * PostGISDBConnection can load multiple env files
+    
+
+geo_py_utils 1.3.3
+
+==================
+- patch:
+    * ogr2ogr shell call works on Windows through powershell 
+
+geo_py_utils 1.3.2
+
+==================
+
+
+- patch:
+    * added a safe check for valid geom col name in spatialite_db_to_gdf
+
+
+geo_py_utils 1.3.1
+
+==================
+
+- patch:
+    * fix for geo renaming: throw and catch GeomColumnAbsentError when geo col absent + ALTER TABLE RENAME with '' for new name string.
+
+geo_py_utils 1.3.0
+
+==================
+
+- minor:
+    * new - minor: can rename geo column
+
+geo_py_utils 1.2.0
+
+==================
+
+- minor:
+    * spatialite renaming of column
+    * pg & spatialite set column name with ogr2ogr
+
+
+
+geo_py_utils 1.1.3
+
+==================
+
+- patch:
+    * changed default arg of borough download
+
+geo_py_utils 1.1.2
+
+==================
+
+
+- minor:
+    * new `get_df_geometry_columns` method in `PostGISDBTablesIdentifier` to get the geometry columns from a given schema and table
+
+
 geo_py_utils 1.1.1
 
 ==================

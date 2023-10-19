@@ -8,7 +8,7 @@ import requests
 from shutil import rmtree
 from typing import Union
 import zipfile
-
+ 
 from geo_py_utils.misc.constants import DATA_DIR
 
 logger = logging.getLogger(__file__)
@@ -74,8 +74,16 @@ def download_zip_shp(url: str,
         shp = gpd.read_file( list_potential_files[0])
 
     finally:
-        if isfile(path_data_dir_zip): remove(path_data_dir_zip)
-        if isdir(path_data_dir_unzipped): rmtree(path_data_dir_unzipped)
+        try:
+            if isfile(path_data_dir_zip): remove(path_data_dir_zip)
+        except Exception as e:
+            logger.warn(f'Warning! Couldnt delete tmp zip file: {path_data_dir_zip} at teardown: prob windows permission issue: {e}')
+        
+        try:
+            if isdir(path_data_dir_unzipped): rmtree(path_data_dir_unzipped)
+        except Exception as e:
+            logger.warn(f'Warning! Couldnt delete tmp unzipped dir: {path_data_dir_unzipped} at teardown: prob windows permission issue: {e}')
+        
 
     return shp
 
