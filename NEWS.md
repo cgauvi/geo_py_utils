@@ -1,3 +1,9 @@
+geo_py_utils 1.4.0
+
+- minor:
+    * new spatialite utils from other project (remove_apostrophe, build_sql_select_with_fct,execute_spatialite_cmd)
+
+
 geo_py_utils 1.3.4
 
 ==================
@@ -11,10 +17,11 @@ geo_py_utils 1.3.3
 - patch:
     * ogr2ogr shell call works on Windows through powershell 
 
+
+
 geo_py_utils 1.3.2
 
 ==================
-
 
 - patch:
     * added a safe check for valid geom col name in spatialite_db_to_gdf
