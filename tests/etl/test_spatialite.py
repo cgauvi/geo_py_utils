@@ -22,7 +22,10 @@ from geo_py_utils.etl.spatialite.db_utils import (
     rename_columns,
     rename_geom_column,
     get_table_geometries_name,
-    get_table_column_names
+    get_table_column_names,
+    remove_apostrophe,
+    build_sql_select_with_fct,
+    execute_spatialite_cmd
 
 )
 from geo_py_utils.misc.constants import DATA_DIR
@@ -30,6 +33,44 @@ from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
 from geo_py_utils.census_open_data.census import FSA_2016_URL
 from geo_py_utils.etl.spatialite.utils_testing import upload_qc_neigh_test_db, QcCityTestData
 
+
+
+def test_remove_apostrophe():
+ 
+    assert remove_apostrophe("Some test: '’‘") == "Some test:    " # replace all 3 kinds
+    assert remove_apostrophe("Some test: ''") == "Some test:   " # 
+    assert remove_apostrophe("Some test: '' ") == "Some test:    " # 
+    assert remove_apostrophe("Some test: \" ") == "Some test:   " # 
+
+
+def test_sql_build_fct():
+    assert build_sql_select_with_fct("bla", {'MAX': '_max'}) == "MAX(bla) as bla_max"
+
+    assert build_sql_select_with_fct(
+        "bla", 
+        {'MAX': '_max'}, 
+        wrapper = lambda x :  f"CASE WHEN {x} = '' THEN 'blo' ELSE NULL END"
+    ) == "MAX(CASE WHEN bla = '' THEN 'blo' ELSE NULL END) as bla_max"
+
+
+def test_execute_spatialite_cmd():
+
+    drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
+    drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, f'{QcCityTestData.SPATIAL_LITE_TBL_QC}_new', 'GEOMETRY')
+
+    if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
+        (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
+        upload_qc_neigh_test_db(promote_to_multi=False)
+
+    execute_spatialite_cmd(
+        QcCityTestData.SPATIAL_LITE_DB_PATH, 
+        f'''
+        create table if not exists {QcCityTestData.SPATIAL_LITE_TBL_QC}_new as
+        select * from {QcCityTestData.SPATIAL_LITE_TBL_QC} limit 1
+        '''
+        )
+
+    assert get_table_rows( QcCityTestData.SPATIAL_LITE_DB_PATH, f'{QcCityTestData.SPATIAL_LITE_TBL_QC}_new') == 1
 
 def test_rename_geo():
 

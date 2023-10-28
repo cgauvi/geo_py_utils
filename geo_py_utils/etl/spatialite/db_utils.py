@@ -7,7 +7,7 @@ import pandas as pd
 import sqlite3
 from pathlib import Path
 import numpy as np 
- 
+import re
 
 logger = logging.getLogger(__file__)
   
@@ -96,6 +96,73 @@ def list_tables(db_name: Union[Path, str]) -> list:
         
     return list_tables
 
+
+def remove_apostrophe(s: str) -> str:
+    """Remove all apostrophes: '’‘"
+
+    Args:
+        s (str): string to parse that potentially contains apostrophe-like symbols that will fuck up your sql statement and need to be escaped
+
+    Returns:
+        str: string without any apostrophes that should run in a sql statement
+    """
+    return re.sub(  pattern= "[\'’‘\"]", repl=" ", string = s)
+
+
+def build_sql_select_with_fct(var_name: str, dict_fct: dict = {'MAX': '_max'}, wrapper = lambda x: x) -> str:
+        
+    """Create a sql select statement based on dict of sql functions (e.g. MAX) along with a suffix to add to the new alias (e.g. _max).
+
+    Details: 
+        For each dictionary element:
+            1. Creates a new var with suffix dict_fct['value'] -> `{var}_{dict_fct['value']}`
+            2. and value given by applying a function -> `dict_fct['key'](var_name)`
+            3. Optional wrapper that takes a string and returns a string
+
+    Example: 
+        build_sql_select_with_fct("bla", {'MAX': '_max'}) = "MAX(bla) as bla_max"
+        build_sql_select_with_fct("bla", {'MAX': '_max'}, wrapper = lambda x :  'CASE WHEN x in (..) THEN blo ELSE NULL END') = "MAX(CASE WHEN bla in (..) THEN blo ELSE NULL END) as bla_max"
+
+    Args:
+        var_name (str): string representing variable name
+        dict_fct (dict): dict with sql function to apply (key) and variable name suffix injected to create the new var (value). Defaults to {'MAX': '_max'}.
+        wrapper (function): wrapper function that should take a string and return a string. Defaults to identity (does nothing)
+
+     Returns:
+        str: string to use in the `SELECT ... `statement
+
+    """
+
+    str_sql = ",".join(
+                    [
+                    f"{k}({wrapper(var_name)}) as {var_name}{v}" for k, v in dict_fct.items()
+                    ]
+    )
+
+    return str_sql
+
+
+
+def execute_spatialite_cmd(db_name: Path, sql_cmd: str):
+    """Basic convenience wrapper to commit a given sql statement to a spatialite db
+
+    Args:
+        db_name(Path)
+        sql_cmd (str): sql query
+    """
+
+    with sqlite3.connect(db_name) as con:
+
+        # avoid fuckups with utf 
+        # https://stackoverflow.com/questions/22751363/sqlite3-operationalerror-could-not-decode-to-utf-8-column
+        con.text_factory = lambda b: b.decode(errors = 'ignore')
+
+        # sqlite connection with extensions
+        con.enable_load_extension(True)
+        con.load_extension("mod_spatialite")
+
+        con.execute(sql_cmd)
+        con.commit()
 
 
 def sql_to_df(db_name: Union[Path, str], query: str) -> pd.DataFrame:
@@ -723,11 +790,23 @@ def get_table_column_all_metadata(db_name: str, tbl_name: str) -> pd.DataFrame:
 
 if __name__ == "__main__":
 
+    import sys
+    import os
+    sys.path.insert(1,os.path.join(os.environ['PATH_TO_GIC'],"gic","geo_py_utils"))
+
     import os
     from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
     from geo_py_utils.misc.constants import DATA_DIR
     from geo_py_utils.etl.db_etl import  Url_to_spatialite 
  
+
+     
+    remove_apostrophe("Some test: '’‘") == "Some test: " # replace all 3 kinds
+    remove_apostrophe("Some test: ''") == "Some test: " # 
+    remove_apostrophe("Some test: '' ") == "Some test:  " # 
+    remove_apostrophe("Some test: \" ") == "Some test:   " # 
+
+    '''
     DB_PATH = os.path.join(DATA_DIR, "test.db")
 
     def upload_qc_neigh_db(db_name = DB_PATH,
@@ -750,3 +829,4 @@ if __name__ == "__main__":
         upload_qc_neigh_db()
     
     promote_multi(DB_PATH, "qc_city_test_tbl")
+    '''
