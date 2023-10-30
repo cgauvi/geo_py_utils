@@ -1,3 +1,10 @@
+geo_py_utils 1.4.1
+
+- patch:
+    * fixed generic spatialite utils
+
+==================
+
 geo_py_utils 1.4.0
 
 - minor:
