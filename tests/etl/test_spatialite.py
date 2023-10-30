@@ -23,9 +23,8 @@ from geo_py_utils.etl.spatialite.db_utils import (
     rename_geom_column,
     get_table_geometries_name,
     get_table_column_names,
-    remove_apostrophe,
-    build_sql_select_with_fct,
-    execute_spatialite_cmd
+    execute_spatialite_cmd,
+    remove_accents_column
 
 )
 from geo_py_utils.misc.constants import DATA_DIR
@@ -35,22 +34,58 @@ from geo_py_utils.etl.spatialite.utils_testing import upload_qc_neigh_test_db, Q
 
 
 
-def test_remove_apostrophe():
- 
-    assert remove_apostrophe("Some test: '’‘") == "Some test:    " # replace all 3 kinds
-    assert remove_apostrophe("Some test: ''") == "Some test:   " # 
-    assert remove_apostrophe("Some test: '' ") == "Some test:    " # 
-    assert remove_apostrophe("Some test: \" ") == "Some test:   " # 
+def test_sqlite_no_apostrophes():
+    with open('test.db', 'w') as f:
+	    pass
+
+    # reate the table
+    execute_spatialite_cmd(
+        'test.db',
+        '''
+        CREATE TABLE test (
+        sometext text not null
+        );
+        '''
+    )
+
+    # Insert 4 types of accent variations 
+    list_statements = [
+        """insert into test (sometext)
+        values ('d''');""",
+        """insert into test (sometext)
+        values ('d''''');""",
+        """insert into test (sometext)
+        values ('d’');""",
+        """insert into test (sometext)
+        values ('d‘'); """
+    ]
+
+    for s in list_statements:
+        execute_spatialite_cmd('test.db',  s  )
 
 
-def test_sql_build_fct():
-    assert build_sql_select_with_fct("bla", {'MAX': '_max'}) == "MAX(bla) as bla_max"
+    # Remove the accents in place using the built-in `replace` function
+    remove_accents_column(
+        'test.db',
+        """
+        update test
+        set 
+            sometext = replace(
+                            replace(
+                                replace(sometext, '''', ''),
+                                    '’', ''
+                                ),
+                                '‘', ''
+                        )
+        """
+    )
 
-    assert build_sql_select_with_fct(
-        "bla", 
-        {'MAX': '_max'}, 
-        wrapper = lambda x :  f"CASE WHEN {x} = '' THEN 'blo' ELSE NULL END"
-    ) == "MAX(CASE WHEN bla = '' THEN 'blo' ELSE NULL END) as bla_max"
+    df_results = sql_to_df('test.db', 'select * from test')
+
+    assert (df_results.sometext.values == 'd').all()
+
+    if os.path.exists('test.db'):
+        os.remove('test.db')
 
 
 def test_execute_spatialite_cmd():
