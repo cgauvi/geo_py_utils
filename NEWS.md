@@ -1,3 +1,10 @@
+geo_py_utils 1.5.0
+
+- minor:
+    * new generic sql string manip functions
+
+================== 
+
 geo_py_utils 1.4.1
 
 - patch:
