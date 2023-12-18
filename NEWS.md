@@ -1,3 +1,10 @@
+geo_py_utils 1.5.2
+
+- patch:
+    * poetry dependencies update
+    
+================== 
+
 geo_py_utils 1.5.0
 
 - minor:
