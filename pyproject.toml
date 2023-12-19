@@ -4,6 +4,9 @@ version = "1.5.2"
 description = "Python functions for generic geospatial manipulations"
 authors = ["Charles Gauvin"]
 
+[project]
+requires-python = ">3.9"
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
@@ -49,7 +52,6 @@ markers =[
     select = ["F"]
 
 [tool.poetry.dependencies] 
-python_version = ">=3.9"
 brotlipy = "^0.7.0"
 psycopg2 = "^2.9.5"
 pyarrow = "^11.0.0"
@@ -58,10 +60,11 @@ pysocks = "^1.7.1"
 rtree = "*"
 unicodedata2 = "^15.0.0"
 python-geohash = "^0.8.5"
-sqlalchemy = "^1.4.46, < 2"
+sqlalchemy = "^1.4.44, < 2"
 snowflake-connector-python = "3.0.1"
 python-dotenv = "*"
 geopandas = "*"
+pandas = "*"
 pyproj = '3.4.1'
 munkres= "*"
 seaborn = {version ="^0.12.1", optional = true}
