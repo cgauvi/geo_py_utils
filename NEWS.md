@@ -1,4 +1,4 @@
-geo_py_utils 1.5.2
+geo_py_utils 1.5.3
 
 - patch:
     * poetry dependencies update
