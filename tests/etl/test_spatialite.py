@@ -5,7 +5,6 @@ import tempfile
 import numpy as np
 import pytest
 
-
 from geo_py_utils.etl.db_etl import  Url_to_spatialite
 from geo_py_utils.etl.spatialite.gdf_load import spatialite_db_to_gdf
 from geo_py_utils.etl.spatialite.db_utils import (
@@ -65,20 +64,7 @@ def test_sqlite_no_apostrophes():
 
 
     # Remove the accents in place using the built-in `replace` function
-    remove_accents_column(
-        'test.db',
-        """
-        update test
-        set 
-            sometext = replace(
-                            replace(
-                                replace(sometext, '''', ''),
-                                    '’', ''
-                                ),
-                                '‘', ''
-                        )
-        """
-    )
+    remove_accents_column(  db_name = 'test.db', tbl_name= 'test', column_name='sometext' )
 
     df_results = sql_to_df('test.db', 'select * from test')
 
@@ -367,6 +353,6 @@ def test_drop_table():
 
 if __name__ == '__main__':
 
-    test_rename_geo()
+    test_sqlite_no_apostrophes()
 
    
