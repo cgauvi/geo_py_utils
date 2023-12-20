@@ -1,7 +1,8 @@
 
 import pandas as pd
 import geopandas as gpd
-from os.path import join, exists
+from os.path import join, exists, isdir
+from os import makedirs
 import logging 
 
 from geo_py_utils.etl.download_zip import download_zip_shp
@@ -67,6 +68,7 @@ class DownloadQcAdmBoundaries:
     """
     QC_PROV_ADM_BOUND_URL = "https://diffusion.mern.gouv.qc.ca/Diffusion/RGQ/Vectoriel/Theme/Local/SDA_20k/SHP/SHP.zip"
 
+
     QC_PROV_ADM_BOUND_MRC = "mrc_s"
     QC_PROV_ADM_BOUND_MUNI = "munic_s"
     QC_PROV_ADM_BOUND_METRO = "comet_s"
@@ -80,6 +82,9 @@ class DownloadQcAdmBoundaries:
         
         self.geo_level = geo_level
         self.data_download_path = data_download_path
+
+        if not isdir(self.data_download_path):
+            makedirs(self.data_download_path)
  
 
     def _download_qc_administrative_boundaries(self):
@@ -132,7 +137,6 @@ class DownloadQcBoroughs(DownloadQcAdmBoundaries):
 
     Attributes:
         data_download_path (_type_, optional): _description_. Defaults to join(DATA_DIR, 'qc_adm_regions').
-        filter_out_unknown_muni (bool, optional): Remove 'Toponyme à venir' . Defaults to True
     """
 
  
