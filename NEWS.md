@@ -1,3 +1,11 @@
+geo_py_utils 1.5.6
+
+- patch:
+    * fixed bus in tests
+    * fixed error when dest download dir does not exist in zip fct
+    
+================== 
+
 geo_py_utils 1.5.5
 
 - patch:
