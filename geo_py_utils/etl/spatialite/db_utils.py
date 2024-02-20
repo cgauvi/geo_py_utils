@@ -7,10 +7,34 @@ import pandas as pd
 import sqlite3
 from pathlib import Path
 import numpy as np 
- 
 
 logger = logging.getLogger(__file__)
   
+
+
+def remove_accents_column(db_name: Union[Path, str], tbl_name: str, column_name: str) -> None:
+    """Remove 3 types of accents from a given text column
+
+    Args:
+        db_name (_type_): db we want to alter
+        tbl_name (str): table we want to alter
+        column_name (str): column for whch we want to remove apostrophes
+    """
+
+    execute_spatialite_cmd(
+        db_name,
+        f"""
+        update {tbl_name}
+        set 
+            {column_name} = replace(
+                                replace(
+                                    replace({column_name}, '''', ''),
+                                        '’', ''
+                                    ),
+                                '‘', ''
+                            )
+        """
+    )
 
 
 def promote_multi(db_name: Union[Path, str],
@@ -96,6 +120,27 @@ def list_tables(db_name: Union[Path, str]) -> list:
         
     return list_tables
 
+
+def execute_spatialite_cmd(db_name: Path, sql_cmd: str):
+    """Basic convenience wrapper to commit a given sql statement to a spatialite db
+
+    Args:
+        db_name(Path)
+        sql_cmd (str): sql query
+    """
+
+    with sqlite3.connect(db_name) as con:
+
+        # avoid fuckups with utf 
+        # https://stackoverflow.com/questions/22751363/sqlite3-operationalerror-could-not-decode-to-utf-8-column
+        con.text_factory = lambda b: b.decode(errors = 'ignore')
+
+        # sqlite connection with extensions
+        con.enable_load_extension(True)
+        con.load_extension("mod_spatialite")
+
+        con.execute(sql_cmd)
+        con.commit()
 
 
 def sql_to_df(db_name: Union[Path, str], query: str) -> pd.DataFrame:
@@ -723,11 +768,15 @@ def get_table_column_all_metadata(db_name: str, tbl_name: str) -> pd.DataFrame:
 
 if __name__ == "__main__":
 
+
     import os
     from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
     from geo_py_utils.misc.constants import DATA_DIR
     from geo_py_utils.etl.db_etl import  Url_to_spatialite 
  
+
+
+    '''
     DB_PATH = os.path.join(DATA_DIR, "test.db")
 
     def upload_qc_neigh_db(db_name = DB_PATH,
@@ -750,3 +799,4 @@ if __name__ == "__main__":
         upload_qc_neigh_db()
     
     promote_multi(DB_PATH, "qc_city_test_tbl")
+    '''

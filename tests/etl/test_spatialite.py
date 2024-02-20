@@ -5,7 +5,6 @@ import tempfile
 import numpy as np
 import pytest
 
-
 from geo_py_utils.etl.db_etl import  Url_to_spatialite
 from geo_py_utils.etl.spatialite.gdf_load import spatialite_db_to_gdf
 from geo_py_utils.etl.spatialite.db_utils import (
@@ -22,7 +21,9 @@ from geo_py_utils.etl.spatialite.db_utils import (
     rename_columns,
     rename_geom_column,
     get_table_geometries_name,
-    get_table_column_names
+    get_table_column_names,
+    execute_spatialite_cmd,
+    remove_accents_column
 
 )
 from geo_py_utils.misc.constants import DATA_DIR
@@ -30,6 +31,67 @@ from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
 from geo_py_utils.census_open_data.census import FSA_2016_URL
 from geo_py_utils.etl.spatialite.utils_testing import upload_qc_neigh_test_db, QcCityTestData
 
+
+
+def test_sqlite_no_apostrophes():
+    with open('test.db', 'w') as f:
+	    pass
+
+    # reate the table
+    execute_spatialite_cmd(
+        'test.db',
+        '''
+        CREATE TABLE test (
+        sometext text not null
+        );
+        '''
+    )
+
+    # Insert 4 types of accent variations 
+    list_statements = [
+        """insert into test (sometext)
+        values ('d''');""",
+        """insert into test (sometext)
+        values ('d''''');""",
+        """insert into test (sometext)
+        values ('d’');""",
+        """insert into test (sometext)
+        values ('d‘'); """
+    ]
+
+    for s in list_statements:
+        execute_spatialite_cmd('test.db',  s  )
+
+
+    # Remove the accents in place using the built-in `replace` function
+    remove_accents_column(  db_name = 'test.db', tbl_name= 'test', column_name='sometext' )
+
+    df_results = sql_to_df('test.db', 'select * from test')
+
+    assert (df_results.sometext.values == 'd').all()
+
+    if os.path.exists('test.db'):
+        os.remove('test.db')
+
+
+def test_execute_spatialite_cmd():
+
+    drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
+    drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, f'{QcCityTestData.SPATIAL_LITE_TBL_QC}_new', 'GEOMETRY')
+
+    if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
+        (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
+        upload_qc_neigh_test_db(promote_to_multi=False)
+
+    execute_spatialite_cmd(
+        QcCityTestData.SPATIAL_LITE_DB_PATH, 
+        f'''
+        create table if not exists {QcCityTestData.SPATIAL_LITE_TBL_QC}_new as
+        select * from {QcCityTestData.SPATIAL_LITE_TBL_QC} limit 1
+        '''
+        )
+
+    assert get_table_rows( QcCityTestData.SPATIAL_LITE_DB_PATH, f'{QcCityTestData.SPATIAL_LITE_TBL_QC}_new') == 1
 
 def test_rename_geo():
 
@@ -291,6 +353,6 @@ def test_drop_table():
 
 if __name__ == '__main__':
 
-    test_rename_geo()
+    test_sqlite_no_apostrophes()
 
    
