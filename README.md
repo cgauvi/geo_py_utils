@@ -1,6 +1,6 @@
 
 <!-- badges: start -->
-[![pytest](https://github.com/cgauvi/geo_py_utils/actions/workflows/tests.yaml/badge.svg)](https://github.com/cgauvi/geo_py_utils/actions/workflows/tests.yaml)
+[![pytest](https://github.com/LaCapitale/geo_py_utils/actions/workflows/tests.yaml/badge.svg)](https://github.com/LaCapitale/geo_py_utils/actions/workflows/tests.yaml)
 <!-- badges: end -->
 
 
