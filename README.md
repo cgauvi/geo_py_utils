@@ -1,6 +1,6 @@
 
 <!-- badges: start -->
-[![pytest](https://github.com/cgauvi/geo_py_utils/actions/workflows/tests.yaml/badge.svg)](https://github.com/cgauvi/geo_py_utils/actions/workflows/tests.yaml)
+[![pytest](https://github.com/LaCapitale/geo_py_utils/actions/workflows/tests.yaml/badge.svg)](https://github.com/LaCapitale/geo_py_utils/actions/workflows/tests.yaml)
 <!-- badges: end -->
 
 
@@ -43,7 +43,7 @@
 The project has been tested by installing geopandas through `conda`. The rest of the dependencies can be installed manually with `pip` or `poetry`. Conda was initially chosen in an attempt to reduce friction and avoid having to tweak environment variables and point to correct libs. In hindsight, this might not be the best approach since some libraries like `mod_spatialite` are not packaged with conda anyways and require some sort of manual sudo install on windows or linux/max. 
 
 ```bash
-conda create --name geo_py_utils python=3.9 geopandas
+conda create --name geo_py_utils python=3.9 geopandas pyproj
 conda activate geo_py_utils
 python -m pip install --upgrade pip
 python -m pip install "geo_py_utils @ git+ssh://git@github.com/LaCapitale/geo_py_utils.git"
