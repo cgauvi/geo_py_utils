@@ -8,6 +8,7 @@ from snowflake.connector.pandas_tools import write_pandas
 
 from geo_py_utils.etl.snowflake.snowflake_connect import connnect_snowflake_ext_browser
 from geo_py_utils.etl.snowflake.db_utils import table_exists
+from geo_py_utils.misc.utils_test import SAMPLE_DF
 
 HERE = Path(abspath(dirname(__file__)))
 TEST_TBL_NAME = 'TEST_TBL'
@@ -17,9 +18,8 @@ assert dotenv.load_dotenv(HERE / 'config' / ".env", override=True), 'Config not 
 
 @pytest.fixture
 def create_df():
-    df = pd.DataFrame(data={'col1':[1,2], "col2": ['a','f']})
     with connnect_snowflake_ext_browser() as conn:
-        write_pandas(conn, df, TEST_TBL_NAME, schema=conn.schema, database=conn.database, overwrite=True)
+        write_pandas(conn, SAMPLE_DF, TEST_TBL_NAME, schema=conn.schema, database=conn.database, overwrite=True)
 
 
 @pytest.mark.requires_remote_sfkl_interactivity
