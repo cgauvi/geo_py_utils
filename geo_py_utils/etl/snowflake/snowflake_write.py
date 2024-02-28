@@ -18,7 +18,40 @@ DEFAULT_LIST_NA_STRINGS = "'\\N', 'NULL', 'NUL', '', 'None' , 'NA', 'N/A'"
 DEFAULT_SFKL_GEO_COL_NAME = "GEOGRAPHY"
 
 class SnowflakeGeoWriter:
+    """SnowflakeGeoWriter: class to upload a GeoDataFrame to Snowflake by creating a temp csv file which is then uploaded to a temp staging area.
 
+    Uses SSO connection so cannot be used or tested automatically.
+    Final sfkl table has a GEOGRAPHY column in 4326 
+    Writes to M_DATA_SCIENCE.SANDBOX by default, but can be changed with `sfkl_conn_params`
+    Context manager useful to clean up temp files and staging 
+
+    Attributes:
+        shp (gpd.GeoDataFrame): gdf to upload
+        sfkl_name (str): table name to create in Snowflake
+        path_env_file (Path, optional): Path to credential file. Needs to have USER_EMAIL_SFKL="xxx" and USER_ACCOUNT_SFKL="yyy". Defaults to Path(".env").
+        local_tmp_file_dir (_type_, optional): Path where the temp local files are written. Defaults to Path("").
+        keep_tmp_local_files (bool, optional): Keep the local files?. Defaults to False.
+        na_strings (_type_, optional): For format creation. Tweak only if NAs are custom coded in a weird way. Defaults to DEFAULT_LIST_NA_STRINGS.
+        overwrite_tbl (bool, optional): Overwrite the Snowflake table. Defaults to True.
+        sfkl_geo_col_name (_type_, optional): Name of geography column in new Snowflake table. Defaults to DEFAULT_SFKL_GEO_COL_NAME.
+
+        sfkl_conn_params: Snowflake connection params (warehouse, schema, role)
+
+    Raises:
+        FileNotFoundError: if no credential file found
+        TypeError: if not a geodf
+        ValueError: if geodf has 1 column or less
+
+    Usage:
+
+        with SnowflakeGeoWriter(
+            shp = SAMPLE_GDF,
+            sfkl_name = SFKL_TBL_NAME,
+            path_env_file = path_config
+        ) as sfkl_writer:
+            
+            sfkl_writer.create_table()
+    """
     def __init__(
             self, 
             shp: gpd.GeoDataFrame,
@@ -32,7 +65,8 @@ class SnowflakeGeoWriter:
             **sfkl_conn_params
             ):
 
-        self.shp = shp
+
+        self.shp = shp.to_crs(4326) # important to convert to geographic since TO_GEOGRAPHY is hardcoded below
         self.geom_col_name = self.shp.geometry.name # will need to drop and recreate ..
         self.sfkl_geo_col_name = str(sfkl_geo_col_name).upper()
 
@@ -211,11 +245,8 @@ if __name__ == '__main__':
     from pathlib import Path
     from os.path import abspath, dirname, exists
 
-    import geopandas as gpd
-    from shapely.geometry import Polygon
-
     from geo_py_utils.etl.snowflake.snowflake_connect import connnect_snowflake_ext_browser
-    #from geo_py_utils.misc.utils_test import SAMPLE_GDF
+    from geo_py_utils.misc.utils_test import SAMPLE_GDF
     
     HERE = Path(abspath(dirname(__file__)))  / '..' / '..' / '..'
     SFKL_TBL_NAME = "TEST_SHP_WRITE_SFKL"
@@ -224,16 +255,6 @@ if __name__ == '__main__':
     if not exists(path_config):
         raise FileNotFoundError()
     
-
-    
-    SAMPLE_GDF =   gpd.GeoDataFrame(
-                    {'id': [0, 1]},
-                    geometry=[
-                        Polygon(((-71.5, 46.5), (-71.6, 46.4),  (-71.5, 46.7),   (-71.5, 46.5))) ,
-                        Polygon(((-71.5, 46.5), (-72, 46.4),  (-71.5, 46.7),   (-71.5, 46.5)))
-                    ],
-                    crs=4326
-                )
     dotenv.load_dotenv(path_config, override= True)
 
     with SnowflakeGeoWriter(
