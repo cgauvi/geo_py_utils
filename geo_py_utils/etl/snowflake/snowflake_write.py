@@ -238,37 +238,4 @@ class SnowflakeGeoWriter:
 
 
 
-
-if __name__ == '__main__':
-
-    import dotenv
-    from pathlib import Path
-    from os.path import abspath, dirname, exists
-
-    from geo_py_utils.etl.snowflake.snowflake_connect import connnect_snowflake_ext_browser
-    from geo_py_utils.misc.utils_test import SAMPLE_GDF
-    
-    HERE = Path(abspath(dirname(__file__)))  / '..' / '..' / '..'
-    SFKL_TBL_NAME = "TEST_SHP_WRITE_SFKL"
-
-    path_config = HERE / "config" / "snowflake" / ".env"
-    if not exists(path_config):
-        raise FileNotFoundError()
-    
-    dotenv.load_dotenv(path_config, override= True)
-
-    with SnowflakeGeoWriter(
-        shp=SAMPLE_GDF,
-        sfkl_name=SFKL_TBL_NAME,
-        path_env_file = path_config
-    ) as sfkl_writer:
-        
-        sfkl_writer.create_table()
-        
-    with connnect_snowflake_ext_browser() as conn:
-        tbl_exists = table_exists(conn, SFKL_TBL_NAME)
-      
-    print(tbl_exists)
-
-    with connnect_snowflake_ext_browser() as conn:
-        conn.cursor().execute(f'DROP TABLE {SFKL_TBL_NAME}')
+ 
