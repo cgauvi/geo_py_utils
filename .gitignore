@@ -1,5 +1,6 @@
 # .env files 
 *.env
+config/
 
 __pycache__
 
