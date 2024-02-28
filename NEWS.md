@@ -1,7 +1,14 @@
+
+geo_py_utils 1.6.0
+
+- minor:
+    * new SnowflakeGeoWriter class to write gpd to snowflake using sso connection
+    
+================== 
 geo_py_utils 1.5.6
 
 - patch:
-    * fixed bus in tests
+    * fixed bug in tests
     * fixed error when dest download dir does not exist in zip fct
     
 ================== 
