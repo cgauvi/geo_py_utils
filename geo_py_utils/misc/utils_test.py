@@ -1,9 +1,14 @@
-import random
+import logging
+
 from os.path import join, isdir
 from os import mkdir
+import pandas as pd
+import geopandas as gpd
+import random
+from shapely.geometry import Polygon
 from shutil import rmtree
 import string
-import logging
+
 
 from geo_py_utils.misc.constants import DATA_DIR
 
@@ -48,3 +53,15 @@ class MockTmpCache:
             logger.warn(f'Warning! Couldnt delete mocked cache dir: {mocked_data_dir} at teardown: prob windows permission issue: {e}')
 
         return mocked_data_dir
+
+
+SAMPLE_GDF =   gpd.GeoDataFrame(
+                    {'id': [0, 1]},
+                    geometry=[
+                        Polygon(((-71.5, 46.5), (-71.6, 46.4),  (-71.5, 46.7),   (-71.5, 46.5))) ,
+                        Polygon(((-71.5, 46.5), (-72, 46.4),  (-71.5, 46.7),   (-71.5, 46.5)))
+                    ],
+                    crs=4326
+                )
+     
+SAMPLE_DF = pd.DataFrame(data={'col1':[1,2], "col2": ['a','f']})

@@ -6,6 +6,7 @@ import numpy as np
 from os.path import isfile
 from os import remove
 from pathlib import Path
+from snowflake.connector.pandas_tools import write_pandas 
 
 from geo_py_utils.etl.snowflake.snowflake_connect import connnect_snowflake_ext_browser
 from geo_py_utils.etl.snowflake.db_utils import table_exists
@@ -14,6 +15,7 @@ from geo_py_utils.etl.snowflake.db_utils import table_exists
 logger = logging.getLogger(__file__)
 
 DEFAULT_LIST_NA_STRINGS = "'\\N', 'NULL', 'NUL', '', 'None' , 'NA', 'N/A'"
+DEFAULT_SFKL_GEO_COL_NAME = "GEOGRAPHY"
 
 class SnowflakeGeoWriter:
 
@@ -26,12 +28,15 @@ class SnowflakeGeoWriter:
             keep_tmp_local_files = False,
             na_strings = DEFAULT_LIST_NA_STRINGS,
             overwrite_tbl = True,
+            sfkl_geo_col_name = DEFAULT_SFKL_GEO_COL_NAME,
             **sfkl_conn_params
             ):
 
         self.shp = shp
+        self.geom_col_name = self.shp.geometry.name # will need to drop and recreate ..
+        self.sfkl_geo_col_name = str(sfkl_geo_col_name).upper()
 
-        self.sfkl_name = sfkl_name
+        self.sfkl_name = str(sfkl_name).upper() # safer to convert all to caps
 
         self.local_tmp_file_dir = local_tmp_file_dir # could be a tmpfile() also
         self.local_tmp_file_path = Path(self.local_tmp_file_dir) / self.sfkl_name
@@ -45,6 +50,25 @@ class SnowflakeGeoWriter:
             raise FileNotFoundError(f'Fatal error! Provide a valid credential .env file to connect to snowflake using the external browser and sso@')
         
         dotenv.load_dotenv(path_env_file , override=True)
+
+        self._init()
+
+    def _init(self):
+        self._qa_input_gdf()
+        self._clean_staging()
+        self._remove_tmp_files()
+        self._create_staging()
+
+        if self.overwrite_tbl:
+            self._clean_table()
+
+    def _qa_input_gdf(self):
+        if not isinstance(self.shp, gpd.GeoDataFrame):
+            raise TypeError('Fatal error not a geodf!')
+
+        if self.shp.shape[1] <= 1:
+            raise ValueError('Fatal error gpf contains only a geometry column!')
+
 
     def _clean_table(self):
         with connnect_snowflake_ext_browser(**self.sfkl_conn_params) as conn:
@@ -74,17 +98,11 @@ class SnowflakeGeoWriter:
                 remove(f)
 
     def __enter__(self):
-        self._clean_staging()
-        if self.overwrite_tbl:
-            self._clean_table()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-
-        if self.keep_tmp_local_files:
-            self._safe_delete_all_files()
-        else:
-            logger.warning("Warning! not deleting temprary download files! make sure to not clog your system")
+        self._clean_staging()
+        self._remove_tmp_files()
 
     def _create_cols_str_not_geo(self):
 
@@ -126,7 +144,20 @@ class SnowflakeGeoWriter:
             self._remove_tmp_files()
 
 
-        
+    def _create_empty_table(self):
+
+        with connnect_snowflake_ext_browser(**self.sfkl_conn_params) as conn:
+            write_pandas(
+                conn=conn,  
+                df=self.shp.iloc[:0].drop(columns=self.geom_col_name), # only the header + NO GEOM (type not correct)
+                table_name=self.sfkl_name, 
+                schema=conn.schema, 
+                database=conn.database, 
+                overwrite=True
+            )
+            conn.cursor().execute(f"ALTER TABLE {self.sfkl_name} ADD COLUMN {self.sfkl_geo_col_name} GEOGRAPHY") 
+
+
     def create_table(self):
         """
         Main function used to transfer a gpd.GeoDataFrame to snowflake by creatng a tmp local csv and uploading it to a tmp staging area on snowflake
@@ -139,6 +170,9 @@ class SnowflakeGeoWriter:
         if tbl_exists and not self.overwrite_tbl:
             logger.info(f'Table {self.sfkl_name} already exists! Not doing anything')
             return 
+        
+        # Create the empty table structure
+        self._create_empty_table()
 
         # Write & upload the local file
         self._put_local_file()
@@ -166,4 +200,54 @@ class SnowflakeGeoWriter:
             conn.cursor().execute(query_insert_into) 
 
 
-        logger.info(f'Successfully wrote table {str(self.sfkl_name).upper()} to snowflake')
+        logger.info(f'Successfully wrote table {self.sfkl_name} to snowflake')
+
+
+
+
+if __name__ == '__main__':
+
+    import dotenv
+    from pathlib import Path
+    from os.path import abspath, dirname, exists
+
+    import geopandas as gpd
+    from shapely.geometry import Polygon
+
+    from geo_py_utils.etl.snowflake.snowflake_connect import connnect_snowflake_ext_browser
+    #from geo_py_utils.misc.utils_test import SAMPLE_GDF
+    
+    HERE = Path(abspath(dirname(__file__)))  / '..' / '..' / '..'
+    SFKL_TBL_NAME = "TEST_SHP_WRITE_SFKL"
+
+    path_config = HERE / "config" / "snowflake" / ".env"
+    if not exists(path_config):
+        raise FileNotFoundError()
+    
+
+    
+    SAMPLE_GDF =   gpd.GeoDataFrame(
+                    {'id': [0, 1]},
+                    geometry=[
+                        Polygon(((-71.5, 46.5), (-71.6, 46.4),  (-71.5, 46.7),   (-71.5, 46.5))) ,
+                        Polygon(((-71.5, 46.5), (-72, 46.4),  (-71.5, 46.7),   (-71.5, 46.5)))
+                    ],
+                    crs=4326
+                )
+    dotenv.load_dotenv(path_config, override= True)
+
+    with SnowflakeGeoWriter(
+        shp=SAMPLE_GDF,
+        sfkl_name=SFKL_TBL_NAME,
+        path_env_file = path_config
+    ) as sfkl_writer:
+        
+        sfkl_writer.create_table()
+        
+    with connnect_snowflake_ext_browser() as conn:
+        tbl_exists = table_exists(conn, SFKL_TBL_NAME)
+      
+    print(tbl_exists)
+
+    with connnect_snowflake_ext_browser() as conn:
+        conn.cursor().execute(f'DROP TABLE {SFKL_TBL_NAME}')

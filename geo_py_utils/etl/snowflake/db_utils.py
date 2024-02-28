@@ -14,21 +14,3 @@ def table_exists(conn, tbl_name) -> bool:
     return df_results.TBL_EXISTS.values[0]
 
 
-if __name__ == '__main__':
-    import dotenv
-    from pathlib import Path
-    from os.path import abspath, dirname, exists
-
-    from geo_py_utils.etl.snowflake.snowflake_connect import connnect_snowflake_ext_browser
-    
-    HERE = Path(abspath(dirname(__file__)))  / '..' / '..' / '..'
-
-    path_config = HERE / "config" / "snowflake" / ".env"
-    if not exists(path_config):
-        raise FileNotFoundError()
-    
-    dotenv.load_dotenv(path_config, override= True)
-    with connnect_snowflake_ext_browser() as conn:
-        tbl_exists = table_exists(conn, 'tmp_geo_qc_neigh')
-
-    print(tbl_exists)
