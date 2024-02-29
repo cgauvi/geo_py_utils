@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 import pytest
 
-from geo_py_utils.etl.snowflake.snowflake_read import sfkl_to_gpd
+from geo_py_utils.etl.snowflake.snowflake_read import sfkl_to_gpd, sfkl_get_table_srid
 from geo_py_utils.etl.snowflake.snowflake_connect import connnect_snowflake_ext_browser
 from geo_py_utils.etl.snowflake.db_utils import table_exists
 from geo_py_utils.etl.snowflake.snowflake_write import SnowflakeGeoWriter
@@ -48,7 +48,7 @@ def test_snowflake_tbl_exists(create_gdf):
     teardown()
 
 @pytest.mark.requires_remote_sfkl_interactivity
-def test_snowflake_type(create_gdf):
+def test_snowflake_types_and_crs_roundtrip(create_gdf):
 
     create_gdf
 
@@ -59,9 +59,11 @@ def test_snowflake_type(create_gdf):
             tbl_name = TEST_TBL_NAME,
             geometry_name = SFKL_GEO_COL_NAME
             )
+        crs_sfkl = sfkl_get_table_srid(conn, TEST_TBL_NAME, SFKL_GEO_COL_NAME)
 
-    assert isinstance(shp_round_trip, gpd.GeoDataFrame)
-
+    assert isinstance(shp_round_trip, gpd.GeoDataFrame), 'Fatal error! Roundtrip data not read in as geodf!'
+    assert shp_round_trip.crs.to_epsg() == crs_sfkl, 'Fatal error! Roundtrip crs from snowflake and geodf do not match'
+    
     teardown()
 
 @pytest.mark.requires_remote_sfkl_interactivity

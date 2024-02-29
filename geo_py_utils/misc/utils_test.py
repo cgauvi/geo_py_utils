@@ -55,8 +55,22 @@ class MockTmpCache:
         return mocked_data_dir
 
 
+ID_COL_NAME= ' id'
+INT_COL_NAME = 'integer_data'
+REAL_COL_NAME = 'real_data'
+STR_COL_NAME = 'text_data'
+MIXED_COL_NAME = 'mixed_data'
+
+BASE_DATA =  {
+    ID_COL_NAME: [0, 1],
+    REAL_COL_NAME: [0.152, 0.1],
+    INT_COL_NAME: [8,7],
+    STR_COL_NAME: ['some 8898 ', 'text é ç !"/ '],
+    MIXED_COL_NAME: [3,'mixed']
+    }
+
 SAMPLE_GDF =   gpd.GeoDataFrame(
-                    {'id': [0, 1]},
+                    data = BASE_DATA,
                     geometry=[
                         Polygon(((-71.5, 46.5), (-71.6, 46.4),  (-71.5, 46.7),   (-71.5, 46.5))) ,
                         Polygon(((-71.5, 46.5), (-72, 46.4),  (-71.5, 46.7),   (-71.5, 46.5)))
@@ -64,4 +78,6 @@ SAMPLE_GDF =   gpd.GeoDataFrame(
                     crs=4326
                 )
      
-SAMPLE_DF = pd.DataFrame(data={'col1':[1,2], "col2": ['a','f']})
+SAMPLE_DF = pd.DataFrame(
+    data = BASE_DATA
+    )

@@ -7,6 +7,7 @@ from os.path import isfile
 from os import remove
 from pathlib import Path
 from snowflake.connector.pandas_tools import write_pandas 
+from unidecode import unidecode
 
 from geo_py_utils.etl.snowflake.snowflake_connect import connnect_snowflake_ext_browser
 from geo_py_utils.etl.snowflake.db_utils import table_exists
@@ -16,6 +17,7 @@ logger = logging.getLogger(__file__)
 
 DEFAULT_LIST_NA_STRINGS = "'\\N', 'NULL', 'NUL', '', 'None' , 'NA', 'N/A'"
 DEFAULT_SFKL_GEO_COL_NAME = "GEOGRAPHY"
+DEFAULT_MAX_ROWS_FOR_TYPE_INF = 100
 
 class SnowflakeGeoWriter:
     """SnowflakeGeoWriter: class to upload a GeoDataFrame to Snowflake by creating a temp csv file which is then uploaded to a temp staging area.
@@ -62,11 +64,12 @@ class SnowflakeGeoWriter:
             na_strings = DEFAULT_LIST_NA_STRINGS,
             overwrite_tbl = True,
             sfkl_geo_col_name = DEFAULT_SFKL_GEO_COL_NAME,
+            max_rows_for_auto_type_inference = DEFAULT_MAX_ROWS_FOR_TYPE_INF,
             **sfkl_conn_params
             ):
 
 
-        self.shp = shp.to_crs(4326) # important to convert to geographic since TO_GEOGRAPHY is hardcoded below
+        self.shp = shp
         self.geom_col_name = self.shp.geometry.name # will need to drop and recreate ..
         self.sfkl_geo_col_name = str(sfkl_geo_col_name).upper()
 
@@ -78,6 +81,8 @@ class SnowflakeGeoWriter:
         self.na_strings = na_strings
         self.overwrite_tbl = overwrite_tbl
 
+        self.max_rows_for_auto_type_inference = max_rows_for_auto_type_inference
+
         self.sfkl_conn_params = sfkl_conn_params
         
         if not isfile(path_env_file):
@@ -88,13 +93,16 @@ class SnowflakeGeoWriter:
         self._init()
 
     def _init(self):
+        
         self._qa_input_gdf()
+        self._clean_up_gdf()
         self._clean_staging()
         self._remove_tmp_files()
         self._create_staging()
 
         if self.overwrite_tbl:
             self._clean_table()
+
 
     def _qa_input_gdf(self):
         if not isinstance(self.shp, gpd.GeoDataFrame):
@@ -103,6 +111,22 @@ class SnowflakeGeoWriter:
         if self.shp.shape[1] <= 1:
             raise ValueError('Fatal error gpf contains only a geometry column!')
 
+    def _clean_up_gdf(self):
+        # CRS
+        logger.info('Converting crs to 4326 to simplify snowflake upload!')
+        self.shp = shp.to_crs(4326) # important to convert to geographic since TO_GEOGRAPHY is hardcoded below
+
+        # Watch out for accents 
+        str_cols = self.shp.columns[ self.shp.dtypes == 'object' ].values
+        str_cols_join = ",".join(str_cols)
+        logger.info(f'Converting strings to characters for: {str_cols_join}')
+        for col in str_cols:
+            self.shp[col] = self.shp.apply(lambda row : unidecode(row[col]), axis=1)
+
+        # Upper case (except the geometry column whose name is set by the ogr2ogr driver in _put_local_file )
+        logger.info('Converting column names to upper case')
+        self.shp.columns = [x.upper() if x != self.geom_col_name else x for x in self.shp.columns.values ]
+ 
 
     def _clean_table(self):
         with connnect_snowflake_ext_browser(**self.sfkl_conn_params) as conn:
@@ -180,16 +204,23 @@ class SnowflakeGeoWriter:
 
     def _create_empty_table(self):
 
+        # only a subset (faster) + NO GEOM (type never automatically infered correctly)
+        num_rows_safe = min(self.max_rows_for_auto_type_inference, self.shp.shape[0])
+        data_subset_for_auto_type_inference = self.shp.\
+            iloc[:num_rows_safe].\
+            drop(columns=self.geom_col_name)
+
         with connnect_snowflake_ext_browser(**self.sfkl_conn_params) as conn:
             write_pandas(
                 conn=conn,  
-                df=self.shp.iloc[:0].drop(columns=self.geom_col_name), # only the header + NO GEOM (type not correct)
+                df=data_subset_for_auto_type_inference, 
                 table_name=self.sfkl_name, 
                 schema=conn.schema, 
                 database=conn.database, 
                 overwrite=True
             )
-            conn.cursor().execute(f"ALTER TABLE {self.sfkl_name} ADD COLUMN {self.sfkl_geo_col_name} GEOGRAPHY") 
+            conn.cursor().execute(f"TRUNCATE table {self.sfkl_name} ") # flush the table 
+            conn.cursor().execute(f"ALTER TABLE {self.sfkl_name} ADD COLUMN {self.sfkl_geo_col_name} GEOGRAPHY")  # add the GEOGRAPHY
 
 
     def create_table(self):
@@ -238,4 +269,27 @@ class SnowflakeGeoWriter:
 
 
 
- 
+if __name__ == '__main__':
+
+    from os.path import abspath, dirname, isfile
+
+    from geo_py_utils.census_open_data.open_data import download_qc_city_neighborhoods
+    from geo_py_utils.constants import ProjectPaths
+
+    HERE = Path(abspath(dirname(__file__)))
+    TEST_TBL_NAME = 'TEST_SHP_WRITE_SFKL'
+    PATH_CONFIG = Path(ProjectPaths.PATH_PROJET_ROOT) / '..' / 'config' / "snowflake" / ".env"
+    SFKL_GEO_COL_NAME= 'GEO_TEST'
+
+
+    shp = download_qc_city_neighborhoods()
+
+    with SnowflakeGeoWriter(
+        shp=shp,
+        sfkl_name=TEST_TBL_NAME,
+        path_env_file=PATH_CONFIG,
+        sfkl_geo_col_name = SFKL_GEO_COL_NAME
+    ) as sfkl_writer:
+        
+        sfkl_writer.create_table()
+
