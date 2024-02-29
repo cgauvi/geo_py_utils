@@ -1,4 +1,11 @@
 
+================== 
+geo_py_utils 1.6.1
+
+- patch:
+    * pyarow deps conflict with snowflake connector: <=10.0.0
+
+==================
 geo_py_utils 1.6.0
 
 - minor:
