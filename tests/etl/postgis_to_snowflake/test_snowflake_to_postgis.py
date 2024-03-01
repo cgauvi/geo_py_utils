@@ -1,0 +1,74 @@
+import geopandas as gpd
+import pandas as pd
+import pytest
+from snowflake.connector.pandas_tools import write_pandas 
+
+from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
+from geo_py_utils.etl.snowflake.gdf_write import SnowflakeGeoWriter
+from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd
+from geo_py_utils.etl.postgis.load_sfkl_to_postgis import LoadSfklPostgis
+from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
+from geo_py_utils.constants import ProjectPaths
+from geo_py_utils.misc.utils_test import SAMPLE_GDF
+
+TEST_SFKL_TBL_NAME = 'TEST_SHP_WRITE_SFKL_NEIGH'
+PATH_SFKL_CONFIG = ProjectPaths.CONFIG_PATH / 'snowflake' / 'extbrowser' / ".env"
+PATH_POSTGIS_CONFIG = ProjectPaths.CONFIG_PATH / 'postgis' / 'gcp' / 'dev' / ".env"
+SFKL_GEO_COL_NAME='GEOGRAPHY'
+
+def create_gdf():
+
+    with SnowflakeGeoWriter(
+        shp=SAMPLE_GDF,
+        sfkl_name=TEST_SFKL_TBL_NAME,
+        sfkl_connector= SnowflakeExternalBrowserConnection(PATH_SFKL_CONFIG) ,
+        sfkl_geo_col_name=SFKL_GEO_COL_NAME
+    ) as sfkl_writer:
+        
+        sfkl_writer.create_table()
+ 
+@pytest.mark.requires_remote_pg_connection_sfkl_interactivity
+def test_transfer_sfkl_postgis():
+
+    create_gdf()
+
+    pg_db_conn = PostGISDBConnection(PATH_POSTGIS_CONFIG)
+    creds_dict = pg_db_conn.get_credentials()
+ 
+    sfkl_connector = SnowflakeExternalBrowserConnection(PATH_SFKL_CONFIG)
+
+    db_transfer = LoadSfklPostgis(
+        sfkl_tbl_name=TEST_SFKL_TBL_NAME,
+        sfkl_connector=sfkl_connector, 
+        host = creds_dict['host'],
+        user= creds_dict['user'],
+        password= creds_dict['password'],
+        port= creds_dict['port'],
+        postgis_tbl_name=TEST_SFKL_TBL_NAME
+    )
+
+    db_transfer.upload_url_to_database()
+
+    query_count = f'select count(*) NUM_ROWS from {TEST_SFKL_TBL_NAME}'
+    query_get_all = f'select * from {TEST_SFKL_TBL_NAME}'
+
+    # Read from postgis
+    with pg_db_conn.get_sql_alchemy_engine().connect() as conn:
+        df_pg = pd.read_sql(query_count, conn)
+        shp_pg = gpd.read_postgis(query_get_all, conn, geom_col=SFKL_GEO_COL_NAME)
+
+    # Read from snowflake
+    with sfkl_connector as connector:
+        df_sfkl = pd.read_sql(query_count, conn)
+        shp_sfkl = sfkl_to_gpd(query_get_all, conn, tbl_name=TEST_SFKL_TBL_NAME, geometry_name=SFKL_GEO_COL_NAME)
+
+    for i in [0,1]:
+        assert shp_pg.shape[i] == shp_sfkl.shape[i], \
+            f'Fattal error! dimension {i} mismatch - {shp_pg.shape[i]} vs {shp_sfkl.shape[i]}'
+
+
+
+        
+if __name__ == '__main__':
+
+    test_transfer_sfkl_postgis()
