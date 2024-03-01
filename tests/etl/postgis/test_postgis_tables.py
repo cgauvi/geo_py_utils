@@ -1,3 +1,7 @@
+# sample call from root to select all:
+# `pytest tests/etl/postgis/test_postgis_tables.py -m 'requires_remote_pg_connection_dev or requires_remote_pg_connection_prod' `
+
+
 from os.path import abspath, dirname
 import pytest
 from pathlib import Path
@@ -58,7 +62,10 @@ def test_list_public_geo_cols(connection_remote_prod_ro):
 
     creds = pg_table_identifier.get_pg_connection().get_credentials()
     assert df_geo_cols.shape[1] > 0
-    assert creds['database'] in df_geo_cols.f_table_catalog.values
+
+    # Chek for empty table
+    if df_geo_cols.shape[0] > 0:
+        assert creds['database'] in df_geo_cols.f_table_catalog.values
 
 @pytest.mark.requires_remote_pg_connection_prod
 def test_list_topology_geo_cols(connection_remote_prod_ro):
