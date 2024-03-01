@@ -1,5 +1,3 @@
-
-import dotenv
 import geopandas as gpd
 import logging
 import numpy as np
@@ -9,9 +7,8 @@ from pathlib import Path
 from snowflake.connector.pandas_tools import write_pandas 
 from unidecode import unidecode
 
-from geo_py_utils.etl.snowflake.snowflake_connect import connnect_snowflake_ext_browser
 from geo_py_utils.etl.snowflake.db_utils import table_exists
-
+from geo_py_utils.etl.snowflake.snowflake_abstract_connection import SnowflakeAbstractConnection
 
 logger = logging.getLogger(__file__)
 
@@ -24,23 +21,21 @@ class SnowflakeGeoWriter:
 
     Uses SSO connection so cannot be used or tested automatically.
     Final sfkl table has a GEOGRAPHY column in 4326 
-    Writes to M_DATA_SCIENCE.SANDBOX by default, but can be changed with `sfkl_conn_params`
+    Writes to M_DATA_SCIENCE.SANDBOX by default, but can be changed with `sfkl_connector` params
     Context manager useful to clean up temp files and staging 
 
     Attributes:
         shp (gpd.GeoDataFrame): gdf to upload
         sfkl_name (str): table name to create in Snowflake
-        path_env_file (Path, optional): Path to credential file. Needs to have USER_EMAIL_SFKL="xxx" and USER_ACCOUNT_SFKL="yyy". Defaults to Path(".env").
+        sfkl_connector (SnowflakeAbstractConnection):  connector object that implements get_connection() which returns a snowflake.connector.connection object 
         local_tmp_file_dir (_type_, optional): Path where the temp local files are written. Defaults to Path("").
         keep_tmp_local_files (bool, optional): Keep the local files?. Defaults to False.
         na_strings (_type_, optional): For format creation. Tweak only if NAs are custom coded in a weird way. Defaults to DEFAULT_LIST_NA_STRINGS.
         overwrite_tbl (bool, optional): Overwrite the Snowflake table. Defaults to True.
         sfkl_geo_col_name (_type_, optional): Name of geography column in new Snowflake table. Defaults to DEFAULT_SFKL_GEO_COL_NAME.
 
-        sfkl_conn_params: Snowflake connection params (warehouse, schema, role)
 
     Raises:
-        FileNotFoundError: if no credential file found
         TypeError: if not a geodf
         ValueError: if geodf has 1 column or less
 
@@ -58,14 +53,13 @@ class SnowflakeGeoWriter:
             self, 
             shp: gpd.GeoDataFrame,
             sfkl_name: str,
-            path_env_file: Path = Path(".env"),
+            sfkl_connector: SnowflakeAbstractConnection,
             local_tmp_file_dir = Path("") ,
             keep_tmp_local_files = False,
             na_strings = DEFAULT_LIST_NA_STRINGS,
             overwrite_tbl = True,
             sfkl_geo_col_name = DEFAULT_SFKL_GEO_COL_NAME,
-            max_rows_for_auto_type_inference = DEFAULT_MAX_ROWS_FOR_TYPE_INF,
-            **sfkl_conn_params
+            max_rows_for_auto_type_inference = DEFAULT_MAX_ROWS_FOR_TYPE_INF
             ):
 
 
@@ -83,12 +77,7 @@ class SnowflakeGeoWriter:
 
         self.max_rows_for_auto_type_inference = max_rows_for_auto_type_inference
 
-        self.sfkl_conn_params = sfkl_conn_params
-        
-        if not isfile(path_env_file):
-            raise FileNotFoundError(f'Fatal error! Provide a valid credential .env file to connect to snowflake using the external browser and sso@')
-        
-        dotenv.load_dotenv(path_env_file , override=True)
+        self.sfkl_connector = sfkl_connector
 
         self._init()
 
@@ -114,14 +103,14 @@ class SnowflakeGeoWriter:
     def _clean_up_gdf(self):
         # CRS
         logger.info('Converting crs to 4326 to simplify snowflake upload!')
-        self.shp = shp.to_crs(4326) # important to convert to geographic since TO_GEOGRAPHY is hardcoded below
+        self.shp = self.shp.to_crs(4326) # important to convert to geographic since TO_GEOGRAPHY is hardcoded below
 
         # Watch out for accents 
         str_cols = self.shp.columns[ self.shp.dtypes == 'object' ].values
         str_cols_join = ",".join(str_cols)
         logger.info(f'Converting strings to characters for: {str_cols_join}')
         for col in str_cols:
-            self.shp[col] = self.shp.apply(lambda row : unidecode(row[col]), axis=1)
+            self.shp[col] = self.shp.apply(lambda row : unidecode(str(row[col])), axis=1)
 
         # Upper case (except the geometry column whose name is set by the ogr2ogr driver in _put_local_file )
         logger.info('Converting column names to upper case')
@@ -129,7 +118,8 @@ class SnowflakeGeoWriter:
  
 
     def _clean_table(self):
-        with connnect_snowflake_ext_browser(**self.sfkl_conn_params) as conn:
+        with self.sfkl_connector as connector:
+            conn = connector.get_connection()
             tbl_exists = table_exists(conn, self.sfkl_name)
 
             if tbl_exists:
@@ -139,11 +129,13 @@ class SnowflakeGeoWriter:
                 logger.info(f"Table {self.sfkl_name} does not exist")
 
     def _clean_staging(self):
-        with connnect_snowflake_ext_browser(**self.sfkl_conn_params) as conn:
+        with self.sfkl_connector as connector:
+            conn = connector.get_connection()
             conn.cursor().execute(f"DROP STAGE IF EXISTS {self.sfkl_name}")
     
     def _create_staging(self):
-        with connnect_snowflake_ext_browser(**self.sfkl_conn_params) as conn:
+        with self.sfkl_connector as connector:
+            conn = connector.get_connection()
             conn.cursor().execute(f"CREATE OR REPLACE stage {self.sfkl_name}")
     
     def _remove_tmp_files(self):
@@ -195,7 +187,8 @@ class SnowflakeGeoWriter:
             STRING_QUOTING="ALWAYS"
         )
 
-        with connnect_snowflake_ext_browser(**self.sfkl_conn_params) as conn:
+        with self.sfkl_connector as connector:
+            conn = connector.get_connection()
             conn.cursor().execute(f"put file://{self.local_tmp_file_path}.csv @{self.sfkl_name};")
 
         if not self.keep_tmp_local_files:
@@ -210,7 +203,8 @@ class SnowflakeGeoWriter:
             iloc[:num_rows_safe].\
             drop(columns=self.geom_col_name)
 
-        with connnect_snowflake_ext_browser(**self.sfkl_conn_params) as conn:
+        with self.sfkl_connector as connector:
+            conn = connector.get_connection()
             write_pandas(
                 conn=conn,  
                 df=data_subset_for_auto_type_inference, 
@@ -229,7 +223,8 @@ class SnowflakeGeoWriter:
         """
 
         # Check if table already exists
-        with connnect_snowflake_ext_browser(**self.sfkl_conn_params) as conn:
+        with self.sfkl_connector as connector:
+            conn = connector.get_connection()
             tbl_exists = table_exists(conn, self.sfkl_name)
 
         if tbl_exists and not self.overwrite_tbl:
@@ -246,7 +241,8 @@ class SnowflakeGeoWriter:
         # Essential to set separator, quoting and other details to ensure data is read in correctly
         str_format_query = self._create_file_format_str()
 
-        with connnect_snowflake_ext_browser(**self.sfkl_conn_params) as conn:
+        with self.sfkl_connector as connector:
+            conn = connector.get_connection()
             conn.cursor().execute(str_format_query) 
             conn.cursor().execute("ALTER SESSION SET GEOGRAPHY_OUTPUT_FORMAT  = 'WKT'") 
 
@@ -261,7 +257,8 @@ class SnowflakeGeoWriter:
             f"FROM @{self.sfkl_name} (file_format => 'myformat') as t; "
             )
         
-        with connnect_snowflake_ext_browser(**self.sfkl_conn_params) as conn:
+        with self.sfkl_connector as connector:
+            conn = connector.get_connection()
             conn.cursor().execute(query_insert_into) 
 
 
@@ -271,25 +268,35 @@ class SnowflakeGeoWriter:
 
 if __name__ == '__main__':
 
-    from os.path import abspath, dirname, isfile
+    from os.path import abspath, dirname
 
     from geo_py_utils.census_open_data.open_data import download_qc_city_neighborhoods
-    from geo_py_utils.constants import ProjectPaths
+    from geo_py_utils.misc.utils_test import SAMPLE_GDF
+    from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
 
     HERE = Path(abspath(dirname(__file__)))
     TEST_TBL_NAME = 'TEST_SHP_WRITE_SFKL'
-    PATH_CONFIG = Path(ProjectPaths.PATH_PROJET_ROOT) / '..' / 'config' / "snowflake" / ".env"
     SFKL_GEO_COL_NAME= 'GEO_TEST'
 
+    with SnowflakeGeoWriter(
+        shp=SAMPLE_GDF,
+        sfkl_name=TEST_TBL_NAME,
+        sfkl_connector=SnowflakeExternalBrowserConnection(),
+        sfkl_geo_col_name = SFKL_GEO_COL_NAME
+    ) as sfkl_writer:
+        
+        sfkl_writer.create_table()
 
     shp = download_qc_city_neighborhoods()
 
     with SnowflakeGeoWriter(
         shp=shp,
-        sfkl_name=TEST_TBL_NAME,
-        path_env_file=PATH_CONFIG,
+        sfkl_name=f'{TEST_TBL_NAME}_neigh',
+        sfkl_connector=SnowflakeExternalBrowserConnection(),
         sfkl_geo_col_name = SFKL_GEO_COL_NAME
     ) as sfkl_writer:
         
         sfkl_writer.create_table()
+
+
 
