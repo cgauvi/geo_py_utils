@@ -262,6 +262,10 @@ def pg_get_table_rows(engine: sqlalchemy.engine.base.Engine, tbl_name: str) -> i
 
     return df.num_rows.values[0]
 
+def pg_create_extension(engine: sqlalchemy.engine.base.Engine):
+
+    with engine.connect() as conn:
+        conn.execute('CREATE EXTENSION IF NOT EXISTS postgis;')
 
 
 def pg_is_spatial_index_enabled(engine: sqlalchemy.engine.base.Engine,
@@ -311,3 +315,4 @@ def pg_is_spatial_index_enabled(engine: sqlalchemy.engine.base.Engine,
 
     return is_enabled
     
+ 

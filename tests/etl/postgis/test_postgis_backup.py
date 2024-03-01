@@ -19,6 +19,8 @@ from shapely.geometry import Polygon
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
 from geo_py_utils.etl.postgis.postgis_tables import PostGISDBPublicTablesIdentifier
 from geo_py_utils.etl.postgis.postgis_backup import PostGISDBBackupGPK
+from geo_py_utils.constants import ProjectPaths
+from geo_py_utils.misc.utils_test import SAMPLE_GDF_SAFE
 
 #--
  
@@ -27,29 +29,15 @@ HERE = Path(abspath(dirname(__file__)))
 
 @pytest.fixture
 def connection_remote_admin_prod():
-    return PostGISDBConnection(HERE / 'config' / 'remote_pg_admin' / "prod" / ".env")
+    return PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "gcp" / "prod" / ".env")
 
 @pytest.fixture
 def connection_remote_admin_dev():
-    return PostGISDBConnection(HERE / 'config' / 'remote_pg_admin' / "dev" / ".env")
+    return PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "gcp" /  "dev" / ".env")
 
- 
-@pytest.fixture
-def dumy_gdf():
-
-    shp = gpd.GeoDataFrame({'id': [0]},
-                           geometry=[Polygon(((-71.5, 46.5),
-                                              (-71.6, 46.4),
-                                              (-71.5, 46.7),
-                                              (-71.5, 46.5)))
-                                     ],
-                           crs=4326
-                           )
-
-    return shp 
-
+  
 @pytest.mark.requires_remote_pg_connection_dev
-def test_backup_to_gpkg(connection_remote_admin_dev, dumy_gdf):
+def test_backup_to_gpkg(connection_remote_admin_dev):
 
     tbl_dummy_name = 'dummy_table'
 
@@ -62,7 +50,7 @@ def test_backup_to_gpkg(connection_remote_admin_dev, dumy_gdf):
     # Load a dummy table
     engine = pg_list_public_tables.get_pg_connection().get_sql_alchemy_engine()
     with engine.connect() as conn:
-        dumy_gdf.to_postgis(tbl_dummy_name, conn, if_exists='replace')
+        SAMPLE_GDF_SAFE.to_postgis(tbl_dummy_name, conn, if_exists='replace')
 
     # Backup selected tables to gpkg 
     db_backup_creator = PostGISDBBackupGPK(
@@ -89,7 +77,7 @@ def test_backup_to_gpkg(connection_remote_admin_dev, dumy_gdf):
 
 @pytest.mark.requires_remote_pg_connection_dev
 @pytest.mark.requires_remote_pg_connection_prod
-def test_backup_to_gpkg_dev_prod(connection_remote_admin_prod, connection_remote_admin_dev, dumy_gdf):
+def test_backup_to_gpkg_dev_prod(connection_remote_admin_prod, connection_remote_admin_dev):
 
     tbl_dummy_name = 'dummy_table'
 
@@ -102,7 +90,7 @@ def test_backup_to_gpkg_dev_prod(connection_remote_admin_prod, connection_remote
     # Load a dummy table
     engine = pg_list_public_tables.get_pg_connection().get_sql_alchemy_engine()
     with engine.connect() as conn:
-        dumy_gdf.to_postgis(tbl_dummy_name, conn, if_exists='replace')
+        SAMPLE_GDF_SAFE.to_postgis(tbl_dummy_name, conn, if_exists='replace')
 
     # Backup selected tables to gpkg 
     db_backup_creator = PostGISDBBackupGPK(
@@ -142,7 +130,7 @@ def test_backup_to_gpkg_dev_prod(connection_remote_admin_prod, connection_remote
 
 
 @pytest.mark.requires_remote_pg_connection_prod
-def test_backup_to_gpkg_prod_roundtrip(connection_remote_admin_prod, dumy_gdf):
+def test_backup_to_gpkg_prod_roundtrip(connection_remote_admin_prod):
 
     tbl_dummy_name = 'dummy_table'
 
@@ -155,7 +143,7 @@ def test_backup_to_gpkg_prod_roundtrip(connection_remote_admin_prod, dumy_gdf):
     # Load a dummy table
     engine = pg_list_public_tables.get_pg_connection().get_sql_alchemy_engine()
     with engine.connect() as conn:
-        dumy_gdf.to_postgis(tbl_dummy_name, conn, if_exists='replace')
+        SAMPLE_GDF_SAFE.to_postgis(tbl_dummy_name, conn, if_exists='replace')
 
     # Backup selected tables to gpkg 
     db_backup_creator = PostGISDBBackupGPK(
@@ -194,7 +182,7 @@ def test_backup_to_gpkg_prod_roundtrip(connection_remote_admin_prod, dumy_gdf):
 
 
 @pytest.mark.requires_remote_pg_connection_dev
-def test_backup_to_gpkg_dev_roundtrip(connection_remote_admin_dev, dumy_gdf):
+def test_backup_to_gpkg_dev_roundtrip(connection_remote_admin_dev):
 
     tbl_dummy_name = 'dummy_table'
 
@@ -207,7 +195,7 @@ def test_backup_to_gpkg_dev_roundtrip(connection_remote_admin_dev, dumy_gdf):
     # Load a dummy table
     engine = pg_list_public_tables.get_pg_connection().get_sql_alchemy_engine()
     with engine.connect() as conn:
-        dumy_gdf.to_postgis(tbl_dummy_name, conn, if_exists='replace')
+        SAMPLE_GDF_SAFE.to_postgis(tbl_dummy_name, conn, if_exists='replace')
 
     # Backup selected tables to gpkg 
     db_backup_creator = PostGISDBBackupGPK(
@@ -240,3 +228,8 @@ def test_backup_to_gpkg_dev_roundtrip(connection_remote_admin_dev, dumy_gdf):
 
     # Delete gpkg
     (HERE / "backuptest.gpkg").unlink()
+
+
+if __name__ == '__main__':
+
+    test_backup_to_gpkg()
