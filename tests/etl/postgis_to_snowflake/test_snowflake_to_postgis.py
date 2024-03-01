@@ -55,17 +55,22 @@ def test_transfer_sfkl_postgis():
     # Read from postgis
     with pg_db_conn.get_sql_alchemy_engine().connect() as conn:
         df_pg = pd.read_sql(query_count, conn)
-        shp_pg = gpd.read_postgis(query_get_all, conn, geom_col=SFKL_GEO_COL_NAME)
+        shp_pg = gpd.read_postgis(query_get_all, conn, geom_col='geom') # default postgis ..
+        df_sfkl = pd.read_sql(query_count, conn)
 
     # Read from snowflake
     with sfkl_connector as connector:
-        df_sfkl = pd.read_sql(query_count, conn)
-        shp_sfkl = sfkl_to_gpd(query_get_all, conn, tbl_name=TEST_SFKL_TBL_NAME, geometry_name=SFKL_GEO_COL_NAME)
+        shp_sfkl = sfkl_to_gpd(query_get_all, connector.get_connection(), tbl_name=TEST_SFKL_TBL_NAME, geometry_name=SFKL_GEO_COL_NAME)
 
-    for i in [0,1]:
-        assert shp_pg.shape[i] == shp_sfkl.shape[i], \
-            f'Fattal error! dimension {i} mismatch - {shp_pg.shape[i]} vs {shp_sfkl.shape[i]}'
+    
+    assert shp_pg.shape[0] == shp_sfkl.shape[0]  , \
+        f'Fatal error! dimension {0} mismatch - {shp_pg.shape[0]} vs {shp_sfkl.shape[0]}'
+    
+    # PG adds a fid column
+    assert shp_pg.shape[1] -1  == shp_sfkl.shape[1] , \
+            f'Fatal error! dimension {1} mismatch - {shp_pg.shape[1]} vs {shp_sfkl.shape[1]}'
 
+    assert df_sfkl.num_rows.values[0] == df_pg.num_rows.values[0], 'Fatal errro! Count different'
 
 
         
