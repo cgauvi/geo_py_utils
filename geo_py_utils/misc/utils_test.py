@@ -54,12 +54,22 @@ class MockTmpCache:
 
         return mocked_data_dir
 
-
+# Easier to all have in caps, but for tests, useful
 ID_COL_NAME= ' id'
 INT_COL_NAME = 'integer_data'
 REAL_COL_NAME = 'real_data'
 STR_COL_NAME = 'text_data'
 MIXED_COL_NAME = 'mixed_data'
+GEOG_COL_NAME = 'GEOGRAPHY'
+
+SFKL_EXPECTED_MAPPING = {
+    ID_COL_NAME: "FIXED",
+    INT_COL_NAME: "FIXED",
+    REAL_COL_NAME: 'REAL',
+    STR_COL_NAME: 'TEXT',
+    MIXED_COL_NAME: 'TEXT',
+    GEOG_COL_NAME: 'GEOGRAPHY'
+}
 
 BASE_DATA =  {
     ID_COL_NAME: [0, 1],
@@ -77,7 +87,11 @@ SAMPLE_GDF =   gpd.GeoDataFrame(
                     ],
                     crs=4326
                 )
+
+SAMPLE_GDF_SAFE = SAMPLE_GDF.drop(columns=[MIXED_COL_NAME])
      
 SAMPLE_DF = pd.DataFrame(
     data = BASE_DATA
     )
+
+SAMPLE_DF_SAFE = SAMPLE_DF.drop(columns=[MIXED_COL_NAME])
