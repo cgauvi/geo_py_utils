@@ -1,5 +1,12 @@
 
 ================== 
+geo_py_utils 1.6.2
+- minor:
+    * new SnowflakeAbstractConnection class 
+- patch:
+    * fixed SnowflakeGeoWriter by converting object to string + encoding
+    
+================== 
 geo_py_utils 1.6.1
 
 - patch:
