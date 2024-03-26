@@ -16,3 +16,5 @@ sqlalchemy
 snowflake-connector-python
 flake8
 python-dotenv
+Unidecode
+oscrypto

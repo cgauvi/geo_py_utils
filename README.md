@@ -42,11 +42,18 @@
 
 The project has been tested by installing geopandas through `conda`. The rest of the dependencies can be installed manually with `pip` or `poetry`. Conda was initially chosen in an attempt to reduce friction and avoid having to tweak environment variables and point to correct libs. In hindsight, this might not be the best approach since some libraries like `mod_spatialite` are not packaged with conda anyways and require some sort of manual sudo install on windows or linux/max. 
 
+
 ```bash
-conda create --name geo_py_utils python=3.9 geopandas pyproj
+conda create --name geo_py_utils python=3.9 geopandas=0.14.3 pyproj=3.6.1 shapely=2.0.1 rtree=1.2.0
 conda activate geo_py_utils
 python -m pip install --upgrade pip
-python -m pip install "geo_py_utils @ git+ssh://git@github.com/LaCapitale/geo_py_utils.git"
+python -m pip install "geo_py_utils @ git+https://git@github.com/LaCapitale/geo_py_utils.git"
+```
+
+### Installing the Anaconda package SnowflakeWrapper (optional)
+
+```bash
+conda install -c https://ae.int.beneva.ca/repository/conda/custom-package snowflakewrapper=3.0.14
 ```
 
 ### Details 
