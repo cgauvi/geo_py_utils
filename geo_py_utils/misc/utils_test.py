@@ -1,9 +1,14 @@
-import random
+import logging
+
 from os.path import join, isdir
 from os import mkdir
+import pandas as pd
+import geopandas as gpd
+import random
+from shapely.geometry import Polygon
 from shutil import rmtree
 import string
-import logging
+
 
 from geo_py_utils.misc.constants import DATA_DIR
 
@@ -48,3 +53,45 @@ class MockTmpCache:
             logger.warn(f'Warning! Couldnt delete mocked cache dir: {mocked_data_dir} at teardown: prob windows permission issue: {e}')
 
         return mocked_data_dir
+
+# Easier to all have in caps, but for tests, useful
+ID_COL_NAME= ' id'
+INT_COL_NAME = 'integer_data'
+REAL_COL_NAME = 'real_data'
+STR_COL_NAME = 'text_data'
+MIXED_COL_NAME = 'mixed_data'
+GEOG_COL_NAME = 'GEOGRAPHY'
+
+SFKL_EXPECTED_MAPPING = {
+    ID_COL_NAME: "FIXED",
+    INT_COL_NAME: "FIXED",
+    REAL_COL_NAME: 'REAL',
+    STR_COL_NAME: 'TEXT',
+    MIXED_COL_NAME: 'TEXT',
+    GEOG_COL_NAME: 'GEOGRAPHY'
+}
+
+BASE_DATA =  {
+    ID_COL_NAME: [0, 1],
+    REAL_COL_NAME: [0.152, 0.1],
+    INT_COL_NAME: [8,7],
+    STR_COL_NAME: ['some 8898 ', 'text é ç !"/ '],
+    MIXED_COL_NAME: [3,'mixed']
+    }
+
+SAMPLE_GDF =   gpd.GeoDataFrame(
+                    data = BASE_DATA,
+                    geometry=[
+                        Polygon(((-71.5, 46.5), (-71.6, 46.4),  (-71.5, 46.7),   (-71.5, 46.5))) ,
+                        Polygon(((-71.5, 46.5), (-72, 46.4),  (-71.5, 46.7),   (-71.5, 46.5)))
+                    ],
+                    crs=4326
+                )
+
+SAMPLE_GDF_SAFE = SAMPLE_GDF.drop(columns=[MIXED_COL_NAME])
+     
+SAMPLE_DF = pd.DataFrame(
+    data = BASE_DATA
+    )
+
+SAMPLE_DF_SAFE = SAMPLE_DF.drop(columns=[MIXED_COL_NAME])

@@ -1,46 +1,16 @@
-import pandas as pd
-import geopandas as gpd
-import re
 
+import geopandas as gpd
+import pandas as pd
+import re
 from shapely import wkt
 from snowflake.connector.connection import SnowflakeConnection
 
+from geo_py_utils.etl.snowflake.db_utils import (
+    sfkl_get_table_srid,
+    sfkl_show_column,
+
+) 
  
-def sfkl_get_table_srid(conn: SnowflakeConnection, 
-                        tbl_name: str,
-                        geometry_name :str) -> int:
-                
-    """Get the SRID associated with a geo enabled table
-
-    Args:
-        conn (SnowflakeConnection): _description_
-        tbl_name (str): _description_
-        geometry_name (str): _description_
-    
-
-    Returns:
-        int: unique srid of the table
-
-    Raises:
-        Exception: if there are more than 1 SRID used in the table 
-
-    """
-
-    query_srid = " SELECT srid, count(*) as num_geo_feat" \
-                 " FROM  " \
-                 f" (SELECT ST_SRID({geometry_name}) as srid from {tbl_name}) as sri_tbl " \
-                 " GROUP BY srid "
-
-    df_srid = pd.read_sql(query_srid, conn)
-
-    assert df_srid.shape[0] == 1, \
-         f"Fatal error! {tbl_name} has more than one SRID!"
-
-    srid = df_srid.SRID.values[0]
-
-    return srid
-
-
 
 def sfkl_to_gpd(query:str, 
                 conn: SnowflakeConnection, 
@@ -98,4 +68,31 @@ def sfkl_to_gpd(query:str,
  
 
 
+if __name__ == '__main__':
+    import dotenv
+    from os.path import exists
+
+    from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
+    from geo_py_utils.constants import ProjectPaths
+
+    from geo_py_utils.etl.snowflake.db_utils    import (
+        sfkl_show_column,
+        sfkl_get_specific_col_types
+    ) 
  
+
+    TBL_NAME = "TEST_SHP_WRITE_SFKL"
+    PATH_CREDENTIAL_FILES_SFKL = ProjectPaths.PATH_PROJET_ROOT / '..' / 'config' / 'snowflake' / '.env'
+    assert exists(PATH_CREDENTIAL_FILES_SFKL)
+    
+    with SnowflakeExternalBrowserConnection(PATH_CREDENTIAL_FILES_SFKL).get_connection() as conn:
+        df_results = sfkl_show_column(conn, TBL_NAME)
+
+        df_results_subset = sfkl_get_specific_col_types(conn, TBL_NAME, ['ID', 'GEO_TEST'])
+
+        try:
+            sfkl_get_specific_col_types(conn, TBL_NAME, ['ID', 'GEOGRAPHY'])
+        except: 
+            print('missing cols')
+
+        

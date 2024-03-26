@@ -5,8 +5,8 @@ import geopandas as gpd
  
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.etl.db_etl import Url_to_postgis
-from geo_py_utils.etl.snowflake.snowflake_connect import connnect_snowflake_ext_browser
-from geo_py_utils.etl.snowflake.snowflake_read import sfkl_to_gpd
+from geo_py_utils.etl.snowflake.snowflake_abstract_connection import SnowflakeAbstractConnection
+from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd
 
 
 # Logger
@@ -38,6 +38,7 @@ class LoadSfklPostgis:
 
     def __init__(self,
                 sfkl_tbl_name: str,
+                sfkl_connector: SnowflakeAbstractConnection, 
                 postgis_tbl_name: str,
                 host: str,
                 user: str,
@@ -53,6 +54,7 @@ class LoadSfklPostgis:
 
         self.sfkl_tbl_name = sfkl_tbl_name
         self.sfkl_geometry_name = sfkl_geometry_name
+        self.sfkl_connector = sfkl_connector
 
         self.postgis_tbl_name = postgis_tbl_name
         self.host = host
@@ -73,15 +75,15 @@ class LoadSfklPostgis:
         """
 
         # Connect
-        con = connnect_snowflake_ext_browser()
+        with self.sfkl_connector as connector:
 
-        # Fetch the table
-        shp_sfkl = sfkl_to_gpd(
-            query=f"SELECT * from {self.sfkl_tbl_name}",
-            conn=con,  
-            tbl_name=self.sfkl_tbl_name,
-            geometry_name=self.sfkl_geometry_name
-            )
+            # Fetch the table
+            shp_sfkl = sfkl_to_gpd(
+                query=f"SELECT * from {self.sfkl_tbl_name}",
+                conn=connector.get_connection(),  
+                tbl_name=self.sfkl_tbl_name,
+                geometry_name=self.sfkl_geometry_name
+                )
 
         logger.info(f"""
                     Successfully downloaded table {self.sfkl_tbl_name} 

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "geo_py_utils"
-version = "1.5.6"
+version = "1.6.1"
 description = "Python functions for generic geospatial manipulations"
 authors = ["Charles Gauvin"]
 
@@ -8,7 +8,7 @@ authors = ["Charles Gauvin"]
 python = {version = ">=3.9,<=3.10"}
 brotlipy= {version =">=0.7.0,<0.8.0"}
 psycopg2= {version =">=2.9.5,<3.0.0"}
-pyarrow= {version =">=11.0.0,<12.0.0"}
+pyarrow= {version ="<10.1.0,>=10.0.1"}
 pyopenssl= {version =">=23.0.0,<24.0.0"}
 pysocks= {version =">=1.7.1,<2.0.0"}
 rtree= {version ="*"}
@@ -18,7 +18,7 @@ sqlalchemy= {version =">=1.4.44,<2"}
 snowflake-connector-python=  "3.0.1"
 python-dotenv= {version ="*"}
 geopandas= {version ="*"}
-pandas= {version ="*"}
+pandas= {version ="<2.2.0"}
 pyproj= {version ="*"}
 munkres= {version ="*"}
 seaborn = {version ="^0.12.1", optional = true}
@@ -30,11 +30,12 @@ xyzservices = {version ="^2022.9.0", optional = true}
 pytest = {version = "^5.2", optional = true}
 flake8 = {version = "^6.0.0", optional = true}
 Flake8-pyproject = {version = "^1.2.3", optional = true}
+oscrypto = {version ="*"}
+Unidecode =  {version ="*"}
 
 [tool.poetry.extras]
 notebooks=["seaborn" , "matplotlib", "folium", "mapclassify", "contextily", "xyzservices"]
 dev=['pytest','flake8']
-
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -46,13 +47,14 @@ pythonpath = [
   "."
 ]
 testpaths = ["tests"]
-addopts =  "-v -m 'not requires_local_pg_connection and not requires_local_docker_pg_connection and not requires_remote_pg_connection_prod and not requires_remote_pg_connection_dev and not requires_remote_pg_connection_sfkl_interactivity' "
+addopts =  "-v -m 'not requires_local_pg_connection and not requires_local_docker_pg_connection and not requires_remote_pg_connection_prod and not requires_remote_pg_connection_dev and not requires_remote_pg_connection_sfkl_interactivity and not requires_remote_sfkl_interactivity' "
 markers =[
     "requires_local_pg_connection: requires a local postgis db set up.",
     "requires_local_docker_pg_connection: requires a running docker container with postgis DB accepting connections on 80:5432.",
     "requires_remote_pg_connection_prod: requires a remote postgis db set up accepting connections on scoring:5052",
     "requires_remote_pg_connection_dev: requires a remote postgis db set up accepting connections on training:5053",
     "requires_remote_pg_connection_sfkl_interactivity:  requires a remote postgis db + sfkl interactive external browser auth USE `-s`  ",
+    "requires_remote_sfkl_interactivity: requires ability to propagate sso conenction in external browser",
     "requires_or2ogr: requires a working gdal and ogr2ogr executable which can be found",
     "windows_specific: used to test windows compatibility",
     "linux_specific: for linux tests"

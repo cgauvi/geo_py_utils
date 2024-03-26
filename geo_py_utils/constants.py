@@ -7,6 +7,7 @@ HERE = Path(abspath(dirname(__file__)))
 class ProjectPaths:
     PATH_PROJET_ROOT = HERE
     DATA_PATH = abspath(join(PATH_PROJET_ROOT, "data"))
+    CONFIG_PATH = PATH_PROJET_ROOT / '..' / 'config'
 
     makedirs(DATA_PATH, exist_ok=True)
 

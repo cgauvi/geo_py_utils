@@ -12,7 +12,7 @@ class PostGISDBConnection:
         path_env_file (_type_, optional): _description_. Defaults to Path(ProjectPaths.PATH_PROJET_ROOT)/".env".
     """
 
-    def __init__(self, path_env_file = Path(ProjectPaths.PATH_PROJET_ROOT) / ".env"):
+    def __init__(self, path_env_file = ProjectPaths.CONFIG_PATH / 'postgis' / 'dev' / ".env"):
 
         assert dotenv.load_dotenv(path_env_file , override=True), 'Failure to load .env! Cannot determine DB parameters'
         
