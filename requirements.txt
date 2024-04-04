@@ -18,3 +18,4 @@ flake8
 python-dotenv
 Unidecode
 oscrypto
+python-dotenv

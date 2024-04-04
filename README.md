@@ -50,11 +50,26 @@ python -m pip install --upgrade pip
 python -m pip install "geo_py_utils @ git+https://git@github.com/LaCapitale/geo_py_utils.git"
 ```
 
+*Note*: to install with conda locally, try `conda config --set ssl_verify false`
+
 ### Installing the Anaconda package SnowflakeWrapper (optional)
 
 ```bash
 conda install -c https://ae.int.beneva.ca/repository/conda/custom-package snowflakewrapper=3.0.14
 ```
+
+
+### Installing on anaconda enterprise (purely with conda to avoid pip & conda conflicts)
+
+```bash
+packages="$(cat requirements.txt | sed ':a;N;$!ba;s/\n/ /g')"
+conda install $packages
+```
+
+
+
+
+
 
 ### Details 
 
