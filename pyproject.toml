@@ -47,7 +47,7 @@ pythonpath = [
   "."
 ]
 testpaths = ["tests"]
-addopts =  "-v -m 'not requires_local_pg_connection and not requires_local_docker_pg_connection and not requires_remote_pg_connection_prod and not requires_remote_pg_connection_dev and not requires_remote_pg_connection_sfkl_interactivity and not requires_remote_sfkl_interactivity' "
+addopts =  "-v -m 'not requires_local_pg_connection and not requires_local_docker_pg_connection and not requires_remote_pg_connection_prod and not requires_remote_pg_connection_dev and not requires_remote_pg_connection_sfkl_interactivity and not requires_remote_sfkl_interactivity and not requires_remote_sfkl_ae' "
 markers =[
     "requires_local_pg_connection: requires a local postgis db set up.",
     "requires_local_docker_pg_connection: requires a running docker container with postgis DB accepting connections on 80:5432.",
@@ -55,6 +55,7 @@ markers =[
     "requires_remote_pg_connection_dev: requires a remote postgis db set up accepting connections on training:5053",
     "requires_remote_pg_connection_sfkl_interactivity:  requires a remote postgis db + sfkl interactive external browser auth USE `-s`  ",
     "requires_remote_sfkl_interactivity: requires ability to propagate sso conenction in external browser",
+    "requires_remote_sfkl_ae: requires ability to connect to sfkl from ae,
     "requires_or2ogr: requires a working gdal and ogr2ogr executable which can be found",
     "windows_specific: used to test windows compatibility",
     "linux_specific: for linux tests"

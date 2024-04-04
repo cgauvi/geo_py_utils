@@ -1,0 +1,24 @@
+import pandas as pd
+import pytest
+from snowflake.connector.errors import DatabaseError
+
+from geo_py_utils.etl.snowflake.snowflake_ae_connection import SnowflakeAEConnection
+from geo_py_utils.constants import ProjectPaths
+ 
+PATH_CONFIG = ProjectPaths.CONFIG_PATH / 'snowflake' / 'ae' / ".env"
+ 
+@pytest.mark.requires_remote_sfkl_ae
+def test_conn_sfkl_ae():
+        
+    query=" select * from M_DATA_SCIENCE.INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = 'SANDBOX' limit 10 "
+
+    tmp_con = None
+    with SnowflakeAEConnection(PATH_CONFIG).get_connection() as conn:
+        df_results = pd.read_sql(query, conn) 
+        tmp_con=conn
+
+    assert df_results.shape[0] > 0 , 'Fatal no results from sso connection!'
+
+    # Connection closed
+    with pytest.raises(DatabaseError):
+        df_results = pd.read_sql(query, tmp_con) 

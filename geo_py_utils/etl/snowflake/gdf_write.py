@@ -273,15 +273,21 @@ if __name__ == '__main__':
     from geo_py_utils.census_open_data.open_data import download_qc_city_neighborhoods
     from geo_py_utils.misc.utils_test import SAMPLE_GDF
     from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
+    from geo_py_utils.etl.snowflake.snowflake_ae_connection import SnowflakeAEConnection
 
-    HERE = Path(abspath(dirname(__file__)))
-    TEST_TBL_NAME = 'TEST_SHP_WRITE_SFKL'
+    USE_AE = True
+    CONFIG_PATH = Path(abspath(dirname(__file__))) / '..' / '..' / '..' / 'config'
+    PATH_CONFIG = CONFIG_PATH / 'snowflake' / 'ae' / ".env"
+
+    TEST_TBL_NAME = 'TEST_SHP_WRITE_SFKL_AE' if USE_AE else 'TEST_SHP_WRITE_SFKL'
     SFKL_GEO_COL_NAME= 'GEO_TEST'
+
+    CONN = SnowflakeAEConnection if USE_AE else SnowflakeExternalBrowserConnection
 
     with SnowflakeGeoWriter(
         shp=SAMPLE_GDF,
         sfkl_name=TEST_TBL_NAME,
-        sfkl_connector=SnowflakeExternalBrowserConnection(),
+        sfkl_connector=CONN(PATH_CONFIG),
         sfkl_geo_col_name = SFKL_GEO_COL_NAME
     ) as sfkl_writer:
         
@@ -292,7 +298,7 @@ if __name__ == '__main__':
     with SnowflakeGeoWriter(
         shp=shp,
         sfkl_name=f'{TEST_TBL_NAME}_neigh',
-        sfkl_connector=SnowflakeExternalBrowserConnection(),
+        sfkl_connector=CONN(PATH_CONFIG),
         sfkl_geo_col_name = SFKL_GEO_COL_NAME
     ) as sfkl_writer:
         

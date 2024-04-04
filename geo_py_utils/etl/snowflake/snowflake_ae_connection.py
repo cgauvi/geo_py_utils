@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 import logging
 from snowflakewrapper import SnowflakeWrapper
-from snowflake.connector import connection x
+from snowflake.connector import connection
 import warnings
 
 logger = logging.getLogger(__file__)
@@ -41,7 +41,7 @@ class SnowflakeAEConnection(SnowflakeAbstractConnection):
 
             self.snowflake_wrapper = SnowflakeWrapper() 
             self.snowflake_wrapper.send_query(f"USE ROLE {self.role};")
-            self.snowflake_wrapper.send_query(f"USE DATABASE {self.database};")
+            self.snowflake_wrapper.send_query(f"USE DATABASE {self.db};")
             self.snowflake_wrapper.send_query(f"USE WAREHOUSE {self.warehouse};")
             self.snowflake_wrapper.send_query(f"USE SCHEMA {self.schema};")
 
@@ -62,3 +62,17 @@ class SnowflakeAEConnection(SnowflakeAbstractConnection):
 
 
 
+if __name__ == '__main__':
+    from os.path import abspath, dirname, join
+    import pandas as pd
+    
+    CONFIG_PATH = Path(abspath(dirname(__file__))) / '..' / '..' / '..' / 'config'
+    PATH_CONFIG = CONFIG_PATH / 'snowflake' / 'ae' / ".env"
+ 
+      
+    query=" select * from M_DATA_SCIENCE.INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = 'SANDBOX' limit 10 "
+
+    tmp_con = None
+    with SnowflakeAEConnection(PATH_CONFIG).get_connection() as conn:
+        df_results = pd.read_sql(query, conn) 
+        tmp_con=conn
