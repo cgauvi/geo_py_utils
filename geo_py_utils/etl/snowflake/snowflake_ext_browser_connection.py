@@ -97,3 +97,15 @@ class SnowflakeExternalBrowserConnection(SnowflakeAbstractConnection):
  
 
     
+if __name__ =='__main__':
+    import pandas as pd
+    
+    query=" select * from M_DATA_SCIENCE.INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = 'SANDBOX' limit 10 "
+    PATH_CONFIG = ProjectPaths.CONFIG_PATH / 'snowflake' / 'extbrowser' / ".env"
+ 
+    with SnowflakeExternalBrowserConnection(PATH_CONFIG).get_connection() as conn:
+        df_results = pd.read_sql(query, conn) 
+ 
+
+    assert df_results.shape[0] > 0 , 'Fatal no results from sso connection!'
+ 
