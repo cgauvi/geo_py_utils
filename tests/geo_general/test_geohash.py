@@ -10,6 +10,7 @@ from geo_py_utils.geo_general.geohash_utils import (
     get_all_geohash_from_gdf,
     geohash_max_precision
 )
+from geo_py_utils.misc.utils_test import US_ALL_CVX_GDF
 
 
 def test_basic_geohash_utils():
@@ -63,8 +64,7 @@ def test_get_max_precision():
     assert max_prec_qc == 2
 
     # Entire US - not just CONUS, the entire thing with puerto rico et al.
-    shp_us = gpd.read_file(
-        'https://www2.census.gov/geo/tiger/GENZ2018/shp/cb_2018_us_nation_5m.zip')
+    shp_us = US_ALL_CVX_GDF
 
     # Max precision should be 1 and should get a warning since no single geohash cell is large enough to cover the entire region
     max_prec_us = geohash_max_precision(shp_us)

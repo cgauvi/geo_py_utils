@@ -284,7 +284,8 @@ def test_spatialite_zip_with_proj():
         download_url = FSA_2016_URL,
         download_destination = DATA_DIR,
         target_projection= 32198,
-        overwrite=True) as uploader:
+        overwrite=True,
+        force_download = True) as uploader:
 
         uploader.upload_url_to_database()
 
@@ -353,6 +354,6 @@ def test_drop_table():
 
 if __name__ == '__main__':
 
-    test_sqlite_no_apostrophes()
+    test_spatialite_zip_with_proj()
 
    
