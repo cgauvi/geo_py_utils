@@ -275,7 +275,7 @@ if __name__ == '__main__':
     from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
     from geo_py_utils.etl.snowflake.snowflake_ae_connection import SnowflakeAEConnection
 
-    USE_AE = True
+    USE_AE = False
     CONFIG_PATH = Path(abspath(dirname(__file__))) / '..' / '..' / '..' / 'config'
     PATH_CONFIG = CONFIG_PATH / 'snowflake' / 'ae' / ".env"
 
