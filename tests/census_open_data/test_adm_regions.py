@@ -2,7 +2,7 @@ import numpy as np
 from os import makedirs
 from os.path import join
 
-from geo_py_utils.misc.utils_test import MockTmpCache
+from geo_py_utils.utilities_testing.mock_tmp_cache import MockTmpCache
 
 from geo_py_utils.census_open_data.open_data import (
     download_qc_city_neighborhoods, 

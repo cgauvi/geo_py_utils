@@ -10,7 +10,7 @@ from geo_py_utils.geo_general.geohash_utils import (
     get_all_geohash_from_gdf,
     geohash_max_precision
 )
-from geo_py_utils.misc.utils_test import US_ALL_CVX_GDF
+from geo_py_utils.utilities_testing.data import US_ALL_CVX_GDF
 
 
 def test_basic_geohash_utils():

@@ -18,7 +18,7 @@ from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
 from geo_py_utils.etl.postgis.postgis_tables import PostGISDBPublicTablesIdentifier
 from geo_py_utils.etl.postgis.postgis_backup import PostGISDBBackupGPK
 from geo_py_utils.constants import ProjectPaths
-from geo_py_utils.misc.utils_test import SAMPLE_GDF_SAFE
+from geo_py_utils.utilities_testing.data import SAMPLE_GDF_SAFE
 
 #--
  
