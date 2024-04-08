@@ -1,7 +1,6 @@
 import geopandas as gpd
 import pandas as pd
 import pytest
-from snowflake.connector.pandas_tools import write_pandas 
 
 from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
 from geo_py_utils.etl.snowflake.gdf_write import SnowflakeGeoWriter

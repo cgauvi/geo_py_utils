@@ -1,12 +1,19 @@
 import pandas as pd
 import pytest
-from snowflake.connector.errors import DatabaseError
+import sys
 
-from geo_py_utils.etl.snowflake.snowflake_ae_connection import SnowflakeAEConnection
+from snowflake.connector.errors import DatabaseError
+try:
+    from geo_py_utils.etl.snowflake.snowflake_ae_connection import SnowflakeAEConnection
+except ImportError:
+    pass
+
 from geo_py_utils.constants import ProjectPaths
  
 PATH_CONFIG = ProjectPaths.CONFIG_PATH / 'snowflake' / 'ae' / ".env"
  
+@pytest.mark.skipif('snowflakewrapper' not in sys.modules,
+                    reason="snowflakewrapper condtional: only required for ae platform") 
 @pytest.mark.requires_remote_sfkl_ae
 def test_conn_sfkl_ae():
         

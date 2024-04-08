@@ -2,7 +2,10 @@ import dotenv
 import os
 from pathlib import Path
 import logging
-from snowflakewrapper import SnowflakeWrapper
+try:
+    from snowflakewrapper import SnowflakeWrapper
+except ImportError:
+    pass
 from snowflake.connector import connection
 import warnings
 
@@ -60,19 +63,4 @@ class SnowflakeAEConnection(SnowflakeAbstractConnection):
     def get_connection(self) ->  connection.SnowflakeConnection:
         return self.conn
 
-
-
-if __name__ == '__main__':
-    from os.path import abspath, dirname, join
-    import pandas as pd
-    
-    CONFIG_PATH = Path(abspath(dirname(__file__))) / '..' / '..' / '..' / 'config'
-    PATH_CONFIG = CONFIG_PATH / 'snowflake' / 'ae' / ".env"
  
-      
-    query=" select * from M_DATA_SCIENCE.INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = 'SANDBOX' limit 10 "
-
-    tmp_con = None
-    with SnowflakeAEConnection(PATH_CONFIG).get_connection() as conn:
-        df_results = pd.read_sql(query, conn) 
-        tmp_con=conn

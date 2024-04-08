@@ -12,9 +12,7 @@
 from os.path import exists, abspath, dirname
 import pytest
 from pathlib import Path
-import geopandas as gpd
 from psycopg2 import sql, connect
-from shapely.geometry import Polygon
 
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
 from geo_py_utils.etl.postgis.postgis_tables import PostGISDBPublicTablesIdentifier

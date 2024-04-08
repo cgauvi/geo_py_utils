@@ -5,7 +5,14 @@ import pytest
 
 from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd
 from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
-from geo_py_utils.etl.snowflake.snowflake_ae_connection import SnowflakeAEConnection
+
+try:
+    from geo_py_utils.etl.snowflake.snowflake_ae_connection import SnowflakeAEConnection
+except ImportError:
+    pass
+
+import sys
+
 from geo_py_utils.etl.snowflake.db_utils import sfkl_get_table_srid
 from geo_py_utils.etl.snowflake.gdf_write import SnowflakeGeoWriter
 from geo_py_utils.misc.utils_test import SAMPLE_GDF
@@ -16,6 +23,8 @@ PATH_CONFIG_AE = ProjectPaths.CONFIG_PATH / 'snowflake' / 'ae' / ".env"
 TEST_TBL_NAME = 'TEST_SHP_WRITE_SFKL'
 SFKL_GEO_COL_NAME= 'GEO_TEST'
 
+@pytest.mark.skipif('snowflakewrapper' not in sys.modules,
+                    reason="snowflakewrapper condtional: only required for ae platform") 
 def teardown_ae():
     with SnowflakeAEConnection(PATH_CONFIG_AE) as connector:
         connector.get_connection().cursor().execute(f"DROP TABLE if exists {TEST_TBL_NAME}")
@@ -105,8 +114,6 @@ def test_temp_files_deleted_ext_browser():
     for f in files_with_ext:
         assert not isfile(f)
 
-    teardown()
+    teardown_ext_browser()
 
-if __name__ == '__main__':
  
-    test_temp_files_deleted()

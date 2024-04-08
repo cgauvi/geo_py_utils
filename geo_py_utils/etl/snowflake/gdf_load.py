@@ -5,11 +5,7 @@ import re
 from shapely import wkt
 from snowflake.connector.connection import SnowflakeConnection
 
-from geo_py_utils.etl.snowflake.db_utils import (
-    sfkl_get_table_srid,
-    sfkl_show_column,
-
-) 
+from geo_py_utils.etl.snowflake.db_utils import sfkl_get_table_srid
  
 
 def sfkl_to_gpd(query:str, 
@@ -67,32 +63,3 @@ def sfkl_to_gpd(query:str,
     return shp_snowflake_results
  
 
-
-if __name__ == '__main__':
-    import dotenv
-    from os.path import exists
-
-    from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
-    from geo_py_utils.constants import ProjectPaths
-
-    from geo_py_utils.etl.snowflake.db_utils    import (
-        sfkl_show_column,
-        sfkl_get_specific_col_types
-    ) 
- 
-
-    TBL_NAME = "TEST_SHP_WRITE_SFKL"
-    PATH_CREDENTIAL_FILES_SFKL = ProjectPaths.PATH_PROJET_ROOT / '..' / 'config' / 'snowflake' / '.env'
-    assert exists(PATH_CREDENTIAL_FILES_SFKL)
-    
-    with SnowflakeExternalBrowserConnection(PATH_CREDENTIAL_FILES_SFKL).get_connection() as conn:
-        df_results = sfkl_show_column(conn, TBL_NAME)
-
-        df_results_subset = sfkl_get_specific_col_types(conn, TBL_NAME, ['ID', 'GEO_TEST'])
-
-        try:
-            sfkl_get_specific_col_types(conn, TBL_NAME, ['ID', 'GEOGRAPHY'])
-        except: 
-            print('missing cols')
-
-        

@@ -34,7 +34,7 @@ from geo_py_utils.etl.spatialite.utils_testing import upload_qc_neigh_test_db, Q
 
 
 def test_sqlite_no_apostrophes():
-    with open('test.db', 'w') as f:
+    with open('test.db', 'w') as _:
 	    pass
 
     # reate the table
