@@ -27,6 +27,7 @@ def create_gdf():
         sfkl_writer.create_table()
  
 @pytest.mark.requires_remote_pg_connection_sfkl_interactivity
+@pytest.mark.requires_remote_sfkl_interactivity
 def test_transfer_sfkl_postgis():
 
     create_gdf()
