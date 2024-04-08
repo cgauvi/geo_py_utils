@@ -765,38 +765,4 @@ def get_table_column_all_metadata(db_name: str, tbl_name: str) -> pd.DataFrame:
 
     return df
         
-
-if __name__ == "__main__":
-
-
-    import os
-    from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
-    from geo_py_utils.misc.constants import DATA_DIR
-    from geo_py_utils.etl.db_etl import  Url_to_spatialite 
  
-
-
-    '''
-    DB_PATH = os.path.join(DATA_DIR, "test.db")
-
-    def upload_qc_neigh_db(db_name = DB_PATH,
-                            tbl_name = "qc_city_test_tbl",
-                            download_url = DEFAULT_QC_CITY_NEIGH_URL):
-        
-        with Url_to_spatialite(
-            db_name = db_name, 
-            table_name = tbl_name,
-            download_url = download_url,
-            download_destination = DATA_DIR,
-            promote_to_multi=False) as uploader:
-
-            uploader.upload_url_to_database()
-
-    drop_geo_table_all(DB_PATH, "qc_city_test_tbl",'GEOMETRY' )
-
-    if (not os.path.exists(DB_PATH)) or \
-        (not "qc_city_test_tbl" in list_tables(DB_PATH)) :
-        upload_qc_neigh_db()
-    
-    promote_multi(DB_PATH, "qc_city_test_tbl")
-    '''

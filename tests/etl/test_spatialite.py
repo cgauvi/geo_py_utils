@@ -29,12 +29,13 @@ from geo_py_utils.etl.spatialite.db_utils import (
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
 from geo_py_utils.census_open_data.census import FSA_2016_URL
-from geo_py_utils.etl.spatialite.utils_testing import upload_qc_neigh_test_db, QcCityTestData
+from geo_py_utils.utilities_testing.spatialite_io import upload_qc_neigh_test_db
+from geo_py_utils.utilities_testing.data import QcCityTestData
 
 
 
 def test_sqlite_no_apostrophes():
-    with open('test.db', 'w') as f:
+    with open('test.db', 'w') as _:
 	    pass
 
     # reate the table
@@ -284,7 +285,8 @@ def test_spatialite_zip_with_proj():
         download_url = FSA_2016_URL,
         download_destination = DATA_DIR,
         target_projection= 32198,
-        overwrite=True) as uploader:
+        overwrite=True,
+        force_download = True) as uploader:
 
         uploader.upload_url_to_database()
 
@@ -353,6 +355,6 @@ def test_drop_table():
 
 if __name__ == '__main__':
 
-    test_sqlite_no_apostrophes()
+    test_spatialite_zip_with_proj()
 
    

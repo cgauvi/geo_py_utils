@@ -2,7 +2,7 @@ import numpy as np
 from os import makedirs
 from os.path import join
 
-from geo_py_utils.misc.utils_test import MockTmpCache
+from geo_py_utils.utilities_testing.mock_tmp_cache import MockTmpCache
 
 from geo_py_utils.census_open_data.open_data import (
     download_qc_city_neighborhoods, 
@@ -12,6 +12,15 @@ from geo_py_utils.census_open_data.open_data import (
     DownloadQcDissolvedAdmReg,
     DownloadQcDissolvedMunicipalities
 )
+
+DICT_CHECK_NUM_RECORDS = {
+            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_METRO: 2,
+            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MRC: 106,
+            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI: 1345,
+            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ARROND: 41
+    }
+
+
 
 class MockCacheOpenData(MockTmpCache):
     """Class to manually implement unittest.patch which never actually works
@@ -72,40 +81,36 @@ def test_boroughs():
 def test_muni_dissolved():
 
     with MockCacheOpenData() as mocked:
-        shp_admReg = mocked.download_dissolved_muni()
+        shp_muni_dissolved_no_unknown = mocked.download_dissolved_muni()
  
-    assert shp_admReg.shape[0] == 1338
+    NUM_DISSOLVED = 2
+    NUM_FILTERED_NO_NAME = 7
+
+    assert shp_muni_dissolved_no_unknown.shape[0] == DICT_CHECK_NUM_RECORDS[DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI] - NUM_FILTERED_NO_NAME - NUM_DISSOLVED
 
 def test_muni_dissolved_raw():
 
     with MockCacheOpenData() as mocked:
-        shp_admReg, shp_raw = mocked.download_dissolved_muni_and_raw(filter_out_unknown_muni=False)
+        shp_muni_dissolved_with_unknown, shp_raw = mocked.download_dissolved_muni_and_raw(filter_out_unknown_muni=False)
 
-    assert shp_admReg.shape[0] == 1345
-    assert shp_raw.shape[0] == shp_admReg.shape[0] + 2
+    assert shp_raw.shape[0] == DICT_CHECK_NUM_RECORDS[DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI]
+    assert shp_raw.shape[0] == shp_muni_dissolved_with_unknown.shape[0] + 2
  
 
 
 
 def test_qa_adm_boundaries():
 
-    # For some reason the number of features is different bepending on the precision - 1/20 or 1/100
-    dict_check_num_records = {
-            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_METRO: 2,
-            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MRC: 106,
-            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI: 1347,
-            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ARROND: 41
-    }
-    
+    # For some reason the number of features is different bepending on the precision - 1/20 or 1/100  
     with MockCacheOpenData() as mocked: 
         dict_results_num_records = { 
             k: mocked.download_adm_bound(geo_level=k).\
                 shape[0] \
-            for k,v in dict_check_num_records.items()
+            for k,v in DICT_CHECK_NUM_RECORDS.items()
         }
 
-    diffs = [ abs(dict_results_num_records[k] - dict_check_num_records[k]) \
-            for k in dict_check_num_records.keys()]
+    diffs = [ abs(dict_results_num_records[k] - DICT_CHECK_NUM_RECORDS[k]) \
+            for k in DICT_CHECK_NUM_RECORDS.keys()]
 
     assert max(diffs) == 0, f"Fatal error, max difference is { max(diffs)}"
 
@@ -113,4 +118,7 @@ def test_qa_adm_boundaries():
 
 if __name__== "__main__":
     test_admRegs_dissolved()
+    test_muni_dissolved()
+    test_muni_dissolved_raw()
+    
  

@@ -79,7 +79,7 @@ class SnowflakeExternalBrowserConnection(SnowflakeAbstractConnection):
         try:
             self.conn.cursor().close()
         except Exception as e:
-            logger.debug('Error closing cursor connection')
+            logger.debug(f'Error closing cursor connection - {str(e)}')
 
         
     def get_connection(self) -> connection.SnowflakeConnection:
@@ -94,6 +94,4 @@ class SnowflakeExternalBrowserConnection(SnowflakeAbstractConnection):
  
 
  
- 
-
-    
+  

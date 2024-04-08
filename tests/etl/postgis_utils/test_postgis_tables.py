@@ -1,20 +1,14 @@
 # sample call from root to select all:
 # `pytest tests/etl/postgis/test_postgis_tables.py -m 'requires_remote_pg_connection_dev or requires_remote_pg_connection_prod' `
 
-
-from os.path import abspath, dirname
 import pytest
-from pathlib import Path
-
+ 
 from geo_py_utils.etl.postgis.db_utils import pg_create_extension
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
 from geo_py_utils.etl.postgis.postgis_tables import PostGISDBPublicTablesIdentifier, PostGISDBTablesIdentifier
 from geo_py_utils.constants import ProjectPaths
 
-#--
  
-HERE = Path(abspath(dirname(__file__)))
-
 # Make sure POSTGIS is minimally enabled!
 @pytest.fixture
 def connection_remote_prod_ro():
@@ -27,7 +21,6 @@ def connection_remote_dev_admin():
     pg_conn = PostGISDBConnection(ProjectPaths.CONFIG_PATH  / 'postgis' /'gcp' / "dev" / ".env")
     pg_create_extension(pg_conn.get_sql_alchemy_engine())
     return pg_conn
-
 
 
 
@@ -84,5 +77,5 @@ def test_list_topology_geo_cols(connection_remote_prod_ro):
 if __name__ == '__main__':
 
     test_list_public_tables_dev(
-        PostGISDBConnection(HERE / 'config' / 'remote_pg_admin' / "dev" / ".env")
+        PostGISDBConnection(ProjectPaths.CONFIG_PATH  / 'postgis' /'gcp' / "prod" / "ro.env")
     )

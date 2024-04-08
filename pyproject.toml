@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "geo_py_utils"
-version = "1.6.2"
+version = "1.6.4"
 description = "Python functions for generic geospatial manipulations"
 authors = ["Charles Gauvin"]
 
@@ -47,14 +47,14 @@ pythonpath = [
   "."
 ]
 testpaths = ["tests"]
-addopts =  "-v -m 'not requires_local_pg_connection and not requires_local_docker_pg_connection and not requires_remote_pg_connection_prod and not requires_remote_pg_connection_dev and not requires_remote_pg_connection_sfkl_interactivity and not requires_remote_sfkl_interactivity' "
+addopts =  "-v -m 'not requires_local_pg_connection and not requires_remote_pg_connection_prod and not requires_remote_pg_connection_dev and not requires_remote_pg_connection_sfkl_interactivity and not requires_remote_sfkl_interactivity and not requires_remote_sfkl_ae' "
 markers =[
-    "requires_local_pg_connection: requires a local postgis db set up.",
-    "requires_local_docker_pg_connection: requires a running docker container with postgis DB accepting connections on 80:5432.",
-    "requires_remote_pg_connection_prod: requires a remote postgis db set up accepting connections on scoring:5052",
-    "requires_remote_pg_connection_dev: requires a remote postgis db set up accepting connections on training:5053",
+    "requires_local_pg_connection: requires a local postgis db set up. Probably with docker and probably accepting connections on 80:5432 or 80:5052.",
+    "requires_remote_pg_connection_prod: requires a remote postgis db set up accepting connections on gcp:dev:5432",
+    "requires_remote_pg_connection_dev: requires a remote postgis db set up accepting connections on gcp:prod:5432",
     "requires_remote_pg_connection_sfkl_interactivity:  requires a remote postgis db + sfkl interactive external browser auth USE `-s`  ",
     "requires_remote_sfkl_interactivity: requires ability to propagate sso conenction in external browser",
+    "requires_remote_sfkl_ae: requires ability to connect to sfkl from ae",
     "requires_or2ogr: requires a working gdal and ogr2ogr executable which can be found",
     "windows_specific: used to test windows compatibility",
     "linux_specific: for linux tests"

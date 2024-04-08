@@ -4,7 +4,7 @@ import pytest
 from geo_py_utils.etl.snowflake.db_utils import sfkl_show_column, sfkl_get_specific_col_types
 from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
 from geo_py_utils.etl.snowflake.gdf_write import SnowflakeGeoWriter
-from geo_py_utils.misc.utils_test import SAMPLE_GDF, SFKL_EXPECTED_MAPPING, GEOG_COL_NAME
+from geo_py_utils.utilities_testing.data import SAMPLE_GDF, SFKL_EXPECTED_MAPPING, GEOG_COL_NAME
 from geo_py_utils.constants import ProjectPaths
  
  

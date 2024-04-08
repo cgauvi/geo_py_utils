@@ -3,7 +3,7 @@ from snowflake.connector.pandas_tools import write_pandas
 
 from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
 from geo_py_utils.etl.snowflake.db_utils import table_exists
-from geo_py_utils.misc.utils_test import SAMPLE_DF_SAFE
+from geo_py_utils.utilities_testing.data import SAMPLE_DF_SAFE
 from geo_py_utils.constants import ProjectPaths
 
 TEST_TBL_NAME = 'TEST_TBL'

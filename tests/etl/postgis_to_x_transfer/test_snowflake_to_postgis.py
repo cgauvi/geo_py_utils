@@ -1,7 +1,6 @@
 import geopandas as gpd
 import pandas as pd
 import pytest
-from snowflake.connector.pandas_tools import write_pandas 
 
 from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
 from geo_py_utils.etl.snowflake.gdf_write import SnowflakeGeoWriter
@@ -9,7 +8,7 @@ from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd
 from geo_py_utils.etl.postgis.load_sfkl_to_postgis import LoadSfklPostgis
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
 from geo_py_utils.constants import ProjectPaths
-from geo_py_utils.misc.utils_test import SAMPLE_GDF
+from geo_py_utils.utilities_testing.data import SAMPLE_GDF
 
 TEST_SFKL_TBL_NAME = 'TEST_SHP_WRITE_SFKL_NEIGH'
 PATH_SFKL_CONFIG = ProjectPaths.CONFIG_PATH / 'snowflake' / 'extbrowser' / ".env"
@@ -73,6 +72,8 @@ def test_transfer_sfkl_postgis():
     assert df_sfkl.num_rows.values[0] == df_pg.num_rows.values[0], 'Fatal errro! Count different'
 
 
+
+ 
         
 if __name__ == '__main__':
 

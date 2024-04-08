@@ -2,7 +2,7 @@ import geopandas as gpd
 from os.path import join
 import inspect
 
-from geo_py_utils.misc.utils_test import MockTmpCache
+from geo_py_utils.utilities_testing.mock_tmp_cache import MockTmpCache
 from geo_py_utils.census_open_data import census
  
 

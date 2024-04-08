@@ -2,8 +2,11 @@ import dotenv
 import os
 from pathlib import Path
 import logging
-from snowflakewrapper import SnowflakeWrapper
-from snowflake.connector import connection x
+try:
+    from snowflakewrapper import SnowflakeWrapper
+except ImportError:
+    pass
+from snowflake.connector import connection
 import warnings
 
 logger = logging.getLogger(__file__)
@@ -41,7 +44,7 @@ class SnowflakeAEConnection(SnowflakeAbstractConnection):
 
             self.snowflake_wrapper = SnowflakeWrapper() 
             self.snowflake_wrapper.send_query(f"USE ROLE {self.role};")
-            self.snowflake_wrapper.send_query(f"USE DATABASE {self.database};")
+            self.snowflake_wrapper.send_query(f"USE DATABASE {self.db};")
             self.snowflake_wrapper.send_query(f"USE WAREHOUSE {self.warehouse};")
             self.snowflake_wrapper.send_query(f"USE SCHEMA {self.schema};")
 
@@ -60,5 +63,4 @@ class SnowflakeAEConnection(SnowflakeAbstractConnection):
     def get_connection(self) ->  connection.SnowflakeConnection:
         return self.conn
 
-
-
+ 

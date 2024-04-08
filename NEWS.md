@@ -1,3 +1,14 @@
+================== 
+geo_py_utils 1.6.4
+
+- patch:
+    *  refactored tests
+
+================== 
+geo_py_utils 1.6.3
+
+- patch:
+    *  refactored ae tests + qc adm regions (CI should now run)
 
 ================== 
 geo_py_utils 1.6.2
