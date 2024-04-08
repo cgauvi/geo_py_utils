@@ -1,4 +1,10 @@
 ================== 
+geo_py_utils 1.6.4
+
+- patch:
+    *  refactored tests
+
+================== 
 geo_py_utils 1.6.3
 
 - patch:
