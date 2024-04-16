@@ -42,6 +42,9 @@ jobs:
           conda activate geo_py_utils
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          conda config --set auto_activate_base false 
+          # ^-- make sure we activate the conda env (not base): seems important on windows
+
         shell: bash -l {0}
 
       - name: Lint with flake8
