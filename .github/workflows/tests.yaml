@@ -42,8 +42,6 @@ jobs:
           conda activate geo_py_utils
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          conda config --set auto_activate_base false 
-          # ^-- make sure we activate the conda env (not base): seems important on windows
 
         shell: bash -l {0}
 
@@ -58,6 +56,12 @@ jobs:
           
       - name: Test with pytest
         run: |
+          conda config --set auto_activate_base false 
+          # ^-- make sure we activate the conda env (not base): seems important on windows
           conda activate geo_py_utils
-          python -m pytest
+          if echo "${{ matrix.os }}" | grep -q "windows"; then
+             python -m pytest "-m windows_specific";
+          else
+            python -m pytest "-m linux_specific";
+          fi
         shell: bash -l {0}
