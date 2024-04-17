@@ -41,9 +41,19 @@ def ogr2ogr_windows_wrapper(orig_ogr_cmd: str):
         raise ValueError(f'Fatal error! cmd {orig_ogr_cmd} does not call ogr2ogr')
     
     if 'win' in sys.platform:
-        # Get the path (which can change depending n the virtual env used or not and wheter it is activated or not)
+
+        # First try to disable reverting back to base env in subshells (if using conda for virt env)
+        try:
+            conda_cmd = 'conda config --set auto_activate_base false'
+            CLIRunner(use_bash=False).run_cmd(conda_cmd)
+        except Exception as e:
+            print(f'Failed to disable reverting back to base conda env -{e} ')
+
+        # Get the path (which can change depending on the virtual env used or not and wheter it is activated or not)
         # Particularly important if we run subcomands in subshells
         path_ogr_powershell = CLIRunner(use_bash=False, capture_std_out=True).run_cmd('(get-command ogr2ogr).Path').strip()
+        if path_ogr_powershell is None or len(path_ogr_powershell) == 0:
+            raise RuntimeError('Fatal error! could not run (get-command ogr2ogr).Path')
         orig_ogr_cmd_stripped = re.sub('ogr2ogr', '', orig_ogr_cmd, count=1,flags=re.IGNORECASE)
         cmd = f'{path_ogr_powershell} {orig_ogr_cmd_stripped}'
     else:
