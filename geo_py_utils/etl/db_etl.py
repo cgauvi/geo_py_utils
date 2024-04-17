@@ -1,15 +1,15 @@
 """ Class to interact with a spatil DB. Strongly inspired by https://github.com/Anagraph/yogrt/blob/main/yogrt/source.py"""
 
 
- 
-from os.path import join, exists
-from os import listdir, environ, makedirs
+from os.path import exists
+from os import listdir, makedirs, remove
  
 from abc import ABC
 from pathlib import Path, PurePosixPath, WindowsPath
 import tempfile
 import shutil
 import logging
+import re
 from sqlalchemy import create_engine
 import sys
 
@@ -18,6 +18,51 @@ from geo_py_utils.etl.postgis.db_utils import pg_create_db, pg_db_exists
 from geo_py_utils.misc.cli_runner import CLIRunner
 
 logger = logging.getLogger(__file__)
+
+
+def ogr2ogr_windows_wrapper(orig_ogr_cmd: str):
+    """
+    ogr2ogr_windows_wrapper Make sure we can find the ogr2ogr executable before calling an ogr2ogr command
+    
+    1. Fetch the full path (will depend on the python virtual env used)
+    2. Once we have the full path, replace the ogr2ogr command in the original cmd string
+    3. Call powershell with the new command (git bash fails with the \\ returned)
+
+    On linux/mac, this will just run the regular original command in the shell (usually finds the executable without any issues, even in subshells and with virt envs)
+
+    Args:
+        orig_ogr_cmd (str): _description_
+
+    Raises:
+        ValueError: _description_
+    """
+
+    if re.search('.*ogr2ogr.*', orig_ogr_cmd, flags=re.IGNORECASE) is None:
+        raise ValueError(f'Fatal error! cmd {orig_ogr_cmd} does not call ogr2ogr')
+    
+    if 'win' in sys.platform:
+
+        # First try to disable reverting back to base env in subshells (if using conda for virt env)
+        try:
+            conda_cmd = 'conda config --set auto_activate_base false'
+            CLIRunner(use_bash=False).run_cmd(conda_cmd)
+        except Exception as e:
+            print(f'Failed to disable reverting back to base conda env -{e} ')
+
+        # Get the path (which can change depending on the virtual env used or not and wheter it is activated or not)
+        # Particularly important if we run subcomands in subshells
+        path_ogr_powershell = CLIRunner(use_bash=False, capture_std_out=True).run_cmd('(get-command ogr2ogr).Path').strip()
+        if path_ogr_powershell is None or len(path_ogr_powershell) == 0:
+            raise RuntimeError('Fatal error! could not run (get-command ogr2ogr).Path')
+        orig_ogr_cmd_stripped = re.sub('ogr2ogr', '', orig_ogr_cmd, count=1,flags=re.IGNORECASE)
+        cmd = f'{path_ogr_powershell} {orig_ogr_cmd_stripped}'
+    else:
+        cmd = orig_ogr_cmd
+
+    # Final ogr2ogr call
+    logger.info(cmd)
+    CLIRunner(use_bash = False).run_cmd(cmd)
+
 
 
 class Url_to_db(ABC):
@@ -214,12 +259,12 @@ class Url_to_spatialite(Url_to_db):
         # Avoid weird bugs where query to non-existent db creates the file and trying to write after creates error
         if self.first_time_creating_db:
             if exists(dest):
-                os.remove(dest)
+                remove(dest)
 
         # Actual ogr2ogr call
-        logger.info(cmd)
+        ogr2ogr_windows_wrapper(cmd)
 
-        CLIRunner(use_bash =False).run_cmd(cmd)
+        
  
 
 
@@ -291,9 +336,8 @@ class Url_to_postgis(Url_to_db):
             else:
                 cmd += " -append"
 
-        logger.info(cmd)
-        
-        CLIRunner(use_bash=False).run_cmd(cmd)
+        # Actual ogr2ogr call
+        ogr2ogr_windows_wrapper(cmd)
  
 
     def _create_db(self):
@@ -318,118 +362,4 @@ class Url_to_postgis(Url_to_db):
         self._try_unzip()
         self._ogr2gr()
 
-
-if __name__ == '__main__':
-
-    from geo_py_utils.census_open_data.open_data import QC_CITY_NEIGH_URL
-    from geo_py_utils.misc.constants import DATA_DIR
-    from geo_py_utils.census_open_data.census import FSA_2016_URL
-    from geo_py_utils.etl.gdf_load import spatialite_db_to_gdf
-    from geo_py_utils.etl.db_utils import sql_to_df
-
-    import os
-    import geopandas as gpd
-
-    # --
-
-    spatialite_db_path = join(DATA_DIR, "test.db")
-    table_name = "qc_city_test_tbl"
-    download_url = QC_CITY_NEIGH_URL
-
-    # --
-
-
-    if os.path.exists(spatialite_db_path):
-        os.remove(spatialite_db_path)
-
-    # Read the shp file from the url + write to disk before uploading to spatialite
-    shp_qc = gpd.read_file(QC_CITY_NEIGH_URL)
-    tmp_dir = tempfile.mkdtemp()
-    path_shp_file_local = join(tmp_dir, 'tmp.shp')
-    shp_qc.to_file(path_shp_file_local)
-
-    with Url_to_spatialite(
-                        db_name = spatialite_db_path, 
-                        table_name = table_name,
-                        download_url = path_shp_file_local # local file does not require curl -- hacky 
-        ) as spatialite_etl:
-
-        # Upload the point DB 
-        spatialite_etl.upload_url_to_database()
-
-    
-    shp_test = spatialite_db_to_gdf(spatialite_db_path, table_name)
-    os.remove(path_shp_file_local)
-
-
-
-    # --
-
-    shp_test = spatialite_db_to_gdf(join(DATA_DIR, "test_fsa.db"),  
-     'geo_fsa_tbl',
-     'limit 10'
-     )
-
-    with Url_to_spatialite(
-        db_name = join(DATA_DIR, "test_fsa.db"), 
-        table_name = 'geo_fsa_tbl',
-        download_url = FSA_2016_URL,
-        download_destination = DATA_DIR,
-        target_projection=32198) as uploader:
-
-        uploader.upload_url_to_database()
-
-    shp_test = spatialite_db_to_gdf(join(DATA_DIR, "test_fsa.db"),  
-     'geo_fsa_tbl',
-     'limit 10'
-     )
-
-    shp_test
-    
-    sql_to_df(join(DATA_DIR, "test_fsa.db"), 'select * from spatial_ref_sys where srid IN (32198, 325834)')
-    sql_to_df(join(DATA_DIR, "test_fsa.db"), 'select * from geometry_columns')
-
-    # ----
-
-
-    with Url_to_spatialite(
-        db_name = join(DATA_DIR, "test_role_eval.db"), 
-        table_name = 'geo_role_tbl',
-        download_url = "https://donneesouvertes.affmunqc.net/role/ROLE2020_SHP.zip",
-        download_destination = DATA_DIR) as uploader:
-
-        uploader.upload_url_to_database()
-
-    # -----
-
-
-
-    with Url_to_spatialite(
-        db_name = spatialite_db_path, 
-        table_name = table_name,
-        download_url = download_url,
-        download_destination = DATA_DIR) as uploader:
-
-        uploader.upload_url_to_database()
-
-
-    # -----
-
-    user = environ['PG_LOCAL_USER']
-    password = environ['PG_LOCAL_PASSWORD']
-    postgis_db_path = 'qc_city_db'
-
-    with Url_to_postgis(
-            db_name = postgis_db_path, 
-            table_name = table_name,
-            download_url = download_url,
-            download_destination = DATA_DIR, 
-            host = "localhost",
-            port = 5432,
-            user = user, 
-            password = password,
-            schema = "public",
-            ) as uploader:
-
-
-        uploader.upload_url_to_database()
+ 
