@@ -353,8 +353,6 @@ def test_drop_table():
                                  for suffix in list_aux_tables_to_drop_suff]
     assert not np.any(np.isin(np.array(list_aux_tables_to_drop), list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)))
 
-if __name__ == '__main__':
-
-    test_spatialite_zip_with_proj()
+ 
 
    
