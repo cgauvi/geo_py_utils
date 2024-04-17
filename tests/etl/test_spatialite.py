@@ -76,7 +76,7 @@ def test_sqlite_no_apostrophes():
 
         if os.path.exists('test.db'):
             os.remove('test.db')
-    except OSError as e:
+    except PermissionError  as e:
         if 'win' not in sys.platform:
             raise e
         else:
@@ -103,7 +103,7 @@ def test_execute_spatialite_cmd():
 
         assert get_table_rows( QcCityTestData.SPATIAL_LITE_DB_PATH, f'{QcCityTestData.SPATIAL_LITE_TBL_QC}_new') == 1
 
-    except OSError as e:
+    except PermissionError  as e:
         if 'win' not in sys.platform:
             raise e
         else:
@@ -131,7 +131,7 @@ def test_rename_geo():
         assert geo_cols[0] not in get_table_column_names(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
         assert geo_cols[0] not in get_table_geometries_name(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
     
-    except OSError as e:
+    except PermissionError  as e:
         if 'win' not in sys.platform:
             raise e
         else:
@@ -155,7 +155,7 @@ def test_rename():
         rename_columns(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, {'nom': 'new_nom'})
         assert 'new_nom' in get_table_column_names(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
     
-    except OSError as e:
+    except PermissionError  as e:
         if 'win' not in sys.platform:
             raise e
         else:
@@ -192,7 +192,7 @@ def test_promot_to_multi():
         assert len(shp_after.geometry.type.unique()) == 1
         assert shp_after.geometry.type.unique() == 'MultiPolygon' 
     
-    except OSError as e:
+    except PermissionError  as e:
         if 'win' not in sys.platform:
             raise e
         else:
@@ -212,7 +212,7 @@ def test_geometry_type():
             get_table_geometry_type( 
                 QcCityTestData.SPATIAL_LITE_DB_PATH,
                 QcCityTestData.SPATIAL_LITE_TBL_QC) == 'POLYGON' # We expect a polygon, but the geometry type is mixed so we get an error
-    except OSError as e:
+    except PermissionError  as e:
         if 'win' not in sys.platform:
             raise e
         else:
@@ -232,7 +232,7 @@ def test_spatial_index_enabled():
             QcCityTestData.SPATIAL_LITE_TBL_QC
             )
         
-    except OSError as e:
+    except PermissionError  as e:
         if 'win' not in sys.platform:
             raise e
         else:
@@ -253,7 +253,7 @@ def test_spatial_index_valid():
             QcCityTestData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME
             )
             
-    except OSError as e:
+    except PermissionError  as e:
         if 'win' not in sys.platform:
             raise e
         else:
