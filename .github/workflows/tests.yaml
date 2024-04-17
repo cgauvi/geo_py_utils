@@ -56,12 +56,7 @@ jobs:
           
       - name: Test with pytest
         run: |
-          conda config --set auto_activate_base false 
-          # ^-- make sure we activate the conda env (not base): seems important on windows
           conda activate geo_py_utils
-          if echo "${{ matrix.os }}" | grep -q "windows"; then
-             python -m pytest "-m not linux_specific ";
-          else
-            python -m pytest "-m not windows_specific ";
-          fi
+          python -m pytest
+          
         shell: bash -l {0}
