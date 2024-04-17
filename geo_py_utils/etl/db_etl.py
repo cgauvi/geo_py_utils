@@ -1,9 +1,8 @@
 """ Class to interact with a spatil DB. Strongly inspired by https://github.com/Anagraph/yogrt/blob/main/yogrt/source.py"""
 
 
- 
-from os.path import join, exists
-from os import listdir, environ, makedirs
+from os.path import exists
+from os import listdir, makedirs, remove
  
 from abc import ABC
 from pathlib import Path, PurePosixPath, WindowsPath
@@ -250,7 +249,7 @@ class Url_to_spatialite(Url_to_db):
         # Avoid weird bugs where query to non-existent db creates the file and trying to write after creates error
         if self.first_time_creating_db:
             if exists(dest):
-                os.remove(dest)
+                remove(dest)
 
         # Actual ogr2ogr call
         ogr2ogr_windows_wrapper(cmd)
@@ -353,28 +352,4 @@ class Url_to_postgis(Url_to_db):
         self._try_unzip()
         self._ogr2gr()
 
-
-if __name__ == '__main__':
-
-
-    '''
-    import os
-    from pathlib import Path
-
-    from geo_py_utils.misc.cli_runner import CLIRunner
-    from geo_py_utils.utilities_testing.data import SAMPLE_GDF
-    from geo_py_utils.constants import ProjectPaths
-    
-
-    #path_ogr_bash = CLIRunner(use_bash=True, capture_std_out=True).run_cmd('which ogr2ogr').strip()
-    #path_ogr_powershell = CLIRunner(use_bash=False, capture_std_out=True).run_cmd('(get-command ogr2ogr).Path').strip()
-
-    PATH_TEST_FILE = Path(ProjectPaths.DATA_PATH) / 'test.gpkg'
-    SAMPLE_GDF.to_file(PATH_TEST_FILE)
-
-    cmd_test = f"ogr2ogr -progress  -f 'SQLite'  -dsco SPATIALITE=YES  {Path(ProjectPaths.DATA_PATH)}\\test.db {PATH_TEST_FILE}  -nln qc_city_test_tbl -lco ENCODING=UTF-8  -nlt PROMOTE_TO_MULTI  -overwrite"
-    ogr2ogr_windows_wrapper(cmd_test)
-
-    if os.path.isfile(PATH_TEST_FILE):
-        os.remove(PATH_TEST_FILE)
-    '''
+ 
