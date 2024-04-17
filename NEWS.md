@@ -1,4 +1,11 @@
 ================== 
+geo_py_utils 1.6.5
+
+- patch:
+    * Windows debugging: make sure `ogr2ogr` is available - even when called from a shell. 
+    * added bunch of try catch for RequestException and PermissionError to avoid ci fails on downloads or spatialite concurrency on windows
+
+================== 
 geo_py_utils 1.6.4
 
 - patch:
