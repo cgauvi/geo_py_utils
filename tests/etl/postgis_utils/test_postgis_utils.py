@@ -1,6 +1,7 @@
+import logging
+import numpy as np
 from os.path import abspath, dirname
 import pytest
-import logging
 from pathlib import Path
 
 logger = logging.getLogger(__file__)
@@ -12,7 +13,9 @@ from geo_py_utils.etl.postgis.db_utils import (
     pg_list_tables, 
     pg_create_engine,
     pg_create_ogr2ogr_str,
-    pg_create_connection_str
+    pg_create_connection_str,
+    pg_sql_to_df,
+    pg_get_table_rows
 )
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
 #--
@@ -107,3 +110,38 @@ def test_list_tables_postgis_remote_dev_ro(connection_remote_ro_dev):
     assert pg_list_tables(engine, DB_NAME_DOES_NOT_EXIST) == []
  
  
+@pytest.mark.requires_remote_pg_connection_dev
+def test_row_count(connection_remote_admin_dev):
+
+    # Create db connection
+    engine = pg_create_engine(**connection_remote_admin_dev.get_credentials())
+
+    df_results = pg_sql_to_df( 
+        engine, 
+        query= f'select count(*) num from spatial_ref_sys',
+        is_spatial = False
+    )
+    
+
+    num_rows_check= pg_get_table_rows(engine, "spatial_ref_sys")
+
+    assert df_results.num.values[0] == num_rows_check
+
+
+@pytest.mark.requires_remote_pg_connection_dev
+def test_kwargs_sql_df(connection_remote_admin_dev):
+
+    CHUNK_SIZE=10
+
+    # Create db connection
+    engine = pg_create_engine(**connection_remote_admin_dev.get_credentials())
+
+    df_iter = pg_sql_to_df( 
+        engine, 
+        query= f'select *  from spatial_ref_sys',
+        is_spatial = False,
+        chunksize=CHUNK_SIZE
+    )
+    
+    assert CHUNK_SIZE == next(df_iter).shape[0]
+  

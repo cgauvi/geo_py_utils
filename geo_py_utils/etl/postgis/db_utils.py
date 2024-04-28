@@ -234,9 +234,9 @@ def pg_sql_to_df( engine: sqlalchemy.engine.base.Engine,
 
     with engine.connect() as conn:
         if is_spatial:
-            df = pd.read_sql(query, conn)
+            df= gpd.read_postgis(query, conn, **kwargs)
         else:
-            df= gpd.read_postgis(query, conn)
+            df = pd.read_sql(query, conn, **kwargs)
         
 
     return df
