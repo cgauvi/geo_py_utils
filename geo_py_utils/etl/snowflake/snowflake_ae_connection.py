@@ -62,5 +62,7 @@ class SnowflakeAEConnection(SnowflakeAbstractConnection):
 
     def get_connection(self) ->  connection.SnowflakeConnection:
         return self.conn
-
+    
+    def __str__(self) -> str:
+        return super().__str__()
  
