@@ -25,7 +25,8 @@ from geo_py_utils.etl.spatialite.db_utils import (
     get_table_geometries_name,
     get_table_column_names,
     execute_spatialite_cmd,
-    remove_accents_column
+    remove_accents_column,
+    get_table_column_all_metadata
 
 )
 from geo_py_utils.misc.constants import DATA_DIR
@@ -167,7 +168,18 @@ def test_rename():
         except :
             print("Got error as expected")
 
-        rename_columns(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC, {LocalGDFData.DATA.columns[0]: 'new_nom'})
+        # Get existing columns
+        df_col_meta = get_table_column_all_metadata(
+            LocalGDFData.SPATIAL_LITE_DB_PATH, 
+            LocalGDFData.SPATIAL_LITE_TBL_QC
+        )
+
+        rename_columns(
+            LocalGDFData.SPATIAL_LITE_DB_PATH, 
+            LocalGDFData.SPATIAL_LITE_TBL_QC, 
+            {df_col_meta.name.values[1]: 'new_nom'}
+        )
+        
         assert 'new_nom' in get_table_column_names(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
     
     except PermissionError  as e:
@@ -313,7 +325,7 @@ def test_spatialite_rename_cols():
         rename_columns(
             LocalGDFData.SPATIAL_LITE_DB_PATH,
             LocalGDFData.SPATIAL_LITE_TBL_QC,
-            {'GEOMETRY': 'mishka'}
+            {LocalGDFData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME: 'mishka'}
             )
 
         df_results = sql_to_df(
@@ -322,7 +334,7 @@ def test_spatialite_rename_cols():
             )
 
         assert 'mishka' in df_results.columns
-        assert 'GEOMETRY' not in df_results.columns
+        assert LocalGDFData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME not in df_results.columns
 
     except PermissionError  as e:
         if 'win' not in sys.platform:
