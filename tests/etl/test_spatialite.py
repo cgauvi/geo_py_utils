@@ -177,9 +177,9 @@ def test_rename():
         rename_columns(
             LocalGDFData.SPATIAL_LITE_DB_PATH, 
             LocalGDFData.SPATIAL_LITE_TBL_QC, 
-            {df_col_meta.name.values[1]: 'new_nom'}
+            {df_col_meta.name.values[2]: 'new_nom'}
         )
-        
+
         assert 'new_nom' in get_table_column_names(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
     
     except PermissionError  as e:
