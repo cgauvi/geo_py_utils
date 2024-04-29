@@ -4,7 +4,8 @@ import pytest
 
 from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
 from geo_py_utils.etl.snowflake.gdf_write import SnowflakeGeoWriter
-from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd, sfkl_get_table_srid
+from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd
+from geo_py_utils.etl.snowflake.db_utils import sfkl_get_table_srid
 from geo_py_utils.etl.postgis.load_sfkl_to_postgis import LoadSfklPostgis
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
 from geo_py_utils.constants import ProjectPaths

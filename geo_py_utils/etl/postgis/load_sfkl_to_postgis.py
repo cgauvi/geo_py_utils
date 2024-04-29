@@ -6,7 +6,8 @@ import geopandas as gpd
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.etl.db_etl import Url_to_postgis
 from geo_py_utils.etl.snowflake.snowflake_abstract_connection import SnowflakeAbstractConnection
-from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd, sfkl_get_table_srid
+from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd
+from geo_py_utils.etl.snowflake.db_utils import sfkl_get_table_srid
 
 
 # Logger

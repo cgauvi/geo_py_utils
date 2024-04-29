@@ -4,7 +4,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd, sfkl_get_table_srid
+from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd
+from geo_py_utils.etl.snowflake.db_utils import sfkl_get_table_srid
 from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
 
 try:
@@ -98,10 +99,9 @@ def test_snowflake_types_and_crs_roundtrip_ext_browser():
             crs = crs,
             geometry_name = SFKL_GEO_COL_NAME
             )
-        crs_sfkl = sfkl_get_table_srid(connector.get_connection(), TEST_TBL_NAME, SFKL_GEO_COL_NAME)
 
     assert isinstance(shp_round_trip, gpd.GeoDataFrame), 'Fatal error! Roundtrip data not read in as geodf!'
-    assert shp_round_trip.crs.to_epsg() == crs_sfkl, 'Fatal error! Roundtrip crs from snowflake and geodf do not match'
+    assert shp_round_trip.crs.to_epsg() == crs, 'Fatal error! Roundtrip crs from snowflake and geodf do not match'
     
     teardown_ext_browser()
 
@@ -165,4 +165,4 @@ def test_temp_files_deleted_ext_browser():
     teardown_ext_browser()
 
 if __name__== '__main__':
-    test_snowflake_overwrite_works()
+    test_snowflake_types_and_crs_roundtrip_ext_browser()
