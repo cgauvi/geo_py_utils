@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd
+from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd, sfkl_get_table_srid
 from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
 
 try:
@@ -65,11 +65,15 @@ def test_snowflake_types_and_crs_roundtrip_ae():
 
     create_gdf_ae(overwrite=True)
 
+
     with SnowflakeAEConnection(PATH_CONFIG_AE) as connector: 
+
+        crs = sfkl_get_table_srid(connector.get_connection(), TEST_TBL_NAME, SFKL_GEO_COL_NAME)
+
         shp_round_trip = sfkl_to_gpd(
             query = f'SELECT * from {TEST_TBL_NAME} limit 10', 
             conn = connector.get_connection(), 
-            tbl_name = TEST_TBL_NAME,
+            crs = crs,
             geometry_name = SFKL_GEO_COL_NAME
             )
         crs_sfkl = sfkl_get_table_srid(connector.get_connection(), TEST_TBL_NAME, SFKL_GEO_COL_NAME)
@@ -85,10 +89,13 @@ def test_snowflake_types_and_crs_roundtrip_ext_browser():
     create_gdf_ext_browser(overwrite=True)
 
     with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) as connector: 
+
+        crs = sfkl_get_table_srid(connector.get_connection(), TEST_TBL_NAME, SFKL_GEO_COL_NAME)
+
         shp_round_trip = sfkl_to_gpd(
             query = f'SELECT * from {TEST_TBL_NAME} limit 10', 
             conn = connector.get_connection(), 
-            tbl_name = TEST_TBL_NAME,
+            crs = crs,
             geometry_name = SFKL_GEO_COL_NAME
             )
         crs_sfkl = sfkl_get_table_srid(connector.get_connection(), TEST_TBL_NAME, SFKL_GEO_COL_NAME)
