@@ -72,9 +72,9 @@ def test_admRegs_dissolved():
         with MockCacheOpenData() as mocked:
             shp_admReg = mocked.download_adm_bound_dissolved()
 
-        assert shp_admReg.shape[0] == 15
+            assert shp_admReg.shape[0] == 15
 
-        assert np.all(np.isin([DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_ID_COL, 'DOMAINE_OPUS'], shp_admReg.columns))
+            assert np.all(np.isin([DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_ID_COL, 'DOMAINE_OPUS'], shp_admReg.columns))
 
     except RequestException as e:
         print(f'Error with network: {e} - skipping test')
@@ -85,7 +85,7 @@ def test_boroughs():
         with MockCacheOpenData() as mocked:
             shp_borough = mocked.download_boroughs()
 
-        assert shp_borough.shape[0] > 10
+            assert shp_borough.shape[0] > 10
     except RequestException as e:
         print(f'Error with network: {e} - skipping test')
 
@@ -95,10 +95,10 @@ def test_muni_dissolved():
         with MockCacheOpenData() as mocked:
             shp_muni_dissolved_no_unknown = mocked.download_dissolved_muni()
     
-        NUM_DISSOLVED = 2
-        NUM_FILTERED_NO_NAME = 7
+            NUM_DISSOLVED = 2
+            NUM_FILTERED_NO_NAME = 7
 
-        assert shp_muni_dissolved_no_unknown.shape[0] == DICT_CHECK_NUM_RECORDS[DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI] - NUM_FILTERED_NO_NAME - NUM_DISSOLVED
+            assert shp_muni_dissolved_no_unknown.shape[0] == DICT_CHECK_NUM_RECORDS[DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI] - NUM_FILTERED_NO_NAME - NUM_DISSOLVED
     except RequestException as e:
         print(f'Error with network: {e} - skipping test')
 
@@ -108,8 +108,8 @@ def test_muni_dissolved_raw():
         with MockCacheOpenData() as mocked:
             shp_muni_dissolved_with_unknown, shp_raw = mocked.download_dissolved_muni_and_raw(filter_out_unknown_muni=False)
 
-        assert shp_raw.shape[0] == DICT_CHECK_NUM_RECORDS[DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI]
-        assert shp_raw.shape[0] == shp_muni_dissolved_with_unknown.shape[0] + 2
+            assert shp_raw.shape[0] == DICT_CHECK_NUM_RECORDS[DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI]
+            assert shp_raw.shape[0] == shp_muni_dissolved_with_unknown.shape[0] + 2
 
     except RequestException as e:
         print(f'Error with network: {e} - skipping test')
@@ -127,11 +127,13 @@ def test_qa_adm_boundaries():
                 for k,v in DICT_CHECK_NUM_RECORDS.items()
             }
 
-        diffs = [ abs(dict_results_num_records[k] - DICT_CHECK_NUM_RECORDS[k]) \
-                for k in DICT_CHECK_NUM_RECORDS.keys()]
+            diffs = [ abs(dict_results_num_records[k] - DICT_CHECK_NUM_RECORDS[k]) \
+                    for k in DICT_CHECK_NUM_RECORDS.keys()]
 
-        assert max(diffs) == 0, f"Fatal error, max difference is { max(diffs)}"
+            assert max(diffs) == 0, f"Fatal error, max difference is { max(diffs)}"
     except RequestException as e:
         print(f'Error with network: {e} - skipping test')
 
 
+if __name__ == '__main__':
+    test_admRegs_dissolved()

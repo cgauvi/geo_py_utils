@@ -4,6 +4,7 @@ import numpy as np
 from os.path import isfile
 from os import remove
 from pathlib import Path
+import pandas as pd
 from snowflake.connector.pandas_tools import write_pandas 
 from unidecode import unidecode
 
@@ -228,11 +229,17 @@ class SnowflakeGeoWriter:
             tbl_exists = table_exists(conn, self.sfkl_name)
 
         if tbl_exists and not self.overwrite_tbl:
-            logger.info(f'Table {self.sfkl_name} already exists! Not doing anything')
-            return 
-        
-        # Create the empty table structure
-        self._create_empty_table()
+            logger.info(f'Table {self.sfkl_name} already exists! appending .. ')
+            with self.sfkl_connector as connector:
+                conn = connector.get_connection()
+                df_num=pd.read_sql(  f'select count(*) NUM from {self.sfkl_name}', conn )
+                n_before = df_num.NUM.values[0]
+        else: 
+            logger.info(f'Table {self.sfkl_name} does not exist: creating new table .. ')
+            n_before = 0
+
+            # Create the empty table structure
+            self._create_empty_table()
 
         # Write & upload the local file
         self._put_local_file()
@@ -246,7 +253,7 @@ class SnowflakeGeoWriter:
             conn.cursor().execute(str_format_query) 
             conn.cursor().execute("ALTER SESSION SET GEOGRAPHY_OUTPUT_FORMAT  = 'WKT'") 
 
-        # Create the inert into select .. statement based on the custom myformat defined above
+        # Create the insert into select .. statement based on the custom myformat defined above
         select_cols_str = self._create_cols_str_not_geo()
 
         # Geometry always in FIRST position using ogr2ogr driver 
@@ -261,8 +268,12 @@ class SnowflakeGeoWriter:
             conn = connector.get_connection()
             conn.cursor().execute(query_insert_into) 
 
+        with self.sfkl_connector as connector:
+            conn = connector.get_connection()
+            df_num=pd.read_sql(  f'select count(*) NUM from {self.sfkl_name}', conn )
+            n_after = df_num.NUM.values[0]
 
-        logger.info(f'Successfully wrote table {self.sfkl_name} to snowflake')
+        logger.info(f'Successfully wrote {n_after-n_before} row to table {self.sfkl_name} on snowflake {self.sfkl_connector}')
 
  
 

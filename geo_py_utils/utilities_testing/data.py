@@ -40,6 +40,18 @@ SAMPLE_GDF =   gpd.GeoDataFrame(
                     crs=4326
                 )
 
+BASE_DATA_2 = BASE_DATA.copy()
+BASE_DATA_2.update({ID_COL_NAME:[2,3], STR_COL_NAME: ['new1', 'new2']})
+SAMPLE_GDF_2 =   gpd.GeoDataFrame(
+                    data = BASE_DATA_2,
+                    geometry=[
+                        Polygon(((-71.5, 46.5), (-71.6, 46.4),  (-71.5, 46.7),   (-71.5, 46.5))) ,
+                        Polygon(((-71.5, 46.5), (-72, 46.4),  (-71.5, 46.7),   (-71.5, 46.5)))
+                    ],
+                    crs=4326
+                )
+
+
 SAMPLE_GDF_SAFE = SAMPLE_GDF.drop(columns=[MIXED_COL_NAME])
      
 SAMPLE_DF = pd.DataFrame(
@@ -74,3 +86,11 @@ class QcCityTestData:
     SQL_LITE_TBL_CSV_QC = 'csv_qc_city_test_tbl'
     QC_CITY_NEIGH_URL = DEFAULT_QC_CITY_NEIGH_URL
     SPATIAL_LITE_TBL_GEOMETRY_COL_NAME = 'GEOMETRY'
+
+
+class LocalGDFData:
+    SPATIAL_LITE_DB_PATH = join(DATA_DIR, "samplegdf_in.sqlite")
+    SPATIAL_LITE_TBL_QC = "mytest"
+    SPATIAL_LITE_TBL_GEOMETRY_COL_NAME = 'GEOMETRY'
+    DATA = SAMPLE_GDF
+ 

@@ -40,6 +40,9 @@ class SnowflakeExternalBrowserConnection(SnowflakeAbstractConnection):
         self.conn = self._init_connection()
 
 
+    def __str__(self) -> str:
+        return super().__str__()
+
     def _init_connection(self):
         
         with warnings.catch_warnings():

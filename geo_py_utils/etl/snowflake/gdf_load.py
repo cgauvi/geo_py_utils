@@ -4,13 +4,11 @@ import pandas as pd
 import re
 from shapely import wkt
 from snowflake.connector.connection import SnowflakeConnection
-
-from geo_py_utils.etl.snowflake.db_utils import sfkl_get_table_srid
- 
+from typing import Union
 
 def sfkl_to_gpd(query:str, 
                 conn: SnowflakeConnection, 
-                tbl_name: str,
+                crs : Union[str, int] = 4326,
                 geometry_name: str ='GEOMETRY',
                 chunksize :int = 100 ) -> gpd.GeoDataFrame :
 
@@ -53,11 +51,11 @@ def sfkl_to_gpd(query:str,
     geom =  [wkt.loads(g) for g in df_snowflake_results[geometry_name]]
     
     # Convert back to geodataframe 
-    srid = sfkl_get_table_srid(conn, tbl_name, geometry_name)
+    
     shp_snowflake_results = gpd.GeoDataFrame(
         df_snowflake_results.drop(columns=[geometry_name]),
         geometry = gpd.GeoSeries(geom),
-        crs = srid
+        crs = crs
         )
 
     return shp_snowflake_results

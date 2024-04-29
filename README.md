@@ -42,10 +42,11 @@
 
 The project has been tested by installing geopandas through `conda`. The rest of the dependencies can be installed manually with `pip` or `poetry`. Conda was initially chosen in an attempt to reduce friction and avoid having to tweak environment variables and point to correct libs. 
 
-*Note*: whatever os or package manager used, `geo_py_utils` requires being able to call both `curl` and `unzip` from the CLI. These are bundled as conda packages or can be installed with `sudo apt get install curl unzip` on ubuntu for example. 
+*Note*: whatever os or package manager used, `geo_py_utils` requires being able to call both `curl` and `unzip` from the CLI. These are bundled as conda packages (only for mac+linux) or can be installed with `sudo apt get install curl unzip` on ubuntu for example. For windows, `unzip` utility is available from gitbash.
 
 ```bash
-conda create --name geo_py_utils python=3.9 geopandas=0.14.3 pyproj=3.6.1 shapely=2.0.1 rtree=1.2.0 unzip
+# Tested for python [3.9, 3.10, 3.11] X [Windows ubuntu]
+conda create --name geo_py_utils python=3.10 geopandas 
 conda activate geo_py_utils
 python -m pip install --upgrade pip
 python -m pip install "geo_py_utils @ git+https://git@github.com/LaCapitale/geo_py_utils.git"

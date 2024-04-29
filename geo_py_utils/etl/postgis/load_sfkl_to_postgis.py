@@ -7,6 +7,7 @@ from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.etl.db_etl import Url_to_postgis
 from geo_py_utils.etl.snowflake.snowflake_abstract_connection import SnowflakeAbstractConnection
 from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd
+from geo_py_utils.etl.snowflake.db_utils import sfkl_get_table_srid
 
 
 # Logger
@@ -78,10 +79,12 @@ class LoadSfklPostgis:
         with self.sfkl_connector as connector:
 
             # Fetch the table
+            crs = sfkl_get_table_srid(connector.get_connection(), self.sfkl_tbl_name, self.sfkl_geometry_name)
+
             shp_sfkl = sfkl_to_gpd(
                 query=f"SELECT * from {self.sfkl_tbl_name}",
                 conn=connector.get_connection(),  
-                tbl_name=self.sfkl_tbl_name,
+                crs=crs,
                 geometry_name=self.sfkl_geometry_name
                 )
 

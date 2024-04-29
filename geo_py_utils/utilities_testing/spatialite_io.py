@@ -1,14 +1,41 @@
 # Utilities to write mock data to a local spatialite db 
 
 import logging
+import os
 import sqlite3
+from shapely.geometry.multipolygon import MultiPolygon
+from shapely.geometry.polygon import Polygon
 
 from geo_py_utils.misc.constants import DATA_DIR
-from geo_py_utils.utilities_testing.data import QcCityTestData
+from geo_py_utils.utilities_testing.data import QcCityTestData, LocalGDFData
 from geo_py_utils.etl.db_etl import Url_to_spatialite
 from geo_py_utils.etl.spatialite.gdf_load import spatialite_db_to_gdf
 
 logger = logging.getLogger(__file__)
+
+
+def create_local_spatialite( 
+        db_name = LocalGDFData.SPATIAL_LITE_DB_PATH,
+        tbl_name = LocalGDFData.SPATIAL_LITE_TBL_QC,
+        overwrite=True,
+        promote_to_multi=True
+        ):
+    
+    if overwrite and os.path.exists(db_name):
+        os.remove(db_name)
+
+    if promote_to_multi:
+        shp = LocalGDFData.DATA.copy()
+        shp["geometry"] = [MultiPolygon([feature]) if isinstance(feature, Polygon) and k == 1  \
+            else feature for k, feature in enumerate(shp["geometry"])]
+
+    if not os.path.exists(db_name):
+        shp.to_file(
+            db_name, 
+            driver="SQLite", 
+            spatialite=True, 
+            layer=tbl_name
+            )
 
 
 def upload_qc_neigh_test_db(
@@ -70,3 +97,5 @@ def upload_regular_csv_db(
 
     
 
+if __name__== '__main__':
+    create_local_spatialite()
