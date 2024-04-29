@@ -167,7 +167,7 @@ def test_rename():
         except :
             print("Got error as expected")
 
-        rename_columns(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC, {'nom': 'new_nom'})
+        rename_columns(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC, {LocalGDFData.DATA.columns[0]: 'new_nom'})
         assert 'new_nom' in get_table_column_names(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
     
     except PermissionError  as e:
