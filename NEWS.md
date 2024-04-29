@@ -1,4 +1,19 @@
 ================== 
+
+geo_py_utils 1.6.6
+
+- patch:
+    * fixed qc adm regions (AGAIN) : zip structure changed
+    * refactored ogr2ogr_windows_wrapper and implemented test
+    * fixed sql_to_df
+    * refactored sfkl_to_gpd: no crs
+    * implemented appending for snowflakegeowriter
+    * new faster testing for spatialite with `to_file(db_name,   driver="SQLite",   spatialite=True, layer=tbl_name)`
+    * tests + debugging for pg_get_table_rows
+    * tests for get_table_column_all_metadata (spatialite)
+
+================== 
+
 geo_py_utils 1.6.5
 
 - patch:
@@ -12,12 +27,14 @@ geo_py_utils 1.6.4
     *  refactored tests
 
 ================== 
+
 geo_py_utils 1.6.3
 
 - patch:
     *  refactored ae tests + qc adm regions (CI should now run)
 
 ================== 
+
 geo_py_utils 1.6.2
 - minor:
     * new SnowflakeAbstractConnection class 
@@ -25,18 +42,21 @@ geo_py_utils 1.6.2
     * fixed SnowflakeGeoWriter by converting object to string + encoding
     
 ================== 
+
 geo_py_utils 1.6.1
 
 - patch:
     * pyarow deps conflict with snowflake connector: <=10.0.0
 
 ==================
+
 geo_py_utils 1.6.0
 
 - minor:
     * new SnowflakeGeoWriter class to write gpd to snowflake using sso connection
     
 ================== 
+
 geo_py_utils 1.5.6
 
 - patch:
