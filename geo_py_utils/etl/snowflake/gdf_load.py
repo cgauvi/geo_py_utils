@@ -6,9 +6,6 @@ from shapely import wkt
 from snowflake.connector.connection import SnowflakeConnection
 from typing import Union
 
-from geo_py_utils.etl.snowflake.db_utils import sfkl_get_table_srid
- 
-
 def sfkl_to_gpd(query:str, 
                 conn: SnowflakeConnection, 
                 crs : Union[str, int] = 4326,
