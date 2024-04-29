@@ -105,13 +105,14 @@ class DownloadQcAdmBoundaries:
         """
 
         # point to data path of unzipped folder
-        path_shp = join(self.data_download_path, 'SHP','Sda', 'version_courante','SHP', f'{self.geo_level}.shp')
+        path_shp = join(self.data_download_path, 'SHP', 'SHP','Sda', 'version_courante','SHP', f'{self.geo_level}.shp')
 
         # Unzip if required
         if not exists(path_shp):
             self._download_qc_administrative_boundaries()
 
-        assert exists(path_shp)
+        if not exists(path_shp):
+            raise FileNotFoundError(f'{path_shp} does not exists `DownloadQcAdmBoundaries.get_qc_administrative_boundaries()` failed to download zip from {DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_URL}')
 
         # Read in the desired polygons
         shp_boundary = gpd.read_file(path_shp)

@@ -4,7 +4,7 @@ import pytest
 
 from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
 from geo_py_utils.etl.snowflake.gdf_write import SnowflakeGeoWriter
-from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd
+from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd, sfkl_get_table_srid
 from geo_py_utils.etl.postgis.load_sfkl_to_postgis import LoadSfklPostgis
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
 from geo_py_utils.constants import ProjectPaths
@@ -59,7 +59,14 @@ def test_transfer_sfkl_postgis():
 
     # Read from snowflake
     with sfkl_connector as connector:
-        shp_sfkl = sfkl_to_gpd(query_get_all, connector.get_connection(), tbl_name=TEST_SFKL_TBL_NAME, geometry_name=SFKL_GEO_COL_NAME)
+        crs = sfkl_get_table_srid(connector.get_connection(), TEST_SFKL_TBL_NAME, SFKL_GEO_COL_NAME)
+
+        shp_sfkl = sfkl_to_gpd(
+            query_get_all, 
+            connector.get_connection(), 
+            crs=crs,
+            geometry_name=SFKL_GEO_COL_NAME
+        )
 
     
     assert shp_pg.shape[0] == shp_sfkl.shape[0]  , \
