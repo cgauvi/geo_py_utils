@@ -3,6 +3,7 @@ import geopandas as gpd
 import os
 import tempfile
 import numpy as np
+from pathlib import Path
 import pytest
 import sys
 
@@ -30,20 +31,35 @@ from geo_py_utils.etl.spatialite.db_utils import (
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
 from geo_py_utils.census_open_data.census import FSA_2016_URL
-from geo_py_utils.utilities_testing.spatialite_io import upload_qc_neigh_test_db
-from geo_py_utils.utilities_testing.data import QcCityTestData
+from geo_py_utils.utilities_testing.spatialite_io import upload_qc_neigh_test_db, create_local_spatialite
+from geo_py_utils.utilities_testing.data import QcCityTestData, LocalGDFData
 
+ 
 
+def setup_qc_neigh():
+    
+    if os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH):
+        os.remove(QcCityTestData.SPATIAL_LITE_DB_PATH)
+        
+    upload_qc_neigh_test_db(promote_to_multi=False)
+
+    assert os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)
+ 
+
+def setup_local():
+    create_local_spatialite(overwrite=True)
+ 
+ 
 
 def test_sqlite_no_apostrophes():
 
     try:
-        with open('test.db', 'w') as _:
+        with open('test_str.db', 'w') as _:
             pass
 
         # reate the table
         execute_spatialite_cmd(
-            'test.db',
+            'test_str.db',
             '''
             CREATE TABLE test (
             sometext text not null
@@ -64,88 +80,87 @@ def test_sqlite_no_apostrophes():
         ]
 
         for s in list_statements:
-            execute_spatialite_cmd('test.db',  s  )
+            execute_spatialite_cmd('test_str.db',  s  )
 
 
         # Remove the accents in place using the built-in `replace` function
-        remove_accents_column(  db_name = 'test.db', tbl_name= 'test', column_name='sometext' )
+        remove_accents_column(  db_name = 'test_str.db', tbl_name= 'test', column_name='sometext' )
 
-        df_results = sql_to_df('test.db', 'select * from test')
+        df_results = sql_to_df('test_str.db', 'select * from test')
 
         assert (df_results.sometext.values == 'd').all()
 
-        if os.path.exists('test.db'):
-            os.remove('test.db')
+        if os.path.exists('test_str.db'):
+            os.remove('test_str.db')
     except PermissionError  as e:
         if 'win' not in sys.platform:
             raise e
         else:
-            print(f'Failed: {e} - probably concurrent usage of test.db on windows')
+            print(f'Failed: {e} - probably concurrent usage of test_str.db on windows')
 
 
 def test_execute_spatialite_cmd():
 
     try:
-        drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
-        drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, f'{QcCityTestData.SPATIAL_LITE_TBL_QC}_new', 'GEOMETRY')
 
-        if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
-            (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
-            upload_qc_neigh_test_db(promote_to_multi=False)
+        # Clean slate
+        setup_local()
+
+        # Drop the new geo col if it exists 
+        geo_cols = get_table_geometries_name(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
+        drop_geo_table_all(
+            LocalGDFData.SPATIAL_LITE_DB_PATH, 
+            f'{LocalGDFData.SPATIAL_LITE_TBL_QC}_new', 
+            geo_cols[0]
+        )
 
         execute_spatialite_cmd(
-            QcCityTestData.SPATIAL_LITE_DB_PATH, 
+            LocalGDFData.SPATIAL_LITE_DB_PATH, 
             f'''
-            create table if not exists {QcCityTestData.SPATIAL_LITE_TBL_QC}_new as
-            select * from {QcCityTestData.SPATIAL_LITE_TBL_QC} limit 1
+            create table if not exists {LocalGDFData.SPATIAL_LITE_TBL_QC}_new as
+            select * from {LocalGDFData.SPATIAL_LITE_TBL_QC} limit 1
             '''
             )
 
-        assert get_table_rows( QcCityTestData.SPATIAL_LITE_DB_PATH, f'{QcCityTestData.SPATIAL_LITE_TBL_QC}_new') == 1
+        assert get_table_rows( LocalGDFData.SPATIAL_LITE_DB_PATH, f'{LocalGDFData.SPATIAL_LITE_TBL_QC}_new') == 1
 
     except PermissionError  as e:
         if 'win' not in sys.platform:
             raise e
         else:
-            print(f'Failed: {e} - probably concurrent usage of {QcCityTestData.SPATIAL_LITE_DB_PATH} on windows')
+            print(f'Failed: {e} - probably concurrent usage of {LocalGDFData.SPATIAL_LITE_DB_PATH} on windows')
 
 def test_rename_geo():
 
     try:
         # Make sure we start from scratch, and dont defacto promot to multipolygon
-        drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
-        if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
-            (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
-            upload_qc_neigh_test_db(promote_to_multi=False)
-        
-        geo_cols = get_table_geometries_name(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+        setup_local()
+
+        geo_cols = get_table_geometries_name(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
         rename_geom_column(
-            QcCityTestData.SPATIAL_LITE_DB_PATH, 
-            QcCityTestData.SPATIAL_LITE_TBL_QC,
+            LocalGDFData.SPATIAL_LITE_DB_PATH, 
+            LocalGDFData.SPATIAL_LITE_TBL_QC,
             new_geom=geo_cols[0] + 'new'
             )
 
-        assert geo_cols[0] + 'new' in get_table_column_names(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
-        assert geo_cols[0] + 'new' in get_table_geometries_name(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+        assert geo_cols[0] + 'new' in get_table_column_names(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
+        assert geo_cols[0] + 'new' in get_table_geometries_name(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
 
-        assert geo_cols[0] not in get_table_column_names(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
-        assert geo_cols[0] not in get_table_geometries_name(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+        assert geo_cols[0] not in get_table_column_names(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
+        assert geo_cols[0] not in get_table_geometries_name(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
     
     except PermissionError  as e:
         if 'win' not in sys.platform:
             raise e
         else:
-            print(f'Failed: {e} - probably concurrent usage of {QcCityTestData.SPATIAL_LITE_DB_PATH} on windows')
+            print(f'Failed: {e} - probably concurrent usage of {LocalGDFData.SPATIAL_LITE_DB_PATH} on windows')
 
 def test_rename():
 
     try:
-        # Make sure we start from scratch, and dont defacto promot to multipolygon
-        drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
-        if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
-            (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
-            upload_qc_neigh_test_db(promote_to_multi=False)
-        
+         # Make sure we start from scratch, and dont defacto promot to multipolygon
+        setup_local()
+
         geo_cols = get_table_geometries_name(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
         try:
             rename_columns(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, {geo_cols[0]: 'ssGEOMsss'})
@@ -165,26 +180,23 @@ def test_promot_to_multi():
 
     try:
         # Make sure we start from scratch, and dont defacto promot to multipolygon
-        drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
-        if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
-            (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
-            upload_qc_neigh_test_db(promote_to_multi=False)
+        setup_local()
 
-        shp_before = spatialite_db_to_gdf(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+        shp_before = spatialite_db_to_gdf(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
         
-        promote_multi(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+        promote_multi(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
 
-        shp_after = spatialite_db_to_gdf(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+        shp_after = spatialite_db_to_gdf(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
 
         # Column renaming creates a new geom column and so needs to infer type
-        geo_cols = get_table_geometries_name(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+        geo_cols = get_table_geometries_name(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
         rename_geom_column(
-            QcCityTestData.SPATIAL_LITE_DB_PATH, 
-            QcCityTestData.SPATIAL_LITE_TBL_QC,
+            LocalGDFData.SPATIAL_LITE_DB_PATH, 
+            LocalGDFData.SPATIAL_LITE_TBL_QC,
             new_geom=geo_cols[0] + 'new'
             )
         
-        assert geo_cols[0] + 'new' in get_table_column_names(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+        assert geo_cols[0] + 'new' in get_table_column_names(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
 
         # The geometry is not properly set in the aux geometry_columns table, but the geometry might still be successfully changed
         assert len(shp_before.geometry.type.unique()) == 2
@@ -203,15 +215,14 @@ def test_geometry_type():
 
     try:
 
-        drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
-        if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
-            (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
-            upload_qc_neigh_test_db()
+        # Make sure we start from scratch, and dont defacto promot to multipolygon
+        setup_qc_neigh()
 
         with pytest.raises(Exception):
             get_table_geometry_type( 
                 QcCityTestData.SPATIAL_LITE_DB_PATH,
-                QcCityTestData.SPATIAL_LITE_TBL_QC) == 'POLYGON' # We expect a polygon, but the geometry type is mixed so we get an error
+                QcCityTestData.SPATIAL_LITE_TBL_QC
+            ) == 'POLYGON' # We expect a polygon, but the geometry type is mixed so we get an error
     except PermissionError  as e:
         if 'win' not in sys.platform:
             raise e
@@ -222,14 +233,11 @@ def test_spatial_index_enabled():
 
     try:
 
-        drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
-        if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
-            (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
-            upload_qc_neigh_test_db()
+        setup_local()
 
         assert is_spatial_index_enabled(
-            QcCityTestData.SPATIAL_LITE_DB_PATH,
-            QcCityTestData.SPATIAL_LITE_TBL_QC
+            LocalGDFData.SPATIAL_LITE_DB_PATH,
+            LocalGDFData.SPATIAL_LITE_TBL_QC
             )
         
     except PermissionError  as e:
@@ -242,15 +250,12 @@ def test_spatial_index_enabled():
 def test_spatial_index_valid():
 
     try:
-        drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
-        if (not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
-            (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
-            upload_qc_neigh_test_db()
+        setup_local()
 
         assert is_spatial_index_enabled_valid(
-            QcCityTestData.SPATIAL_LITE_DB_PATH,
-            QcCityTestData.SPATIAL_LITE_TBL_QC,
-            QcCityTestData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME
+            LocalGDFData.SPATIAL_LITE_DB_PATH,
+            LocalGDFData.SPATIAL_LITE_TBL_QC,
+            LocalGDFData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME
             )
             
     except PermissionError  as e:
@@ -259,46 +264,35 @@ def test_spatial_index_valid():
         else:
             print(f'Failed: {e} - probably concurrent usage of {QcCityTestData.SPATIAL_LITE_DB_PATH} on windows')
 
-def test_upload_spatialite_qc():
-    try:
-        upload_qc_neigh_test_db()
-    except PermissionError  as e:
-        if 'win' not in sys.platform:
-            raise e
-        else:
-            print(f'Failed: {e} - probably concurrent usage of {QcCityTestData.SPATIAL_LITE_DB_PATH} on windows')
-
-
+ 
 
 def test_read_gdf_spatialite_qc ():
 
     try:
-        if not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH):
-            upload_qc_neigh_test_db()
+        setup_local()
 
-        df = spatialite_db_to_gdf(db_name = QcCityTestData.SPATIAL_LITE_DB_PATH,
-                                tbl_name = QcCityTestData.SPATIAL_LITE_TBL_QC,
-                                additional_where_limit_causes = "LIMIT 10"
+        df = spatialite_db_to_gdf(db_name = LocalGDFData.SPATIAL_LITE_DB_PATH,
+                                tbl_name = LocalGDFData.SPATIAL_LITE_TBL_QC,
+                                additional_where_limit_causes = "LIMIT 1"
         ) 
 
         assert isinstance(df, gpd.GeoDataFrame)
-        assert df.shape[0] == 10
+        assert df.shape[0] == 1
     except PermissionError  as e:
         if 'win' not in sys.platform:
             raise e
         else:
-            print(f'Failed: {e} - probably concurrent usage of {QcCityTestData.SPATIAL_LITE_DB_PATH} on windows')
+            print(f'Failed: {e} - probably concurrent usage of {LocalGDFData.SPATIAL_LITE_DB_PATH} on windows')
 
 
 def test_read_gdf_error_geom ():
 
     try:
-        if not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH):
-            upload_qc_neigh_test_db()
+        setup_local()
 
         with pytest.raises(Exception):
-            _ = spatialite_db_to_gdf(db_name = QcCityTestData.SPATIAL_LITE_DB_PATH,
-                                    tbl_name = QcCityTestData.SPATIAL_LITE_TBL_QC,
+            _ = spatialite_db_to_gdf(db_name = LocalGDFData.SPATIAL_LITE_DB_PATH,
+                                    tbl_name = LocalGDFData.SPATIAL_LITE_TBL_QC,
                                     current_geo_col_name='somecolumnthatclearlydoesnotexist',
                                     additional_where_limit_causes = "LIMIT 10"
             ) 
@@ -306,27 +300,24 @@ def test_read_gdf_error_geom ():
         if 'win' not in sys.platform:
             raise e
         else:
-            print(f'Failed: {e} - probably concurrent usage of {QcCityTestData.SPATIAL_LITE_DB_PATH} on windows')
+            print(f'Failed: {e} - probably concurrent usage of {LocalGDFData.SPATIAL_LITE_DB_PATH} on windows')
  
 
 
 def test_spatialite_rename_cols():
 
     try:
-        drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, 'GEOMETRY')
-        if not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH) or \
-        not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH) :
-            upload_qc_neigh_test_db()
+        setup_local()
 
         rename_columns(
-            QcCityTestData.SPATIAL_LITE_DB_PATH,
-            QcCityTestData.SPATIAL_LITE_TBL_QC,
+            LocalGDFData.SPATIAL_LITE_DB_PATH,
+            LocalGDFData.SPATIAL_LITE_TBL_QC,
             {'GEOMETRY': 'mishka'}
             )
 
         df_results = sql_to_df(
-            QcCityTestData.SPATIAL_LITE_DB_PATH, 
-            f'SELECT * from {QcCityTestData.SPATIAL_LITE_TBL_QC} limit 1'
+            LocalGDFData.SPATIAL_LITE_DB_PATH, 
+            f'SELECT * from {LocalGDFData.SPATIAL_LITE_TBL_QC} limit 1'
             )
 
         assert 'mishka' in df_results.columns
@@ -336,40 +327,45 @@ def test_spatialite_rename_cols():
         if 'win' not in sys.platform:
             raise e
         else:
-            print(f'Failed: {e} - probably concurrent usage of {QcCityTestData.SPATIAL_LITE_DB_PATH} on windows')
+            print(f'Failed: {e} - probably concurrent usage of {LocalGDFData.SPATIAL_LITE_DB_PATH} on windows')
     
 
 def test_spatialite_list_tables():
 
     try:
-        if not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH):
-            upload_qc_neigh_test_db()
+        setup_local()
 
-        existing_tables = list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)
+        existing_tables = list_tables(LocalGDFData.SPATIAL_LITE_DB_PATH)
 
-        assert QcCityTestData.SPATIAL_LITE_TBL_QC in existing_tables
+        assert LocalGDFData.SPATIAL_LITE_TBL_QC in existing_tables
     except PermissionError  as e:
         if 'win' not in sys.platform:
             raise e
         else:
-            print(f'Failed: {e} - probably concurrent usage of {QcCityTestData.SPATIAL_LITE_DB_PATH} on windows')
+            print(f'Failed: {e} - probably concurrent usage of {LocalGDFData.SPATIAL_LITE_DB_PATH} on windows')
 
 def test_spatialite_send_query():
     try:
-        df_results = sql_to_df(QcCityTestData.SPATIAL_LITE_DB_PATH, 
-                                f"select count(*) as num_rows from {QcCityTestData.SPATIAL_LITE_TBL_QC}")
+        setup_local()
 
-        assert get_table_rows(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC) == df_results.num_rows.values[0]
+        df_results = sql_to_df(LocalGDFData.SPATIAL_LITE_DB_PATH, 
+                                f"select count(*) as num_rows from {LocalGDFData.SPATIAL_LITE_TBL_QC}")
+
+        assert get_table_rows(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC) == df_results.num_rows.values[0]
     except PermissionError  as e:
         if 'win' not in sys.platform:
             raise e
         else:
-            print(f'Failed: {e} - probably concurrent usage of {QcCityTestData.SPATIAL_LITE_DB_PATH} on windows')
+            print(f'Failed: {e} - probably concurrent usage of {LocalGDFData.SPATIAL_LITE_DB_PATH} on windows')
 
 @pytest.mark.requires_or2ogr
 def test_spatialite_zip_with_proj():
 
     try:
+
+        if os.path.exists(join(DATA_DIR, "test_fsa.db")):
+            os.remove(join(DATA_DIR, "test_fsa.db"))
+
         with Url_to_spatialite(
             db_name = join(DATA_DIR, "test_fsa.db"), 
             table_name = 'geo_fsa_tbl',
@@ -398,69 +394,35 @@ def test_spatialite_zip_with_proj():
             raise e
         else:
             print(f'Failed: {e} - probably concurrent usage of {QcCityTestData.SPATIAL_LITE_DB_PATH} on windows')
-
-@pytest.mark.requires_or2ogr
-def test_spatialite_local_file():
-
-    try:
-        # Remove if existing
-        if os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH):
-            os.remove(QcCityTestData.SPATIAL_LITE_DB_PATH)
-
-        # Read the shp file from the url + write to disk before uploading to spatialite
-        shp_qc = gpd.read_file(DEFAULT_QC_CITY_NEIGH_URL)
-        tmp_dir = tempfile.mkdtemp()
-        path_shp_file_local = join(tmp_dir, 'tmp.shp')
-        shp_qc.to_file(path_shp_file_local)
-
-        with Url_to_spatialite(
-                            db_name = QcCityTestData.SPATIAL_LITE_DB_PATH, 
-                            table_name = QcCityTestData.SPATIAL_LITE_TBL_QC,
-                            download_url = path_shp_file_local, # local file does not require curl -- hacky + watch out, Url_to_spatialite will automatically delete the file 
-                            overwrite = True #for some weird reason, appending duplicates the dataset -- even if we start of with a clean db
-            ) as spatialite_etl:
-
-            # Upload the point DB 
-            spatialite_etl.upload_url_to_database()
-
-        
-        shp_test = spatialite_db_to_gdf ( 
-            QcCityTestData.SPATIAL_LITE_DB_PATH,
-            QcCityTestData.SPATIAL_LITE_TBL_QC
-            )
-
-        assert shp_qc.shape[0] == shp_test.shape[0]
-    
-    except PermissionError  as e:
-        if 'win' not in sys.platform:
-            raise e
-        else:
-            print(f'Failed: {e} - probably concurrent usage of {QcCityTestData.SPATIAL_LITE_DB_PATH} on windows')
-
+ 
 def test_drop_table():
 
     try:
         # Make sure table exists initially
-        if not os.path.exists(QcCityTestData.SPATIAL_LITE_DB_PATH):
-            upload_qc_neigh_test_db()
+        setup_local()
 
         # Drop table 
-        drop_table(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+        drop_table(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
 
         # Table not present
-        assert QcCityTestData.SPATIAL_LITE_TBL_QC not in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)
+        assert LocalGDFData.SPATIAL_LITE_TBL_QC not in list_tables(LocalGDFData.SPATIAL_LITE_DB_PATH)
 
         # Drop ALL
-        drop_geo_table_all(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, QcCityTestData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME)
+        drop_geo_table_all(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC, LocalGDFData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME)
         list_aux_tables_to_drop_suff = ['', '_rowid', '_node', '_parent']
-        list_aux_tables_to_drop = [ f"{QcCityTestData.SPATIAL_LITE_TBL_QC}_{QcCityTestData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME}{suffix};"
+        list_aux_tables_to_drop = [ f"{LocalGDFData.SPATIAL_LITE_TBL_QC}_{LocalGDFData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME}{suffix};"
                                     for suffix in list_aux_tables_to_drop_suff]
-        assert not np.any(np.isin(np.array(list_aux_tables_to_drop), list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)))
+        assert not np.any(np.isin(np.array(list_aux_tables_to_drop), list_tables(LocalGDFData.SPATIAL_LITE_DB_PATH)))
 
     except PermissionError  as e:
         if 'win' not in sys.platform:
             raise e
         else:
-            print(f'Failed: {e} - probably concurrent usage of {QcCityTestData.SPATIAL_LITE_DB_PATH} on windows')
+            print(f'Failed: {e} - probably concurrent usage of {LocalGDFData.SPATIAL_LITE_DB_PATH} on windows')
 
    
+
+
+
+if __name__ == '__main__':
+    test_execute_spatialite_cmd()

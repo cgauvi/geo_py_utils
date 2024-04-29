@@ -86,3 +86,11 @@ class QcCityTestData:
     SQL_LITE_TBL_CSV_QC = 'csv_qc_city_test_tbl'
     QC_CITY_NEIGH_URL = DEFAULT_QC_CITY_NEIGH_URL
     SPATIAL_LITE_TBL_GEOMETRY_COL_NAME = 'GEOMETRY'
+
+
+class LocalGDFData:
+    SPATIAL_LITE_DB_PATH = join(DATA_DIR, "samplegdf_in.sqlite")
+    SPATIAL_LITE_TBL_QC = "mytest"
+    SPATIAL_LITE_TBL_GEOMETRY_COL_NAME = 'GEOMETRY'
+    DATA = SAMPLE_GDF
+ 
