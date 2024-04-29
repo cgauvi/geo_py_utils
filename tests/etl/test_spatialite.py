@@ -161,14 +161,14 @@ def test_rename():
          # Make sure we start from scratch, and dont defacto promot to multipolygon
         setup_local()
 
-        geo_cols = get_table_geometries_name(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+        geo_cols = get_table_geometries_name(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
         try:
-            rename_columns(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, {geo_cols[0]: 'ssGEOMsss'})
+            rename_columns(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC, {geo_cols[0]: 'ssGEOMsss'})
         except :
             print("Got error as expected")
 
-        rename_columns(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC, {'nom': 'new_nom'})
-        assert 'new_nom' in get_table_column_names(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
+        rename_columns(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC, {'nom': 'new_nom'})
+        assert 'new_nom' in get_table_column_names(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
     
     except PermissionError  as e:
         if 'win' not in sys.platform:
@@ -176,27 +176,28 @@ def test_rename():
         else:
             print(f'Failed: {e} - probably concurrent usage of {QcCityTestData.SPATIAL_LITE_DB_PATH} on windows')
 
-def test_promot_to_multi():
+def test_promote_to_multi():
 
     try:
         # Make sure we start from scratch, and dont defacto promot to multipolygon
-        setup_local()
+        # Only works if geom set to mixed at creation and we have some polygons and multipolygons
+        setup_qc_neigh()
 
-        shp_before = spatialite_db_to_gdf(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
+        shp_before = spatialite_db_to_gdf(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
         
-        promote_multi(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
+        promote_multi(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
 
-        shp_after = spatialite_db_to_gdf(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
+        shp_after = spatialite_db_to_gdf(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
 
         # Column renaming creates a new geom column and so needs to infer type
-        geo_cols = get_table_geometries_name(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
+        geo_cols = get_table_geometries_name(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
         rename_geom_column(
-            LocalGDFData.SPATIAL_LITE_DB_PATH, 
-            LocalGDFData.SPATIAL_LITE_TBL_QC,
+            QcCityTestData.SPATIAL_LITE_DB_PATH, 
+            QcCityTestData.SPATIAL_LITE_TBL_QC,
             new_geom=geo_cols[0] + 'new'
             )
         
-        assert geo_cols[0] + 'new' in get_table_column_names(LocalGDFData.SPATIAL_LITE_DB_PATH, LocalGDFData.SPATIAL_LITE_TBL_QC)
+        assert geo_cols[0] + 'new' in get_table_column_names(QcCityTestData.SPATIAL_LITE_DB_PATH, QcCityTestData.SPATIAL_LITE_TBL_QC)
 
         # The geometry is not properly set in the aux geometry_columns table, but the geometry might still be successfully changed
         assert len(shp_before.geometry.type.unique()) == 2
@@ -425,4 +426,4 @@ def test_drop_table():
 
 
 if __name__ == '__main__':
-    test_execute_spatialite_cmd()
+    test_promote_to_multi()

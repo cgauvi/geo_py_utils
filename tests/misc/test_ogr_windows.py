@@ -30,39 +30,38 @@ def teardown():
 @pytest.mark.windows_specific
 def test_windows_ogr():
 
-    setup()
+    if 'win' in sys.platform:
+        setup()
 
-    source =  WindowsPath(PATH_READ) 
-    dest = WindowsPath(PATH_WRITE)
+        source =  WindowsPath(PATH_READ) 
+        dest = WindowsPath(PATH_WRITE)
 
-    cmd = "ogr2ogr " \
-            " -progress " \
-            " -f 'SQLite' " \
-            " -dsco SPATIALITE=YES "
-    
-    cmd += fr" {dest} {source} " 
-
-    ogr2ogr_windows_wrapper(cmd)
-
-    assert PATH_WRITE.exists()
-
+        cmd = "ogr2ogr " \
+                " -progress " \
+                " -f 'SQLite' " \
+                " -dsco SPATIALITE=YES "
         
-    # Would be nice to check but always getting permisson errors because of the 
-    try:
-        shp_write= spatialite_db_to_gdf(
-            db_name = PATH_WRITE,
-            tbl_name = LAYER_NAME, # table name corresponds to first soure spatialite table
-            current_geo_col_name='geometry'
-        ) 
+        cmd += fr" {dest} {source} " 
 
-        assert isinstance(shp_write, gpd.GeoDataFrame)
-        assert shp_write.shape[0] == SAMPLE_GDF.shape[0]
-    except PermissionError as e:
-        print('Windows file permission error')
+        ogr2ogr_windows_wrapper(cmd)
 
+        assert PATH_WRITE.exists()
 
+            
+        # Would be nice to check but always getting permisson errors because of the 
+        try:
+            shp_write= spatialite_db_to_gdf(
+                db_name = PATH_WRITE,
+                tbl_name = LAYER_NAME, # table name corresponds to first soure spatialite table
+                current_geo_col_name='geometry'
+            ) 
 
-    teardown()
+            assert isinstance(shp_write, gpd.GeoDataFrame)
+            assert shp_write.shape[0] == SAMPLE_GDF.shape[0]
+        except PermissionError as e:
+            print('Windows file permission error')
+
+        teardown()
 
 if __name__ == '__main__':
     test_windows_ogr()
