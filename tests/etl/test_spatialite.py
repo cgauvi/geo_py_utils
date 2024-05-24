@@ -1,9 +1,7 @@
 from os.path import join
 import geopandas as gpd
 import os
-import tempfile
 import numpy as np
-from pathlib import Path
 import pytest
 import sys
 
@@ -30,7 +28,6 @@ from geo_py_utils.etl.spatialite.db_utils import (
 
 )
 from geo_py_utils.misc.constants import DATA_DIR
-from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
 from geo_py_utils.census_open_data.census import FSA_2016_URL
 from geo_py_utils.utilities_testing.spatialite_io import upload_qc_neigh_test_db, create_local_spatialite
 from geo_py_utils.utilities_testing.data import QcCityTestData, LocalGDFData

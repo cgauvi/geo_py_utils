@@ -19,7 +19,7 @@ STR_MULTILINE_1 = "ogr2ogr " \
                 " -dsco SPATIALITE=YES "
 
 # Was failing without the join(.splitlines())
-STR_MULTILINE_2 = f"""
+STR_MULTILINE_2 = """
     ogr2ogr
     -progress
     -f 'SQLite' 
@@ -34,7 +34,7 @@ def setup_teardown():
     try:
         PATH_WRITE.unlink(missing_ok=True)    
     except PermissionError as e:
-        print('Windows file permission error')
+        print(f'Windows file permission error - {e}')
 
     yield
 
@@ -42,7 +42,7 @@ def setup_teardown():
         PATH_READ.unlink(missing_ok=True)
         PATH_WRITE.unlink(missing_ok=True)    
     except PermissionError as e:
-        print('Windows file permission error')
+        print(f'Windows file permission error - {e}')
 
 @pytest.mark.windows_specific
 @pytest.mark.parametrize('ogrcmd', [STR_MULTILINE_1, STR_MULTILINE_2])
@@ -72,6 +72,6 @@ def test_windows_ogr(ogrcmd, setup_teardown):
             assert isinstance(shp_write, gpd.GeoDataFrame)
             assert shp_write.shape[0] == SAMPLE_GDF.shape[0]
         except PermissionError as e:
-            print('Windows file permission error')
+            print(f'Windows file permission error - {e}')
 
  
