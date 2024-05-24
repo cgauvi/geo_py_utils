@@ -25,6 +25,8 @@ def ogr2ogr_windows_wrapper(orig_ogr_cmd: str):
         ValueError: _description_
     """
 
+    orig_ogr_cmd="".join(orig_ogr_cmd.splitlines())
+
     if re.search('.*ogr2ogr.*', orig_ogr_cmd, flags=re.IGNORECASE) is None:
         raise ValueError(f'Fatal error! cmd {orig_ogr_cmd} does not call ogr2ogr')
     
@@ -50,4 +52,3 @@ def ogr2ogr_windows_wrapper(orig_ogr_cmd: str):
     # Final ogr2ogr call
     logger.info(cmd)
     CLIRunner(use_bash = False).run_cmd(cmd)
-
