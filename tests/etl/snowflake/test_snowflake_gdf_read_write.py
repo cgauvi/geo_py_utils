@@ -3,18 +3,19 @@ from os.path import isfile
 from pathlib import Path
 import pandas as pd
 import pytest
+import sys
 
-from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd
-from geo_py_utils.etl.snowflake.db_utils import sfkl_get_table_srid
-from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
+
+
 
 try:
     from geo_py_utils.etl.snowflake.snowflake_ae_connection import SnowflakeAEConnection
 except ImportError:
     pass
 
-import sys
 
+from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
+from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd
 from geo_py_utils.etl.snowflake.db_utils import sfkl_get_table_srid
 from geo_py_utils.etl.snowflake.gdf_write import SnowflakeGeoWriter
 from geo_py_utils.utilities_testing.data import SAMPLE_GDF, SAMPLE_GDF_2

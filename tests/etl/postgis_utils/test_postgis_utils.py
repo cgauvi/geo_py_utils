@@ -1,5 +1,4 @@
 import logging
-import numpy as np
 from os.path import abspath, dirname
 import pytest
 from pathlib import Path
@@ -118,7 +117,7 @@ def test_row_count(connection_remote_admin_dev):
 
     df_results = pg_sql_to_df( 
         engine, 
-        query= f'select count(*) num from spatial_ref_sys',
+        query= 'select count(*) num from spatial_ref_sys',
         is_spatial = False
     )
     
@@ -138,7 +137,7 @@ def test_kwargs_sql_df(connection_remote_admin_dev):
 
     df_iter = pg_sql_to_df( 
         engine, 
-        query= f'select *  from spatial_ref_sys',
+        query= 'select *  from spatial_ref_sys',
         is_spatial = False,
         chunksize=CHUNK_SIZE
     )

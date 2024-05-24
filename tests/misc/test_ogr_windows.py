@@ -3,6 +3,8 @@ import pytest
 from pathlib import Path, WindowsPath
 import sys
 
+import os
+sys.path.insert(0, os.path.join(os.environ['PATH_TO_GIC'], '..' , 'geo_py_utils' ))
 from geo_py_utils.utilities_testing.data import SAMPLE_GDF
 from geo_py_utils.misc.cli_windows import ogr2ogr_windows_wrapper
 from geo_py_utils.etl.spatialite.gdf_load import spatialite_db_to_gdf
@@ -11,36 +13,47 @@ PATH_READ = Path('samplegdf_in.sqlite')
 PATH_WRITE = Path('samplegdf_out.sqlite')
 LAYER_NAME='mytest'
 
-def setup():
+STR_MULTILINE_1 = "ogr2ogr " \
+                " -progress " \
+                " -f 'SQLite' " \
+                " -dsco SPATIALITE=YES "
+
+# Was failing without the join(.splitlines())
+STR_MULTILINE_2 = """
+    ogr2ogr
+    -progress
+    -f 'SQLite' 
+    -dsco SPATIALITE=YES
+"""
+
+@pytest.fixture
+def setup_teardown():
     if not PATH_READ.exists():
-        SAMPLE_GDF.to_file(PATH_READ, driver="SQLite", spatialite=True, layer=LAYER_NAME)
+        SAMPLE_GDF.to_file(PATH_READ, driver="SQLite", spatialite=True, layer=LAYER_NAME )
 
     try:
         PATH_WRITE.unlink(missing_ok=True)    
     except PermissionError as e:
-        print('Windows file permission error')
+        print(f'Windows file permission error - {e}')
 
+    yield
 
-def teardown():
     try:
         PATH_READ.unlink(missing_ok=True)
         PATH_WRITE.unlink(missing_ok=True)    
     except PermissionError as e:
-        print('Windows file permission error')
+        print(f'Windows file permission error - {e}')
 
 @pytest.mark.windows_specific
-def test_windows_ogr():
+@pytest.mark.parametrize('ogrcmd', [STR_MULTILINE_1, STR_MULTILINE_2])
+def test_windows_ogr(ogrcmd, setup_teardown):
 
     if 'win' in sys.platform:
-        setup()
 
         source =  WindowsPath(PATH_READ) 
         dest = WindowsPath(PATH_WRITE)
 
-        cmd = "ogr2ogr " \
-                " -progress " \
-                " -f 'SQLite' " \
-                " -dsco SPATIALITE=YES "
+        cmd = ogrcmd
         
         cmd += fr" {dest} {source} " 
 
@@ -48,7 +61,6 @@ def test_windows_ogr():
 
         assert PATH_WRITE.exists()
 
-            
         # Would be nice to check but always getting permisson errors because of the 
         try:
             shp_write= spatialite_db_to_gdf(
@@ -60,9 +72,6 @@ def test_windows_ogr():
             assert isinstance(shp_write, gpd.GeoDataFrame)
             assert shp_write.shape[0] == SAMPLE_GDF.shape[0]
         except PermissionError as e:
-            print('Windows file permission error')
+            print(f'Windows file permission error - {e}')
 
-        teardown()
-
-if __name__ == '__main__':
-    test_windows_ogr()
+ 
