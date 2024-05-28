@@ -14,7 +14,8 @@ LAYER_NAME='mytest'
 STR_MULTILINE_1 = "ogr2ogr " \
                 " -progress " \
                 " -f 'SQLite' " \
-                " -dsco SPATIALITE=YES "
+                " -dsco SPATIALITE=YES "\
+                "-overwrite"
 
 # Was failing without the join(.splitlines())
 STR_MULTILINE_2 = """
@@ -22,12 +23,13 @@ STR_MULTILINE_2 = """
     -progress
     -f 'SQLite' 
     -dsco SPATIALITE=YES
+    -overwrite
 """
 
 @pytest.fixture(autouse=True)
 def setup_teardown():
     if not PATH_READ.exists():
-        SAMPLE_GDF.to_file(PATH_READ, driver="SQLite", spatialite=True, layer=LAYER_NAME )
+        SAMPLE_GDF.to_file(PATH_READ, driver="SQLite",   layer=LAYER_NAME ,mode ='w')
 
     try:
         PATH_WRITE.unlink(missing_ok=True)    
@@ -38,6 +40,10 @@ def setup_teardown():
 
     try:
         PATH_READ.unlink(missing_ok=True)
+    except PermissionError as e:
+        print(f'Windows file permission error - {e}')
+        
+    try:
         PATH_WRITE.unlink(missing_ok=True)    
     except PermissionError as e:
         print(f'Windows file permission error - {e}')
