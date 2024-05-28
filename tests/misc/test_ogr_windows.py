@@ -3,8 +3,6 @@ import pytest
 from pathlib import Path, WindowsPath
 import sys
 
-import os
-sys.path.insert(0, os.path.join(os.environ['PATH_TO_GIC'], '..' , 'geo_py_utils' ))
 from geo_py_utils.utilities_testing.data import SAMPLE_GDF
 from geo_py_utils.misc.cli_windows import ogr2ogr_windows_wrapper
 from geo_py_utils.etl.spatialite.gdf_load import spatialite_db_to_gdf
