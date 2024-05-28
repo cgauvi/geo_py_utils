@@ -1,3 +1,16 @@
+
+================== 
+
+geo_py_utils 1.7.0
+
+- patch:
+    * fixed the ogr2ogr wrapper in windows: can deal with multiline cmd
+    * tweak to allow writing a regular df with `SnowflakeGeoWriter`
+- minor
+    * implemented datetime management + tested with `SnowflakeGeoWriter`
+
+
+
 ================== 
 
 geo_py_utils 1.6.6
