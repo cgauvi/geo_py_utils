@@ -24,7 +24,7 @@ STR_MULTILINE_2 = """
     -dsco SPATIALITE=YES
 """
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def setup_teardown():
     if not PATH_READ.exists():
         SAMPLE_GDF.to_file(PATH_READ, driver="SQLite", spatialite=True, layer=LAYER_NAME )
@@ -44,7 +44,7 @@ def setup_teardown():
 
 @pytest.mark.windows_specific
 @pytest.mark.parametrize('ogrcmd', [STR_MULTILINE_1, STR_MULTILINE_2])
-def test_windows_ogr(ogrcmd, setup_teardown):
+def test_windows_ogr(ogrcmd):
 
     if 'win' in sys.platform:
 
