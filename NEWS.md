@@ -1,6 +1,13 @@
 
 ================== 
 
+geo_py_utils 1.7.1
+
+- path:
+    * fixed the `SnowflakeGeoWriter` date cast: allo variable names with spaces
+
+================== 
+
 geo_py_utils 1.7.0
 
 - patch:
