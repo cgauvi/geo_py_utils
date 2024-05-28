@@ -33,11 +33,11 @@ flake8 = {version = "^6.0.0", optional = true}
 Flake8-pyproject = {version = "^1.2.3", optional = true}
 oscrypto = {version ="*"}
 Unidecode =  {version ="*"}
-pytz=  {version ="*"}
+pytz=  {version ="*", optional = true}
 
 [tool.poetry.extras]
 notebooks=["seaborn" , "matplotlib", "folium", "mapclassify", "contextily", "xyzservices"]
-dev=['pytest','flake8', 'freezegun']
+dev=['pytest','flake8', 'freezegun','pytz']
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
