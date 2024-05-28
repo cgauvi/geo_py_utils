@@ -8,7 +8,6 @@ from pathlib import Path
 import pandas as pd
 import pytest
 import pytz
-from unittest.mock import patch
 import sys
 
 logging.basicConfig(level=logging.INFO)
@@ -183,6 +182,7 @@ def test_snowflake_append_works():
         n_after = df_num.NUM.values[0]
      
     assert n_after == SAMPLE_GDF.shape[0] + SAMPLE_GDF_2.shape[0], 'Fatal error! Appending fails'
+    assert n_after > n_before
     
     teardown_ext_browser()
 
