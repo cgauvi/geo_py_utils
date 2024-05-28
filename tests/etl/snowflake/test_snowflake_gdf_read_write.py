@@ -249,11 +249,11 @@ def test_datetime_formats_work_no_tz():
     # Given standard time in summer, Mtl is UTC-4 so 1:30 ahead of UTC-5:30 (+5:30-4 = 1:30) so it is 13:30 locally (and still 17:30 +0000 UTC)
     # In the winter with DST Mtl is UTC-5 so it is only 0:30 ahead of the UTC-5:30. Given 12:00:00 -0530, it is 12:30 locally (and still 17:30 +0000 UTC)
     SAMPLE_GDF_DATES['datetime_no_tz_col'] = pd.to_datetime(['2018-10-26 12:00', '2017-03-22 15:16:45.433502912'], format='mixed')
-    SAMPLE_GDF_DATES['datetime_tz_utc_col'] = pd.to_datetime(['2018-10-26 12:00 -0530', '2018-06-26 12:00 -0530'],  utc=True)
+    SAMPLE_GDF_DATES['datetime tz utc col'] = pd.to_datetime(['2018-10-26 12:00 -0530', '2018-06-26 12:00 -0530'],  utc=True)
     SAMPLE_GDF_DATES['timedelta_col'] = [pd.to_timedelta('1 days 06:05:01.00003'), pd.to_timedelta('4 days 06:05:01.00003')]
     
 
-    LIST_DATETIME_COLS = ['datetime_no_tz_col'.upper(), 'datetime_tz_utc_col'.upper()]
+    LIST_DATETIME_COLS = ['datetime_no_tz_col'.upper(), 'datetime tz utc col'.upper()]
     LIST_TIME_DELTA_COLS = ['timedelta_col'.upper()]
 
     # Dates treated naively without timezone (assumes same local time as sfkl)
@@ -282,7 +282,7 @@ def test_datetime_formats_work_no_tz():
         assert df_cols[df_cols['column_name'] == col]['json_col'].values[0]== exp_type
         
     # Make sure cols with timezones dealt with as expected
-    assert np.all(df_round_trip['DATETIME_TZ_UTC_COL'].dt.strftime('%H:%M').values == ['17:30', '17:30' ])
+    assert np.all(df_round_trip['DATETIME TZ UTC COL'].dt.strftime('%H:%M').values == ['17:30', '17:30' ])
 
     # Make sure we can read back timedeltas in pandas using to_timeselta
     for col in LIST_TIME_DELTA_COLS:

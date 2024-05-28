@@ -157,13 +157,13 @@ class SnowflakeGeoWriter:
 
             for d in self.init_cols_ts:
                 cursor = conn.cursor()
-                sql_alter = f"ALTER TABLE  {self.sfkl_name} add column if not exists {d.upper()}_ts_new_____ TIMESTAMP "
+                sql_alter = f"ALTER TABLE  {self.sfkl_name} add column if not exists \"{d.upper()}_ts_new_____\" TIMESTAMP "
                 cursor.execute(sql_alter)
-                sql_populate = f"UPDATE  {self.sfkl_name} set {d.upper()}_ts_new_____ = to_timestamp({d.upper()}) "
+                sql_populate = f"UPDATE  {self.sfkl_name} set \"{d.upper()}_ts_new_____\" = to_timestamp(\"{d.upper()}\") "
                 cursor.execute(sql_populate)
-                sql_drop = f"ALTER TABLE  {self.sfkl_name} drop column {d.upper()}"
+                sql_drop = f"ALTER TABLE  {self.sfkl_name} drop column \"{d.upper()}\""
                 cursor.execute(sql_drop)
-                sql_rename = f"ALTER TABLE {self.sfkl_name} rename column {d.upper()}_ts_new_____ TO  {d.upper()}"
+                sql_rename = f"ALTER TABLE {self.sfkl_name} rename column \"{d.upper()}_ts_new_____\" TO  \"{d.upper()}\""
                 cursor.execute(sql_rename)
 
         logger.info('Successfully converted timestamp/datetime columns...')
