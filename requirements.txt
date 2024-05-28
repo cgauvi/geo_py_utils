@@ -23,4 +23,5 @@ unzip
 geopandas
 pyproj
 shapely
-rtree
+pytz
+freezegun
