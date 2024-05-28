@@ -105,7 +105,7 @@ class DownloadQcAdmBoundaries:
         """
 
         # point to data path of unzipped folder
-        path_shp = join(self.data_download_path, 'SHP', 'SHP','Sda', 'version_courante','SHP', f'{self.geo_level}.shp')
+        path_shp = join(self.data_download_path, 'SHP',  f'{self.geo_level}.shp')
 
         # Unzip if required
         if not exists(path_shp):

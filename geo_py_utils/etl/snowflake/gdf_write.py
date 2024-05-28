@@ -5,6 +5,8 @@ from os.path import isfile
 from os import remove
 from pathlib import Path
 import pandas as pd
+import re
+from shapely.geometry import Point
 from snowflake.connector.pandas_tools import write_pandas 
 from unidecode import unidecode
 
@@ -63,8 +65,19 @@ class SnowflakeGeoWriter:
             max_rows_for_auto_type_inference = DEFAULT_MAX_ROWS_FOR_TYPE_INF
             ):
 
-
-        self.shp = shp
+        # Geodf or regular df?
+        self.is_geo = True
+        if not isinstance(shp, gpd.GeoDataFrame):
+            self.is_geo = False
+            logger.warning('Received a regular pandas df.. treating as geodf ')
+            dummy_geo = gpd.GeoSeries( [Point(0, 90) for _ in np.arange(shp.shape[0])], crs=4326)
+            self.shp=gpd.GeoDataFrame(
+                data=shp,
+                geometry=dummy_geo
+            )
+        else:
+            self.shp = shp
+            
         self.geom_col_name = self.shp.geometry.name # will need to drop and recreate ..
         self.sfkl_geo_col_name = str(sfkl_geo_col_name).upper()
 
@@ -106,7 +119,24 @@ class SnowflakeGeoWriter:
         logger.info('Converting crs to 4326 to simplify snowflake upload!')
         self.shp = self.shp.to_crs(4326) # important to convert to geographic since TO_GEOGRAPHY is hardcoded below
 
-        # Watch out for accents 
+        # timedelta: not clear how we should treat this variable    
+        timedelta_types_dynamic = [ v for v in self.shp.dtypes.values if re.match('(timedelta)', str(v)) is not None]
+        if len(timedelta_types_dynamic):
+            logger.info('Converting timedelta to string.')
+            time_delta_vars = self.shp.select_dtypes(timedelta_types_dynamic).columns.values
+            for col in time_delta_vars:
+                self.shp[col] = self.shp.apply(lambda row : unidecode(str(row[col])), axis=1)
+
+        # Datetimes: otherwise, impossible to catch all tz variations `datetime[ns, UTC]`, `datetime[ns, GMT+3]`, etc.
+        datetime_types_dynamic = [ v for v in self.shp.dtypes.values if re.match('(datetime)', str(v)) is not None]
+        self.init_cols_ts = []
+        if len(datetime_types_dynamic):
+            logger.info('Converting datetimes to string: will cast to TIMEZONE_NTZ ')
+            self.init_cols_ts = self.shp.select_dtypes(datetime_types_dynamic).columns.values
+            for col in self.init_cols_ts:
+                self.shp[col] = self.shp.apply(lambda row : unidecode(str(row[col])), axis=1)
+
+        # Rest of the mixed types
         str_cols = self.shp.columns[ self.shp.dtypes == 'object' ].values
         str_cols_join = ",".join(str_cols)
         logger.info(f'Converting strings to characters for: {str_cols_join}')
@@ -117,6 +147,26 @@ class SnowflakeGeoWriter:
         logger.info('Converting column names to upper case')
         self.shp.columns = [x.upper() if x != self.geom_col_name else x for x in self.shp.columns.values ]
  
+    def _recover_datetimes(self):
+
+        if len(self.init_cols_ts) == 0:
+            return
+
+        with self.sfkl_connector as connector:
+            conn = connector.get_connection()
+
+            for d in self.init_cols_ts:
+                cursor = conn.cursor()
+                sql_alter = f"ALTER TABLE  {self.sfkl_name} add column if not exists {d.upper()}_ts_new_____ TIMESTAMP "
+                cursor.execute(sql_alter)
+                sql_populate = f"UPDATE  {self.sfkl_name} set {d.upper()}_ts_new_____ = to_timestamp({d.upper()}) "
+                cursor.execute(sql_populate)
+                sql_drop = f"ALTER TABLE  {self.sfkl_name} drop column {d.upper()}"
+                cursor.execute(sql_drop)
+                sql_rename = f"ALTER TABLE {self.sfkl_name} rename column {d.upper()}_ts_new_____ TO  {d.upper()}"
+                cursor.execute(sql_rename)
+
+        logger.info('Successfully converted timestamp/datetime columns...')
 
     def _clean_table(self):
         with self.sfkl_connector as connector:
@@ -148,12 +198,23 @@ class SnowflakeGeoWriter:
             if isfile(f):
                 remove(f)
 
+    def _remove_geo_col(self):
+        with self.sfkl_connector as connector:
+            conn = connector.get_connection()
+            conn.cursor().execute(
+                f"""
+                ALTER TABLE {self.sfkl_name} 
+                DROP COLUMN {self.sfkl_geo_col_name}
+                """
+                )
+
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         self._clean_staging()
         self._remove_tmp_files()
+
 
     def _create_cols_str_not_geo(self):
 
@@ -267,6 +328,13 @@ class SnowflakeGeoWriter:
         with self.sfkl_connector as connector:
             conn = connector.get_connection()
             conn.cursor().execute(query_insert_into) 
+
+        if not self.is_geo:
+            self._remove_geo_col()
+            logger.debug(f'Successfully removed dummy {self.sfkl_geo_col_name} column..')
+
+
+        self._recover_datetimes()
 
         with self.sfkl_connector as connector:
             conn = connector.get_connection()
