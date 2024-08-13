@@ -59,7 +59,8 @@ def get_centroid_gpd(shp: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
     shp_centroid = gpd.GeoDataFrame( 
         df_with_lat_lng,
-        geometry = gpd.points_from_xy(df_with_lat_lng.lng, df_with_lat_lng.lat)
+        geometry = gpd.points_from_xy(df_with_lat_lng.lng, df_with_lat_lng.lat),
+        crs=shp.crs
     )
 
     return shp_centroid
