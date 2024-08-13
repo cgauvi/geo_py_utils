@@ -23,4 +23,4 @@ BASIC_POLY_4326 = BASIC_POLY_NO_CRS.set_crs(4326)
 def test_get_centroid_gpd(shp):
 
     centroid = get_centroid_gpd(shp)
-    assert centroid.crs = shp.crs
+    assert centroid.crs == shp.crs
