@@ -1,5 +1,13 @@
 ================== 
 
+geo_py_utils 1.7.4
+
+- patch:
+    * fixed `DownloadQcDissolvedAdmReg` to make sure we really retrieve all 17 unique administrative regions + works when merging with OPUS data mapping. 
+ 
+
+================== 
+
 geo_py_utils 1.7.3
 
 - patch:
@@ -17,7 +25,7 @@ geo_py_utils 1.7.2
 geo_py_utils 1.7.1
 
 - patch:
-    * fixed the `SnowflakeGeoWriter` date cast: allo variable names with spaces
+    * fixed the `SnowflakeGeoWriter` date cast: allow variable names with spaces
 
 ================== 
 

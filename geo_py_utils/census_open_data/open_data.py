@@ -263,6 +263,8 @@ class DownloadQcDissolvedAdmReg(DownloadQcAdmBoundaries):
                 "Côte-Nord": "CÔTE-NORD", 
                 "Estrie": "ESTRIE", 
                 "Gaspésie--Îles-de-la-Madeleine": "GASPÉSIE/ÎLES-DE-LA-MADELAINE", # watch out with the names ... some characters are different from raw data when reading in with fiona
+                "Gaspésie-Îles-de-la-Madeleine": "GASPÉSIE/ÎLES-DE-LA-MADELAINE",
+                "Gaspésie–Îles-de-la-Madeleine": "GASPÉSIE/ÎLES-DE-LA-MADELAINE",
                 "Lanaudière" :  "LANAUDIÈRE",
                 "Laurentides": "LAURENTIDES"  ,
                 "Laval":"LAVAL" ,
@@ -271,12 +273,15 @@ class DownloadQcDissolvedAdmReg(DownloadQcAdmBoundaries):
                 "Montérégie":  "MONTÉRÉGIE" , 
                 "Nord-du-Québec": None,
                 "Outaouais": "OUTAOUAIS" ,
-                "Saguenay--Lac-Saint-Jean" :  "SAGUENAY LAC ST-JEAN" # also watch out for -- here - like Iles de la Madelaine above
+                "Saguenay--Lac-Saint-Jean" :  "SAGUENAY LAC ST-JEAN", # also watch out for -- here - like Iles de la Madelaine above
+                "Saguenay-Lac-Saint-Jean" :  "SAGUENAY LAC ST-JEAN" ,
+                "Saguenay–Lac-Saint-Jean":  "SAGUENAY LAC ST-JEAN" 
         }
 
     def __init__(self,
                 data_download_path=join(DATA_DIR, 'qc_adm_regions'),
-                path_cache_root=join(DATA_DIR, "cache")
+                path_cache_root=join(DATA_DIR, "cache"),
+                add_opus_region_names=False
                 ) :
 
         super().__init__(DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MRC , data_download_path)
@@ -284,6 +289,7 @@ class DownloadQcDissolvedAdmReg(DownloadQcAdmBoundaries):
         self.path_cache_root = path_cache_root
         self.path_cache = join(self.path_cache_root, "qc_adm_regions_ADM_REG_DISSOLVED_17.parquet")
         self.raw_data = None
+        self.add_opus_region_names = add_opus_region_names
 
     def _create_dict_mapping(self) -> dict:
             """Create the hardcoded dict to map values from the official boundary files to the opus data
@@ -326,8 +332,12 @@ class DownloadQcDissolvedAdmReg(DownloadQcAdmBoundaries):
             reset_index()
 
         # Map the opus values
-        df_mapping = self._create_dict_mapping()
-        shp_mrc_dissolved_merged = shp_mrc_dissolved.merge(df_mapping, on=DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_ID_COL)
+        if self.add_opus_region_names:
+            logger.info('Adding the OPUS region names ... ')
+            df_mapping = self._create_dict_mapping()
+            shp_mrc_dissolved_merged = shp_mrc_dissolved.merge(df_mapping, on=DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_ID_COL, how='left')
+        else:
+            shp_mrc_dissolved_merged = shp_mrc_dissolved
 
         return shp_mrc_dissolved_merged
 

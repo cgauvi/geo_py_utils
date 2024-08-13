@@ -1,6 +1,7 @@
 import numpy as np
 from os import makedirs
 from os.path import join
+import re
 from requests.exceptions import RequestException
 
 from geo_py_utils.utilities_testing.mock_tmp_cache import MockTmpCache
@@ -21,7 +22,8 @@ DICT_CHECK_NUM_RECORDS = {
             DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ARROND: 41
     }
 
-
+NUM_UNIQUE_OPUS = len(set([v  for v  in DownloadQcDissolvedAdmReg.DICT_MAPPING.values() if v is not None]))
+NUM_UNIQUE_ADM_REGIONS = len(set([re.sub('[-–]','',s) for s in DownloadQcDissolvedAdmReg.DICT_MAPPING.keys()]))
 
 class MockCacheOpenData(MockTmpCache):
     """Class to manually implement unittest.patch which never actually works
@@ -66,18 +68,34 @@ def test_qc_city_bbox():
     assert dict_bbox['min_lng'] < dict_bbox['max_lng']
 
 
-def test_admRegs_dissolved():
+def test_admRegs_dissolved_no_opus():
+    # Need to separate test_admRegs_dissolved_no_opus_all and test_admRegs_dissolved_with_opus: otherwise we will use the same cached file (which is undesirable)
+    try:
+        with MockCacheOpenData() as mocked:
+            shp_admReg_no_opus = mocked.download_adm_bound_dissolved()
+            assert shp_admReg_no_opus.shape[0] == NUM_UNIQUE_ADM_REGIONS, 'Fatal error! incorrect number of unique regions'
+            assert np.all(np.isin(DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_ID_COL, shp_admReg_no_opus.columns))
+            assert shp_admReg_no_opus.groupby(DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_CODE_COL)[DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_CODE_COL].size().sum() == NUM_UNIQUE_ADM_REGIONS , 'Fatal error! some regions are repeated '
+
+    except RequestException as e:
+        print(f'Error (potentially with network): {e} - skipping test')
+
+
+def test_admRegs_dissolved_with_opus():
 
     try:
         with MockCacheOpenData() as mocked:
-            shp_admReg = mocked.download_adm_bound_dissolved()
+            shp_admReg_with_opus = mocked.download_adm_bound_dissolved(add_opus_region_names=True)
 
-            assert shp_admReg.shape[0] == 15
+            assert shp_admReg_with_opus.shape[0] == NUM_UNIQUE_ADM_REGIONS, 'Fatal error! left join fails '
+            assert np.all(np.isin([DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_ID_COL, 'DOMAINE_OPUS'], shp_admReg_with_opus.columns))
+            assert shp_admReg_with_opus.groupby(DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_CODE_COL)[DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_CODE_COL].size().sum() == NUM_UNIQUE_ADM_REGIONS
 
-            assert np.all(np.isin([DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_ID_COL, 'DOMAINE_OPUS'], shp_admReg.columns))
+            
+            assert shp_admReg_with_opus.groupby('DOMAINE_OPUS')['DOMAINE_OPUS'].size().sum()  == NUM_UNIQUE_OPUS
 
     except RequestException as e:
-        print(f'Error with network: {e} - skipping test')
+        print(f'Error (potentially with network): {e} - skipping test')
 
 
 def test_boroughs():
@@ -136,4 +154,4 @@ def test_qa_adm_boundaries():
 
 
 if __name__ == '__main__':
-    test_admRegs_dissolved()
+    test_admRegs_dissolved_with_opus()
