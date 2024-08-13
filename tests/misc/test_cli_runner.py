@@ -1,10 +1,12 @@
 
-from pathlib import Path, PurePosixPath, WindowsPath
+import json
 from os import path
+from pathlib import Path, PurePosixPath, WindowsPath
 import pytest
 import sys
 
 from geo_py_utils.misc.cli_runner import CLIRunner
+from geo_py_utils.constants import ProjectPaths
 
 @pytest.mark.windows_specific
 def test_powershell_envvars():
@@ -28,7 +30,7 @@ def test_gitbash_fails_wrong_call():
             CLIRunner(use_bash=True).run_cmd(WindowsPath(success_script_path))
 
 @pytest.mark.windows_specific
-def test_gitbash_capture_stderr():
+def test_gitbash_catch_exception():
     if 'win' in sys.platform:
         try:
             error_script_path = Path(path.dirname(__file__ )) / 'error.sh'
@@ -41,9 +43,11 @@ def test_gitbash_capture_stderr():
 def test_gitbash_capture_stdout_windows():
 
     if 'win' in sys.platform:
+ 
         success_script_path = Path(path.dirname(__file__ )) / 'success.sh'
 
-        str_return = CLIRunner(use_bash=True, capture_std_out=True).run_cmd(PurePosixPath(success_script_path))
+        dict_return = CLIRunner(use_bash=True, capture_std_out=True).run_cmd(PurePosixPath(success_script_path))
+        str_return = json.loads(dict_return)['out'] # dict_return is a json string
         assert str_return.strip() == 'Success!'
 
         assert CLIRunner(use_bash=True).run_cmd(PurePosixPath(success_script_path)) is None
@@ -56,9 +60,25 @@ def test_gitbash_capture_stdout_linux():
     if 'win' not in sys.platform:
         success_script_path = Path(path.dirname(__file__ )) / 'success.sh'
 
-        str_return = CLIRunner(use_bash=True, capture_std_out=True).run_cmd(success_script_path)
+        dict_return = CLIRunner(use_bash=True, capture_std_out=True).run_cmd(success_script_path)
+        str_return = json.loads(dict_return)['out'] # dict_return is a json string
         assert str_return.strip() == 'Success!'
         assert CLIRunner(use_bash=True).run_cmd(success_script_path) is None
 
 
- 
+def test_multiline_statement_works_os_agnostic():
+
+
+    multiline_cmd = f'echo {PurePosixPath(ProjectPaths.PATH_PROJET_ROOT)}'
+    multiline_cmd += """
+     | 
+    awk -F  '/' '{print $NF}'
+    """
+    
+    # Print `misc` in `geo_py_utils\tests\misc`
+    out_mess = json.loads(CLIRunner(use_bash=True, capture_std_out=True).run_cmd(multiline_cmd))['out'].strip()
+    assert out_mess == 'geo_py_utils'
+       
+
+if __name__ == '__main__':
+    test_multiline_statement_works_os_agnostic()

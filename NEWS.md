@@ -1,4 +1,9 @@
+================== 
 
+geo_py_utils 1.7.2
+
+- path:
+    * fixed the `CLIRunner ` will now return error messages aong with std out in a json parsable text format
 ================== 
 
 geo_py_utils 1.7.1
