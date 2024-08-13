@@ -69,7 +69,7 @@ def test_gitbash_capture_stdout_linux():
 def test_multiline_statement_works_os_agnostic():
 
 
-    multiline_cmd = f'echo {ProjectPaths.PATH_PROJET_ROOT}'
+    multiline_cmd = f'echo {PurePosixPath(ProjectPaths.PATH_PROJET_ROOT)}'
     multiline_cmd += """
      | 
     awk -F  '/' '{print $NF}'
