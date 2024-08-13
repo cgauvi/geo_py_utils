@@ -54,8 +54,12 @@ class SnowflakeAEConnection(SnowflakeAbstractConnection):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if self.snowflake_wrapper and self.snowflake_wrapper.get_connection():
-            self.close_connection()
+        try:
+            if self.snowflake_wrapper and self.snowflake_wrapper.get_connection():
+                self.close_connection()
+                self.get_connection().close()
+        except Exception as e:
+            logger.debug(f'Error closing AE cursor + connection - {str(e)}')
 
     def close_connection(self):
         self.snowflake_wrapper.close_connection()

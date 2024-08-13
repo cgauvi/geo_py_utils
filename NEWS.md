@@ -1,14 +1,22 @@
 ================== 
 
+geo_py_utils 1.7.3
+
+- patch:
+    * fixed `SnowflakeExternalBrowserConnection` and `SnowflakeAEConnection`: close the connection in the context manager. 
+    * geopandas < 1.0.0 added as dependency
+
+================== 
+
 geo_py_utils 1.7.2
 
-- path:
+- patch:
     * fixed the `CLIRunner ` will now return error messages aong with std out in a json parsable text format
 ================== 
 
 geo_py_utils 1.7.1
 
-- path:
+- patch:
     * fixed the `SnowflakeGeoWriter` date cast: allo variable names with spaces
 
 ================== 
