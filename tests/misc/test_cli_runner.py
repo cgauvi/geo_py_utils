@@ -6,6 +6,7 @@ import pytest
 import sys
 
 from geo_py_utils.misc.cli_runner import CLIRunner
+from geo_py_utils.constants import ProjectPaths
 
 @pytest.mark.windows_specific
 def test_powershell_envvars():
@@ -59,19 +60,25 @@ def test_gitbash_capture_stdout_linux():
     if 'win' not in sys.platform:
         success_script_path = Path(path.dirname(__file__ )) / 'success.sh'
 
-        str_return = CLIRunner(use_bash=True, capture_std_out=True).run_cmd(success_script_path)
+        dict_return = CLIRunner(use_bash=True, capture_std_out=True).run_cmd(success_script_path)
+        str_return = json.loads(dict_return)['out'] # dict_return is a json string
         assert str_return.strip() == 'Success!'
         assert CLIRunner(use_bash=True).run_cmd(success_script_path) is None
 
 
 def test_multiline_statement_works_os_agnostic():
 
-    multiline_cmd = """
-    pwd | 
-    awk -F  '/' '/1/ {print $NF}'
+
+    multiline_cmd = f'echo {ProjectPaths.PATH_PROJET_ROOT}'
+    multiline_cmd += """
+     | 
+    awk -F  '/' '{print $NF}'
     """
     
     # Print `misc` in `geo_py_utils\tests\misc`
     out_mess = json.loads(CLIRunner(use_bash=True, capture_std_out=True).run_cmd(multiline_cmd))['out'].strip()
-    assert out_mess == 'misc'
+    assert out_mess == 'geo_py_utils'
        
+
+if __name__ == '__main__':
+    test_multiline_statement_works_os_agnostic()

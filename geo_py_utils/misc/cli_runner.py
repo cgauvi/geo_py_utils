@@ -96,7 +96,7 @@ class CLIRunner:
         """
 
         # Multiline statements converted to single line:more robust 
-        cmd="".join(cmd.splitlines())
+        cmd="".join(str(cmd).splitlines())
 
         if 'win' in sys.platform:
             if self.use_bash:
