@@ -71,13 +71,15 @@ def test_admRegs_dissolved():
     try:
         with MockCacheOpenData() as mocked:
             shp_admReg = mocked.download_adm_bound_dissolved()
+            assert shp_admReg.shape[0] == 17
+            assert np.all(np.isin(DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_ID_COL, shp_admReg_with_opus.columns))
 
-            assert shp_admReg.shape[0] == 15
-
-            assert np.all(np.isin([DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_ID_COL, 'DOMAINE_OPUS'], shp_admReg.columns))
+            shp_admReg_with_opus = mocked.download_adm_bound_dissolved(add_opus_region_names=True)
+            assert shp_admReg_with_opus.shape[0] == 17
+            assert np.all(np.isin([DownloadQcDissolvedAdmReg.ADM_REG_DISSOLVE_ID_COL, 'DOMAINE_OPUS'], shp_admReg_with_opus.columns))
 
     except RequestException as e:
-        print(f'Error with network: {e} - skipping test')
+        print(f'Error (potentially with network): {e} - skipping test')
 
 
 def test_boroughs():
