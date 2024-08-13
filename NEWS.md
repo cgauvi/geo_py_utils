@@ -1,5 +1,13 @@
 ================== 
 
+geo_py_utils 1.7.5
+
+- patch:
+    * fixed `get_centroid_gpd` to make sure we recover the appropriate crs from the original geodf when possible.
+ 
+
+================== 
+
 geo_py_utils 1.7.4
 
 - patch:
