@@ -29,7 +29,7 @@ def test_gitbash_fails_wrong_call():
             CLIRunner(use_bash=True).run_cmd(WindowsPath(success_script_path))
 
 @pytest.mark.windows_specific
-def test_gitbash_capture_stderr():
+def test_gitbash_catch_exception():
     if 'win' in sys.platform:
         try:
             error_script_path = Path(path.dirname(__file__ )) / 'error.sh'
@@ -64,4 +64,14 @@ def test_gitbash_capture_stdout_linux():
         assert CLIRunner(use_bash=True).run_cmd(success_script_path) is None
 
 
- 
+def test_multiline_statement_works_os_agnostic():
+
+    multiline_cmd = """
+    pwd | 
+    awk -F  '/' '/1/ {print $NF}'
+    """
+    
+    # Print `misc` in `geo_py_utils\tests\misc`
+    out_mess = json.loads(CLIRunner(use_bash=True, capture_std_out=True).run_cmd(multiline_cmd))['out'].strip()
+    assert out_mess == 'misc'
+       

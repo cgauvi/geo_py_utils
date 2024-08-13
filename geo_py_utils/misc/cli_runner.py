@@ -4,8 +4,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
-from typing import Union
-
+ 
 from geo_py_utils.misc.constants import DEFAULT_GIT_BASH_PATH
 
  
@@ -82,7 +81,7 @@ class CLIRunner:
             raise FileNotFoundError(strerror=f'Fatal error! gitbash not found at path {self.git_bash_path}')
 
 
-    def run_cmd(self, cmd: str) -> Union[CLIStdErrOut,None]:
+    def run_cmd(self, cmd: str) -> CLIStdErrOut:
         """
         Run the CLI command
 
@@ -93,8 +92,11 @@ class CLIRunner:
             ValueError: _description_
 
         Returns:
-            output if `capture_std_out=True`
+            json text with keys `out` and `err`. `out`/`err` is null if `capture_std_out=False`/`capture_std_err=False`
         """
+
+        # Multiline statements converted to single line:more robust 
+        cmd="".join(cmd.splitlines())
 
         if 'win' in sys.platform:
             if self.use_bash:
