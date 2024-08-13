@@ -1,4 +1,5 @@
 import logging
+import json
 import re
 import sys
 
@@ -41,7 +42,7 @@ def ogr2ogr_windows_wrapper(orig_ogr_cmd: str):
 
         # Get the path (which can change depending on the virtual env used or not and wheter it is activated or not)
         # Particularly important if we run subcomands in subshells
-        path_ogr_powershell = CLIRunner(use_bash=False, capture_std_out=True).run_cmd('(get-command ogr2ogr).Path').strip()
+        path_ogr_powershell = json.loads(CLIRunner(use_bash=False, capture_std_out=True).run_cmd('(get-command ogr2ogr).Path'))['out'].strip()
         if path_ogr_powershell is None or len(path_ogr_powershell) == 0:
             raise RuntimeError('Fatal error! could not run (get-command ogr2ogr).Path')
         orig_ogr_cmd_stripped = re.sub('ogr2ogr', '', orig_ogr_cmd, count=1,flags=re.IGNORECASE)
