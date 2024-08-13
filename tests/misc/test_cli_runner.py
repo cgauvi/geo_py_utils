@@ -1,6 +1,7 @@
 
-from pathlib import Path, PurePosixPath, WindowsPath
+import json
 from os import path
+from pathlib import Path, PurePosixPath, WindowsPath
 import pytest
 import sys
 
@@ -41,9 +42,11 @@ def test_gitbash_capture_stderr():
 def test_gitbash_capture_stdout_windows():
 
     if 'win' in sys.platform:
+ 
         success_script_path = Path(path.dirname(__file__ )) / 'success.sh'
 
-        str_return = CLIRunner(use_bash=True, capture_std_out=True).run_cmd(PurePosixPath(success_script_path))
+        dict_return = CLIRunner(use_bash=True, capture_std_out=True).run_cmd(PurePosixPath(success_script_path))
+        str_return = json.loads(dict_return)['out'] # dict_return is a json string
         assert str_return.strip() == 'Success!'
 
         assert CLIRunner(use_bash=True).run_cmd(PurePosixPath(success_script_path)) is None

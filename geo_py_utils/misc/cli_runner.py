@@ -1,9 +1,30 @@
-from pathlib import Path
+
 import distutils.spawn
+import json
+from pathlib import Path
 import subprocess
 import sys
+from typing import Union
 
 from geo_py_utils.misc.constants import DEFAULT_GIT_BASH_PATH
+
+ 
+class CLIStdErrOut:
+    """
+    Basic class to provide backward compatibility when priting the results of CLIRunner().run_cmd()
+
+    Attributes:
+        errs (str, optional): output of stderrr. Defaults to None
+        outs (str, optional): output of stdout. Defaults to None
+    """
+    def __new__(cls, err: str = None, out: str = None):
+        if err is None and out is None:
+            return None
+        
+        obj = json.dumps({'out': out , 'err': err})
+        return obj 
+
+
 
 class CLIRunner:
 
@@ -21,7 +42,7 @@ class CLIRunner:
     Very finicky so not used by default. Works when calling scripts (.sh files) - e.g. 
     -  `WindowsBashRunner(use_bash=True).run_cmd(Path(path.dirname(__file__ )) / 'success.sh')`
 
-    Args:
+    Attributes:
         git_bash_path (Path, optional): _description_. Defaults to DEFAULT_GIT_BASH_PATH.
         use_bash (bool, optional): Use git bash if True, else powershell. Defaults to True.
         capture_std_out (bool, optional): Will return a string if true representing output, else prints to stdout. Defaults to False.
@@ -61,7 +82,7 @@ class CLIRunner:
             raise FileNotFoundError(strerror=f'Fatal error! gitbash not found at path {self.git_bash_path}')
 
 
-    def run_cmd(self, cmd: str) -> str:
+    def run_cmd(self, cmd: str) -> Union[CLIStdErrOut,None]:
         """
         Run the CLI command
 
@@ -122,17 +143,36 @@ class CLIRunner:
             else:
                 raise ValueError(f'Fatal error trying to run  {sys.platform} cmd `{cmd}` with shell {shell_name}')
 
-        return outs
+        return CLIStdErrOut(out=outs,err=errs)
 
 if __name__ == '__main__':
 
+    # %%
     if 'win' in sys.platform:
-        str_out=CLIRunner(use_bash=False, capture_std_out=True).run_cmd(f" ls {Path(__file__)}")
-        CLIRunner(use_bash=False).run_cmd(" ls .")
+        rez=CLIRunner(use_bash=False, capture_std_out=True).run_cmd(f" ls {Path(__file__)}")
+       
+        print(
+            f'''
+            Results of printing entire results of `ls .`
+            {CLIRunner(use_bash=False).run_cmd(" ls .") }  
+            '''
+        )
+        
 
-        str_out=CLIRunner(capture_std_out=True).run_cmd(f" ls '{Path(__file__)}'")
-        CLIRunner().run_cmd(" ls .")
+        dict_out=CLIRunner(capture_std_out=True, capture_std_err=True).run_cmd(f" ls '{Path(__file__)}'")
+        str_out = json.loads(dict_out)['out']
+        str_err = json.loads(dict_out)['err']
+        print(
+          f'''
+            Results of printing entire results of `ls cli_runner.py`
+            out: {str_err}
+            err: {str_err}
+            '''
+        )
+
+
     elif 'linux' in sys.platform:
         str_out=CLIRunner(use_bash=False, capture_std_out=True).run_cmd(f" ls {Path(__file__)}")
         CLIRunner(use_bash=False).run_cmd(" ls .")
      
+# %%
