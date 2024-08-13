@@ -44,6 +44,3 @@ def test_conn_no_context_manager_persisted_connection():
 
     assert df_results.shape[0] > 0 , 'Fatal no results from sso connection - seems connection was unexpectedly closed!'
 
-
-if __name__ == '__main__':
-    test_conn_context_manager_proper()
