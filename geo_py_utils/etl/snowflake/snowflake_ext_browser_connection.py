@@ -37,7 +37,8 @@ class SnowflakeExternalBrowserConnection(SnowflakeAbstractConnection):
         self.db = os.environ['DB']
         self.schema = os.environ['SCHEMA']
 
-        self.conn = self._init_connection()
+        # Lazy eval
+        self.conn = None
 
 
     def __str__(self) -> str:
@@ -61,7 +62,11 @@ class SnowflakeExternalBrowserConnection(SnowflakeAbstractConnection):
                 cursor.execute(f"USE WAREHOUSE {self.warehouse}")
                 cursor.execute(f"USE DATABASE {self.db};")
                 cursor.execute(f"USE SCHEMA {self.schema};")
-        
+
+        # Set the actual connection
+        self.conn = conn
+
+
         return conn
 
 
@@ -81,13 +86,22 @@ class SnowflakeExternalBrowserConnection(SnowflakeAbstractConnection):
     def close_connection(self):
         try:
             self.conn.cursor().close()
-            self.conn.close()
         except Exception as e:
             logger.debug(f'Error closing cursor connection - {str(e)}')
+
+        try:
+            self.conn.close()
+        except Exception as e:
+            logger.debug(f'Error closing connection - {str(e)}')
             
 
         
     def get_connection(self) -> connection.SnowflakeConnection:
+
+        # Watch out with context manager: if we point to the same SnowflakeAbstractConnection after closing the connection we will return None
+        if self.conn is None:
+            self._init_connection()
+            
         return self.conn
      
     def __enter__(self):

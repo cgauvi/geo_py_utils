@@ -288,3 +288,6 @@ def test_datetime_formats_work_no_tz():
     for col in LIST_TIME_DELTA_COLS:
         assert str(pd.to_timedelta(df_round_trip[col]).dtype) == 'timedelta64[ns]'
  
+
+if __name__ == '__main__':
+    test_snowflake_types_and_crs_roundtrip_ext_browser()

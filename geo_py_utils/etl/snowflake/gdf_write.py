@@ -25,7 +25,11 @@ class SnowflakeGeoWriter:
     Uses SSO connection so cannot be used or tested automatically.
     Final sfkl table has a GEOGRAPHY column in 4326 
     Writes to M_DATA_SCIENCE.SANDBOX by default, but can be changed with `sfkl_connector` params
-    Context manager useful to clean up temp files and staging 
+    
+    Context manager useful to clean up temp files and staging. 
+        To avoid spawning multiple connections in each SnowflakeGeoWriter method, avoid using SnowflakeAbstractConnection context manager each time
+        Instead, use a single SnowflakeAbstractConnection instance for all tasks.
+        Close the SnowflakeAbstractConnection connection at the end (in SnowflakeGeoWriter.__exit__())
 
     Attributes:
         shp (gpd.GeoDataFrame): gdf to upload
@@ -152,11 +156,11 @@ class SnowflakeGeoWriter:
         if len(self.init_cols_ts) == 0:
             return
 
-        with self.sfkl_connector as connector:
-            conn = connector.get_connection()
+        connector = self.sfkl_connector 
+        conn = connector.get_connection()
 
-            for d in self.init_cols_ts:
-                cursor = conn.cursor()
+        for d in self.init_cols_ts:
+            with conn.cursor() as cursor:
                 sql_alter = f"ALTER TABLE  {self.sfkl_name} add column if not exists \"{d.upper()}_ts_new_____\" TIMESTAMP "
                 cursor.execute(sql_alter)
                 sql_populate = f"UPDATE  {self.sfkl_name} set \"{d.upper()}_ts_new_____\" = to_timestamp(\"{d.upper()}\") "
@@ -169,25 +173,29 @@ class SnowflakeGeoWriter:
         logger.info('Successfully converted timestamp/datetime columns...')
 
     def _clean_table(self):
-        with self.sfkl_connector as connector:
-            conn = connector.get_connection()
-            tbl_exists = table_exists(conn, self.sfkl_name)
+        connector = self.sfkl_connector 
+        conn = connector.get_connection()
+        
+        tbl_exists = table_exists(conn, self.sfkl_name)
 
-            if tbl_exists:
-                logger.info(f"Table {self.sfkl_name} already exists -> deleting")
-                conn.cursor().execute(f"DROP TABLE {self.sfkl_name}")
-            else:
-                logger.info(f"Table {self.sfkl_name} does not exist")
+        if tbl_exists:
+            logger.info(f"Table {self.sfkl_name} already exists -> deleting")
+            with conn.cursor() as cursor:
+                cursor.execute(f"DROP TABLE {self.sfkl_name}")
+        else:
+            logger.info(f"Table {self.sfkl_name} does not exist")
 
     def _clean_staging(self):
-        with self.sfkl_connector as connector:
-            conn = connector.get_connection()
-            conn.cursor().execute(f"DROP STAGE IF EXISTS {self.sfkl_name}")
+        connector = self.sfkl_connector
+        conn = connector.get_connection()
+        with conn.cursor() as cursor:
+            cursor.execute(f"DROP STAGE IF EXISTS {self.sfkl_name}")
     
     def _create_staging(self):
-        with self.sfkl_connector as connector:
-            conn = connector.get_connection()
-            conn.cursor().execute(f"CREATE OR REPLACE stage {self.sfkl_name}")
+        connector = self.sfkl_connector
+        conn = connector.get_connection()
+        with conn.cursor() as cursor:
+            cursor.execute(f"CREATE OR REPLACE stage {self.sfkl_name}")
     
     def _remove_tmp_files(self):
 
@@ -199,14 +207,15 @@ class SnowflakeGeoWriter:
                 remove(f)
 
     def _remove_geo_col(self):
-        with self.sfkl_connector as connector:
-            conn = connector.get_connection()
-            conn.cursor().execute(
+        connector = self.sfkl_connector
+        conn = connector.get_connection()
+        with conn.cursor() as cursor:
+            cursor.execute(
                 f"""
                 ALTER TABLE {self.sfkl_name} 
                 DROP COLUMN {self.sfkl_geo_col_name}
                 """
-                )
+        )
 
     def __enter__(self):
         return self
@@ -214,6 +223,7 @@ class SnowflakeGeoWriter:
     def __exit__(self, exc_type, exc_value, traceback):
         self._clean_staging()
         self._remove_tmp_files()
+        self.sfkl_connector.close_connection()
 
 
     def _create_cols_str_not_geo(self):
@@ -249,9 +259,10 @@ class SnowflakeGeoWriter:
             STRING_QUOTING="ALWAYS"
         )
 
-        with self.sfkl_connector as connector:
-            conn = connector.get_connection()
-            conn.cursor().execute(f"put file://{self.local_tmp_file_path}.csv @{self.sfkl_name};")
+        connector=self.sfkl_connector
+        conn = connector.get_connection()
+        with conn.cursor() as cursor:
+            cursor.execute(f"put file://{self.local_tmp_file_path}.csv @{self.sfkl_name};")
 
         if not self.keep_tmp_local_files:
             self._remove_tmp_files()
@@ -265,9 +276,9 @@ class SnowflakeGeoWriter:
             iloc[:num_rows_safe].\
             drop(columns=self.geom_col_name)
 
-        with self.sfkl_connector as connector:
-            conn = connector.get_connection()
-            write_pandas(
+        connector= self.sfkl_connector
+        conn = connector.get_connection()
+        write_pandas(
                 conn=conn,  
                 df=data_subset_for_auto_type_inference, 
                 table_name=self.sfkl_name, 
@@ -275,8 +286,9 @@ class SnowflakeGeoWriter:
                 database=conn.database, 
                 overwrite=True
             )
-            conn.cursor().execute(f"TRUNCATE table {self.sfkl_name} ") # flush the table 
-            conn.cursor().execute(f"ALTER TABLE {self.sfkl_name} ADD COLUMN {self.sfkl_geo_col_name} GEOGRAPHY")  # add the GEOGRAPHY
+        with conn.cursor() as cursor:
+            cursor.execute(f"TRUNCATE table {self.sfkl_name} ") # flush the table 
+            cursor.execute(f"ALTER TABLE {self.sfkl_name} ADD COLUMN {self.sfkl_geo_col_name} GEOGRAPHY")  # add the GEOGRAPHY
 
 
     def create_table(self):
@@ -285,16 +297,16 @@ class SnowflakeGeoWriter:
         """
 
         # Check if table already exists
-        with self.sfkl_connector as connector:
-            conn = connector.get_connection()
-            tbl_exists = table_exists(conn, self.sfkl_name)
+        connector=self.sfkl_connector
+        conn = connector.get_connection()
+        tbl_exists = table_exists(conn, self.sfkl_name)
 
         if tbl_exists and not self.overwrite_tbl:
             logger.info(f'Table {self.sfkl_name} already exists! appending .. ')
-            with self.sfkl_connector as connector:
-                conn = connector.get_connection()
-                df_num=pd.read_sql(  f'select count(*) NUM from {self.sfkl_name}', conn )
-                n_before = df_num.NUM.values[0]
+            connector= self.sfkl_connector 
+            conn = connector.get_connection()
+            df_num=pd.read_sql(  f'select count(*) NUM from {self.sfkl_name}', conn )
+            n_before = df_num.NUM.values[0]
         else: 
             logger.info(f'Table {self.sfkl_name} does not exist: creating new table .. ')
             n_before = 0
@@ -309,10 +321,11 @@ class SnowflakeGeoWriter:
         # Essential to set separator, quoting and other details to ensure data is read in correctly
         str_format_query = self._create_file_format_str()
 
-        with self.sfkl_connector as connector:
-            conn = connector.get_connection()
-            conn.cursor().execute(str_format_query) 
-            conn.cursor().execute("ALTER SESSION SET GEOGRAPHY_OUTPUT_FORMAT  = 'WKT'") 
+        connector = self.sfkl_connector
+        conn = connector.get_connection()
+        with conn.cursor() as cursor:
+            cursor.execute(str_format_query) 
+            cursor.execute("ALTER SESSION SET GEOGRAPHY_OUTPUT_FORMAT  = 'WKT'") 
 
         # Create the insert into select .. statement based on the custom myformat defined above
         select_cols_str = self._create_cols_str_not_geo()
@@ -325,21 +338,21 @@ class SnowflakeGeoWriter:
             f"FROM @{self.sfkl_name} (file_format => 'myformat') as t; "
             )
         
-        with self.sfkl_connector as connector:
-            conn = connector.get_connection()
-            conn.cursor().execute(query_insert_into) 
+        connector = self.sfkl_connector
+        conn = connector.get_connection()
+        with conn.cursor() as cursor:
+            cursor.execute(query_insert_into) 
 
         if not self.is_geo:
             self._remove_geo_col()
             logger.debug(f'Successfully removed dummy {self.sfkl_geo_col_name} column..')
 
-
         self._recover_datetimes()
 
-        with self.sfkl_connector as connector:
-            conn = connector.get_connection()
-            df_num=pd.read_sql(  f'select count(*) NUM from {self.sfkl_name}', conn )
-            n_after = df_num.NUM.values[0]
+        connector = self.sfkl_connector
+        conn = connector.get_connection()
+        df_num=pd.read_sql(  f'select count(*) NUM from {self.sfkl_name}', conn )
+        n_after = df_num.NUM.values[0]
 
         logger.info(f'Successfully wrote {n_after-n_before} row to table {self.sfkl_name} on snowflake {self.sfkl_connector}')
 
