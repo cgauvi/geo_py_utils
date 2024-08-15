@@ -22,6 +22,7 @@ def create_local_spatialite(
         ):
     
     if overwrite and os.path.exists(db_name):
+        os.chmod(db_name, 0o777)
         os.remove(db_name)
 
     if promote_to_multi:
@@ -89,13 +90,15 @@ def upload_regular_csv_db(
     df = shp_init.\
         drop(columns=QcCityTestData.SPATIAL_LITE_TBL_GEOMETRY_COL_NAME.lower()).\
         sample(n=min(10, shp_init.shape[0]))
+    
+    conn= sqlite3.connect(db_name)
+    df.to_sql(tbl_name_csv, conn)
+    conn.close()
 
-    with sqlite3.connect(db_name) as conn:
-        df.to_sql(tbl_name_csv, conn)
-
+    
     logger.info(f'Writing table {tbl_name_init} to db {db_name}')
 
     
 
 if __name__== '__main__':
-    create_local_spatialite()
+    upload_regular_csv_db()

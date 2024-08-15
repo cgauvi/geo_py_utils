@@ -1,12 +1,14 @@
 
-    
-from os.path import exists
+from contextlib import closing
 import logging
-from typing import Union, List
-import pandas as pd
-import sqlite3
-from pathlib import Path
 import numpy as np 
+from os.path import exists
+import pandas as pd
+from pathlib import Path
+import sqlite3
+from typing import Union, List
+
+
 
 logger = logging.getLogger(__file__)
   
@@ -63,17 +65,21 @@ def promote_multi(db_name: Union[Path, str],
     except Exception as e:
         logger.warning(f'Error in promote_multi getting geom type before - {e}')
 
-    with sqlite3.connect(db_name) as con:
+    # https://discuss.python.org/t/implicitly-close-sqlite3-connections-with-context-managers/33320/6
+    with closing(sqlite3.connect(db_name)) as con, con:
+
         con.enable_load_extension(True)
         con.load_extension("mod_spatialite")
-         
+            
         # Now update the tabe and actually fill the geometry
         query_update = f"UPDATE {tbl_name} " \
-                f" SET {geometry_name} = CastToMulti({tbl_name}.{geometry_name})  "  
-            
-        c = con.cursor()
-        c.execute(query_update)
-        con.commit()
+                    f" SET {geometry_name} = CastToMulti({tbl_name}.{geometry_name})  "  
+                
+    
+        con.execute(query_update)
+ 
+
+    con.close()
 
     # Safey get geom after
     geom_after = "MIXED/ERROR"
@@ -110,9 +116,9 @@ def list_tables(db_name: Union[Path, str]) -> list:
     if exists(db_name):
         logger.info(f"DB {db_name} exists!")
 
-        with sqlite3.connect(db_name) as con:
+        with closing(sqlite3.connect(db_name)) as con, con:
             df_tbls = pd.read_sql("SELECT tbl_name FROM sqlite_master WHERE type = 'table';", con)
-
+        
         list_tables = df_tbls.tbl_name.values
     else:
         logger.info(f"DB {db_name} does not exists")
@@ -129,7 +135,7 @@ def execute_spatialite_cmd(db_name: Path, sql_cmd: str):
         sql_cmd (str): sql query
     """
 
-    with sqlite3.connect(db_name) as con:
+    with closing(sqlite3.connect(db_name)) as con, con:
 
         # avoid fuckups with utf 
         # https://stackoverflow.com/questions/22751363/sqlite3-operationalerror-could-not-decode-to-utf-8-column
@@ -140,7 +146,6 @@ def execute_spatialite_cmd(db_name: Path, sql_cmd: str):
         con.load_extension("mod_spatialite")
 
         con.execute(sql_cmd)
-        con.commit()
 
 
 def sql_to_df(db_name: Union[Path, str], query: str) -> pd.DataFrame:
@@ -162,8 +167,8 @@ def sql_to_df(db_name: Union[Path, str], query: str) -> pd.DataFrame:
     if not exists(db_name):
         raise ValueError(f"Fatal error! Cannot run `sql_to_df`. {db_name} does not exist")
 
-    with sqlite3.connect(db_name) as conn:
-        df = pd.read_sql(query, conn)
+    with closing(sqlite3.connect(db_name)) as con, con:
+        df = pd.read_sql(query, con)
 
     return df
 
@@ -230,7 +235,7 @@ def get_table_geometries_classes(db_name: Union[Path, str], tbl_name: str, geom_
         np.array: unique classes - typically 1 or 2
     """
 
-    with sqlite3.connect(db_name) as con:
+    with closing(sqlite3.connect(db_name)) as con, con:
         con.enable_load_extension(True)
         con.load_extension("mod_spatialite") 
 
@@ -369,14 +374,13 @@ def is_spatial_index_enabled(db_name: str, tbl_name: str) -> bool:
     if tbl_name not in existing_tables:
         raise ValueError(f"Fatal error! {tbl_name} does not exist")
 
-    with sqlite3.connect(db_name) as con:
-
+    with closing(sqlite3.connect(db_name)) as con, con:
         # sqlite connection with extensions
         con.enable_load_extension(True)
         con.load_extension("mod_spatialite")
 
         df_geometry = pd.read_sql(f"SELECT spatial_index_enabled, f_table_name FROM geometry_columns WHERE f_table_name = '{tbl_name}' ", con) 
-
+    
     is_enabled = df_geometry['spatial_index_enabled'].values[0] == 1
 
     return is_enabled
@@ -397,7 +401,7 @@ def is_spatial_index_valid(db_name: str, tbl_name: str, geometry_name: str) -> b
     Returns:
         bool: True if no error, False (0) otherwise
     """
-    with sqlite3.connect(db_name) as con:
+    with closing(sqlite3.connect(db_name)) as con, con:
         con.enable_load_extension(True)
         con.load_extension("mod_spatialite")
 
@@ -409,7 +413,8 @@ def is_spatial_index_valid(db_name: str, tbl_name: str, geometry_name: str) -> b
             (df_results.shape[0] == 0) or \
             (df_results.is_spatial_idx_correct.values[0] is None) :
             raise ValueError(f"Fatal error {tbl_name}.{geometry_name} does not have an index")
-        
+ 
+
     return bool(df_results.is_spatial_idx_correct.values[0] == 1)
 
 
@@ -447,26 +452,21 @@ def drop_spatial_index(db_name: str,  tbl_name: str, geometry_name: str) -> None
         logger.info(f'Not running drop_spatial_index {db_name} does not exist')
         return 
 
-    with sqlite3.connect(db_name) as con:
+    with closing(sqlite3.connect(db_name)) as con, con:
         con.enable_load_extension(True)
         con.load_extension("mod_spatialite")
 
         try:
-            cur = con.cursor()
-            cur.execute(f" SELECT DisableSpatialIndex('{tbl_name}', '{geometry_name}'); ")
-            con.commit()
+            con.execute(f" SELECT DisableSpatialIndex('{tbl_name}', '{geometry_name}'); ")
         except Exception as e:
             logger.warning(f"Warning! Failed to drop spatial index on table {tbl_name} -> geometry {geometry_name} - {e}" )
 
         list_aux_tables_to_drop = ['','_rowid', '_node', '_parent']
         for suffix in list_aux_tables_to_drop:
             try:
-                cur.execute(f"DROP TABLE IF EXISTS idx_{tbl_name}_{geometry_name}{suffix}")
-                con.commit()
+                con.execute(f"DROP TABLE IF EXISTS idx_{tbl_name}_{geometry_name}{suffix}")
             except Exception as e:
                 logger.warning(f"Warning! Failed to drop table idx_{tbl_name}_{geometry_name}{suffix} - {e}" )
-
-
 
 
   
@@ -482,15 +482,16 @@ def drop_table(db_name: Union[Path, str], tbl_name: str):
     if not exists(db_name):
         logger.info(f'Not running drop_table {db_name} does not exist')
         return 
-
-    with sqlite3.connect(db_name, isolation_level=None) as conn:
+    
+    with closing(sqlite3.connect(db_name)) as con, con:
         try:
-            cursor = conn.cursor()
+            cursor = con.cursor()
             cursor.execute(f"DROP TABLE if exists {tbl_name}")
-            conn.commit()
+            con.commit()
         except Exception as e:
             logger.warning(f"Warning! Failed to drop table tbl_name - {e}" )
-
+    
+ 
 
 def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> None:
     """Remove the `tbl_name` record in the auxiliary `geometry_columns`, `vector_layers`, etc tables.
@@ -505,33 +506,25 @@ def drop_geometry_columns(db_name: str, tbl_name: str, geometry_name:str) -> Non
     if not exists(db_name):
         logger.info(f'Not running drop_geometry_columns {db_name} does not exist')
         return
-
-    with sqlite3.connect(db_name, isolation_level=None) as con:
+    
+    with closing(sqlite3.connect(db_name)) as con, con:
         con.enable_load_extension(True)
         con.load_extension("mod_spatialite")
 
         try:
-            cur = con.cursor()
-            cur.execute(f" SELECT DiscardGeometryColumn('{tbl_name}', '{geometry_name}'); ")
-            con.commit()
+            con.execute(f" SELECT DiscardGeometryColumn('{tbl_name}', '{geometry_name}'); ")
         except Exception as e:
             logger.warning(f"Warning! Failed to discard geometry on table {tbl_name} -> geometry {geometry_name} - {e}" )
 
-
         for t in ['geom_cols_ref_sys', 'geometry_columns']:
             try:
-                cur = con.cursor()
-                cur.execute(f"DELETE FROM {t} WHERE f_table_name = '{tbl_name}'; ")
-                con.commit()
+                con.execute(f"DELETE FROM {t} WHERE f_table_name = '{tbl_name}'; ")
             except Exception as e:
                 logger.warning(f"Warning! Failed to drop record from {t} for table {tbl_name} - {e}" )
 
-
         for suff in ['', '_auth', '_fields_info', '_statistics']:
             try:
-                cur = con.cursor()
-                cur.execute(f"DELETE FROM vector_layers{suff} WHERE table_name = '{tbl_name}'; ")
-                con.commit()
+                con.execute(f"DELETE FROM vector_layers{suff} WHERE table_name = '{tbl_name}'; ")
             except Exception as e:
                 logger.warning(f"Warning! Failed to drop record from vector_layers{suff} for table {tbl_name} - {e}" )
 
@@ -573,31 +566,24 @@ def rename_geom_column(
     # 2. Populate by copying from old geom
     # 3. Create an index (optional)
     # 4. Remove the old geom from the tbl + aux geometry columns
-    with sqlite3.connect(db_name, isolation_level=None) as con:
+    with closing(sqlite3.connect(db_name)) as con, con:
         con.enable_load_extension(True)
         con.load_extension("mod_spatialite")
     
-        cur = con.cursor()
+        con.execute(f"SELECT AddGeometryColumn('{tbl_name}', '{new_geom}', {srid}, '{geom_type}', 'XY', 0);")
 
-        cur.execute(f"SELECT AddGeometryColumn('{tbl_name}', '{new_geom}', {srid}, '{geom_type}', 'XY', 0);")
-        con.commit()
-        
         if cast_to_multi:
-            cur.execute(f'UPDATE {tbl_name} SET "{new_geom}" = CastToMulti("{old_geom}");')
+            con.execute(f'UPDATE {tbl_name} SET "{new_geom}" = CastToMulti("{old_geom}");')
         else:
-            cur.execute(f'UPDATE {tbl_name} SET "{new_geom}" = "{old_geom}";')
-        con.commit()
+            con.execute(f'UPDATE {tbl_name} SET "{new_geom}" = "{old_geom}";')
     
         if create_index:
-            cur.execute(f"SELECT CreateSpatialIndex('{tbl_name}', '{new_geom}');")
-            con.commit()
+            con.execute(f"SELECT CreateSpatialIndex('{tbl_name}', '{new_geom}');")
         
-        cur.execute(f"SELECT DiscardGeometryColumn('{tbl_name}', '{old_geom}');")
-        con.commit()
-
-        cur.execute(f"ALTER TABLE '{tbl_name}' DROP COLUMN '{old_geom}';")
-        con.commit()
+        con.execute(f"SELECT DiscardGeometryColumn('{tbl_name}', '{old_geom}');")
+        con.execute(f"ALTER TABLE '{tbl_name}' DROP COLUMN '{old_geom}';")
     
+
 
     logger.info(f'Successfully renamed column {old_geom} to {new_geom} in table {tbl_name}')
 
@@ -619,8 +605,8 @@ def rename_columns(db_name: str, tbl_name: str, dict_rename: dict) -> None:
 
     if len(get_table_column_names(db_name, tbl_name)) == 0:
         raise ValueError(f'Fatal error! {tbl_name} has no columns!')
-
-    with sqlite3.connect(db_name, isolation_level=None) as con:
+    
+    with closing(sqlite3.connect(db_name)) as con, con:
         con.enable_load_extension(True)
         con.load_extension("mod_spatialite")
 
@@ -638,10 +624,8 @@ def rename_columns(db_name: str, tbl_name: str, dict_rename: dict) -> None:
                 RENAME COLUMN {k} TO '{v}';
             """
 
-            cur = con.cursor()
-            cur.execute(query_rename)
-            con.commit()
-                
+            con.execute(query_rename)
+
     # QA + print message
     unchanged_cols = np.setdiff1d(list(dict_rename.values()), get_table_column_names(db_name, tbl_name))
     unchanged_cols_str = ",".join(unchanged_cols)
@@ -687,7 +671,7 @@ def get_table_crs(db_name: str, tbl_name: str, return_srid = False) -> Union[int
     if tbl_name not in existing_tables:
         raise ValueError(f"Fatal error! {tbl_name} does not exist")
 
-    with sqlite3.connect(db_name) as con:
+    with closing(sqlite3.connect(db_name)) as con, con:
 
         # sqlite connection with extensions
         con.enable_load_extension(True)
@@ -711,7 +695,7 @@ def get_table_crs(db_name: str, tbl_name: str, return_srid = False) -> Union[int
         except Exception as e:
             logger.error(f"Error retrieving the CRS from table - {e}")
 
-
+ 
 
 def get_table_column_names(db_name: str, tbl_name: str) -> np.array:
     """Get table column names
@@ -759,9 +743,11 @@ def get_table_column_all_metadata(db_name: str, tbl_name: str) -> pd.DataFrame:
     if not exists(db_name):
         raise ValueError(f"Fatal error! Cannot run `get_table_column_all_metadata` db {db_name} does not exist")
 
-    with sqlite3.connect(db_name) as conn:
+    with closing(sqlite3.connect(db_name)) as con, con:
         query = f"PRAGMA table_info({tbl_name});"
-        df = pd.read_sql(query, conn)
+        df = pd.read_sql(query, con)
+
+ 
 
     return df
         
