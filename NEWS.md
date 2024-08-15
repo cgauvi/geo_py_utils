@@ -1,6 +1,13 @@
 
 ================== 
 
+geo_py_utils 1.7.7
+
+- patch: 
+    * fixed the sqlite db contextmanager manager (finally - after 2 years.). No more PermissionErrors in Windows
+
+================== 
+
 geo_py_utils 1.7.6
 
 - patch:
