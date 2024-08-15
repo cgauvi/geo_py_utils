@@ -41,7 +41,7 @@ def teardown_ext_browser():
     with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) as connector:
         connector.get_connection().cursor().execute(f"DROP TABLE if exists {TEST_TBL_NAME}")
 
-@pytest.fixture(autouse=True)
+@pytest.fixture()
 def teardown_ext_browser_fix():
 
     with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) as connector:
@@ -288,3 +288,6 @@ def test_datetime_formats_work_no_tz():
     for col in LIST_TIME_DELTA_COLS:
         assert str(pd.to_timedelta(df_round_trip[col]).dtype) == 'timedelta64[ns]'
  
+
+if __name__ == '__main__':
+    test_snowflake_types_and_crs_roundtrip_ext_browser()

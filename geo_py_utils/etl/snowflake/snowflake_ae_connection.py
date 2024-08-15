@@ -35,7 +35,8 @@ class SnowflakeAEConnection(SnowflakeAbstractConnection):
         self.db = os.environ['DB']
         self.schema = os.environ['SCHEMA']
 
-        self.conn = self._init_connection()
+        # Lazy eval
+        self.conn = None
 
     def _init_connection(self):
         
@@ -48,23 +49,34 @@ class SnowflakeAEConnection(SnowflakeAbstractConnection):
             self.snowflake_wrapper.send_query(f"USE WAREHOUSE {self.warehouse};")
             self.snowflake_wrapper.send_query(f"USE SCHEMA {self.schema};")
 
-        return self.snowflake_wrapper.get_connection()
+        self.conn = self.snowflake_wrapper.get_connection()
+
+        return self.conn
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        try:
-            if self.snowflake_wrapper and self.snowflake_wrapper.get_connection():
-                self.close_connection()
-                self.get_connection().close()
-        except Exception as e:
-            logger.debug(f'Error closing AE cursor + connection - {str(e)}')
+        self.close_connection()
 
     def close_connection(self):
-        self.snowflake_wrapper.close_connection()
+        
+        try:
+            self.snowflake_wrapper.close_connection()       #closes the cursor
+        except Exception as e:
+            logger.debug(f'Error closing AE cursor  - {str(e)}')
+    
+        try:
+            self.snowflake_wrapper.get_connection().close() #closes the actual connection
+        except Exception as e:
+            logger.debug(f'Error closing AE connection - {str(e)}')
 
     def get_connection(self) ->  connection.SnowflakeConnection:
+
+        # Watch out with context manager: if we point to the same SnowflakeAbstractConnection after closing the connection we will return None
+        if self.conn is None:
+            self._init_connection()
+            
         return self.conn
     
     def __str__(self) -> str:

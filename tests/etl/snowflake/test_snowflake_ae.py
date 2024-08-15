@@ -20,7 +20,8 @@ def test_conn_sfkl_ae():
     query=" select * from M_DATA_SCIENCE.INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = 'SANDBOX' limit 10 "
 
     tmp_con = None
-    with SnowflakeAEConnection(PATH_CONFIG).get_connection() as conn:
+    with SnowflakeAEConnection(PATH_CONFIG) as connector:
+        conn = connector.get_connection()
         df_results = pd.read_sql(query, conn) 
         tmp_con=conn
 

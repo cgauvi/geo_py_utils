@@ -43,4 +43,3 @@ def test_conn_no_context_manager_persisted_connection():
     df_results = pd.read_sql(query, conn) 
 
     assert df_results.shape[0] > 0 , 'Fatal no results from sso connection - seems connection was unexpectedly closed!'
-
