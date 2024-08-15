@@ -49,7 +49,9 @@ class SnowflakeAEConnection(SnowflakeAbstractConnection):
             self.snowflake_wrapper.send_query(f"USE WAREHOUSE {self.warehouse};")
             self.snowflake_wrapper.send_query(f"USE SCHEMA {self.schema};")
 
-        return self.snowflake_wrapper.get_connection()
+        self.conn = self.snowflake_wrapper.get_connection()
+
+        return self.conn
 
     def __enter__(self):
         return self
