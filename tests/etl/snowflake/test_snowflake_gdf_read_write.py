@@ -41,7 +41,7 @@ def teardown_ext_browser():
     with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) as connector:
         connector.get_connection().cursor().execute(f"DROP TABLE if exists {TEST_TBL_NAME}")
 
-@pytest.fixture(autouse=True)
+@pytest.fixture()
 def teardown_ext_browser_fix():
 
     with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) as connector:
