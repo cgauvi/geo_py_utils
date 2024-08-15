@@ -15,7 +15,7 @@ rtree= {version ="*"}
 unicodedata2= {version =">=15.0.0,<16.0.0"}
 python-geohash= {version =">=0.8.5,<0.9.0"}
 sqlalchemy= {version =">=1.4.44,<2"}
-snowflake-connector-python=  "3.0.1"
+snowflake-connector-python= {version =">=3.0.0,<4.0.0"}
 python-dotenv= {version ="*"}
 geopandas= {version ="<1.0.0"}
 pandas= {version ="<2.2.0"}
