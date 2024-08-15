@@ -1,3 +1,14 @@
+
+================== 
+
+geo_py_utils 1.7.6
+
+- patch:
+    * fixed `SnowflakeExternalBrowserConnection` and `SnowflakeAEConnection`: lazy connection creation + context manager fix + check for connection existence (bug introduced in 1.7.5)
+    * fixed `SnowflakeGeoWriter` accordinly: maintain a single snowflake connection using `SnowflakeAbstractConnection` which we open lazily and close in the `SnowflakeGeoWriter` context manager.
+    * changed `snowflake-connector-python` version requirements in `pyproject.toml` to >= 3 , <4
+
+
 ================== 
 
 geo_py_utils 1.7.5
