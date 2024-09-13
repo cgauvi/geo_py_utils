@@ -8,7 +8,7 @@ authors = ["Charles Gauvin"]
 python = {version = ">=3.9,<=3.10"}
 brotlipy= {version =">=0.7.0,<0.8.0"}
 psycopg2= {version =">=2.9.5,<3.0.0"}
-pyarrow= {version ="<10.1.0,>=10.0.1"}
+pyarrow= {version ="*"}
 pyopenssl= {version =">=23.0.0,<24.0.0"}
 pysocks= {version =">=1.7.1,<2.0.0"}
 rtree= {version ="*"}
