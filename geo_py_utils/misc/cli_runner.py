@@ -4,25 +4,31 @@ import json
 from pathlib import Path
 import subprocess
 import sys
- 
+from typing import Optional
+
 from geo_py_utils.misc.constants import DEFAULT_GIT_BASH_PATH
 
- 
-class CLIStdErrOut:
-    """
-    Basic class to provide backward compatibility when priting the results of CLIRunner().run_cmd()
+class CLIStdErrOut(str):
+    """Basic class to provide backward compatibility when priting the results of CLIRunner().run_cmd().
 
-    Attributes:
-        errs (str, optional): output of stderrr. Defaults to None
-        outs (str, optional): output of stdout. Defaults to None
+    Since it is a python str with value "{'out': out , 'err': err}", json.loads() works
+    For backwards compatibility, returns a None object if both arguments None
+    Can also access individual elements with CLIStdErrOut().out for instance 
     """
+
     def __new__(cls, err: str = None, out: str = None):
         if err is None and out is None:
             return None
-        
-        obj = json.dumps({'out': out , 'err': err})
-        return obj 
+        else:
+            instance = super().__new__(cls,  json.dumps({'out': out , 'err': err}))
+            return instance
 
+    def __init__(self,  err : Optional[str] = None, out : Optional[str] = None):
+        self.err=err 
+        self.out=out 
+        
+    def __repr__(self):
+        return  json.dumps({'out': self.out , 'err': self.err})
 
 
 class CLIRunner:
