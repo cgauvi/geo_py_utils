@@ -17,7 +17,7 @@ def test_powershell_envvars():
 def test_powershell_script_capture_stdout ():
     if 'win' in sys.platform:
         str_return=CLIRunner(use_bash=False, capture_std_out=True).run_cmd(" ls ~")
-        assert len(str_return) > 0
+        assert len(str(str_return)) > 0
 
 
 @pytest.mark.windows_specific
@@ -46,9 +46,12 @@ def test_gitbash_capture_stdout_windows():
  
         success_script_path = Path(path.dirname(__file__ )) / 'success.sh'
 
-        dict_return = CLIRunner(use_bash=True, capture_std_out=True).run_cmd(PurePosixPath(success_script_path))
-        str_return = json.loads(dict_return)['out'] # dict_return is a json string
+        cli_results = CLIRunner(use_bash=True, capture_std_out=True).run_cmd(PurePosixPath(success_script_path))
+
+        str_return = json.loads(str(cli_results))['out'] # dict_return is a json string
         assert str_return.strip() == 'Success!'
+
+        assert str_return.strip() == cli_results.out.strip(), 'Dataclass field `out` shuld be the same as the json content'
 
         assert CLIRunner(use_bash=True).run_cmd(PurePosixPath(success_script_path)) is None
 

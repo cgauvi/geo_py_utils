@@ -1,3 +1,15 @@
+================== 
+
+geo_py_utils 1.8.0
+
+- minor:
+    * implemented the new `SnowflakeCsvWriter` along with some basic type mapping from pyarrow to snowflake.
+- patch: 
+    * fixed `CLIRunner ` : backwards compatible change: get stdout and stderror output easily + print easily
+    * fixed the `DownloadQcDissolvedAdmReg`: 2 municipalities were merged into one in august 2024
+    * fixed the pyarrow deps
+    
+
 
 ================== 
 
@@ -45,7 +57,7 @@ geo_py_utils 1.7.3
 geo_py_utils 1.7.2
 
 - patch:
-    * fixed the `CLIRunner ` will now return error messages aong with std out in a json parsable text format
+    * fixed the `CLIRunner` will now return error messages aong with std out in a json parsable text format
 ================== 
 
 geo_py_utils 1.7.1
