@@ -1,4 +1,3 @@
-import datetime
 import geopandas as gpd
 import logging
 import numpy as np
@@ -6,7 +5,6 @@ from os.path import isfile
 from pathlib import Path
 import pandas as pd
 import pytest
-import pytz
 import sys
 
 logging.basicConfig(level=logging.INFO)

@@ -1,15 +1,8 @@
-import datetime
-from freezegun import freeze_time
-import geopandas as gpd
 import logging
 import numpy as np
-from os.path import isfile
-from pathlib import Path
 import pandas as pd
 import pytest
-import pytz
 import sys
- 
  
 
 logging.basicConfig(level=logging.INFO)
@@ -24,7 +17,7 @@ except ImportError:
 from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
 from geo_py_utils.etl.snowflake.csv_write import SnowflakeCsvWriter
 from geo_py_utils.etl.snowflake.db_utils import sfkl_show_column
-from geo_py_utils.utilities_testing.data import SAMPLE_DF, SAMPLE_DF
+from geo_py_utils.utilities_testing.data import SAMPLE_DF
 from geo_py_utils.utilities_testing.tmp_file import TempFile
 from geo_py_utils.constants import ProjectPaths
  
