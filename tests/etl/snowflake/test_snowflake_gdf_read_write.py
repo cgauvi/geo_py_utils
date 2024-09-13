@@ -1,5 +1,4 @@
 import datetime
-from freezegun import freeze_time
 import geopandas as gpd
 import logging
 import numpy as np
@@ -40,18 +39,7 @@ def teardown_ae():
 def teardown_ext_browser():
     with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) as connector:
         connector.get_connection().cursor().execute(f"DROP TABLE if exists {TEST_TBL_NAME}")
-
-@pytest.fixture()
-def teardown_ext_browser_fix():
-
-    with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) as connector:
-        connector.get_connection().cursor().execute(f"DROP TABLE if exists {TEST_TBL_NAME}")
-
-    yield
-
-    with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) as connector:
-        connector.get_connection().cursor().execute(f"DROP TABLE if exists {TEST_TBL_NAME}")
-
+ 
 
  
 def create_gdf_ext_browser(overwrite, use_1 = True):
@@ -214,30 +202,24 @@ def test_temp_files_deleted_ext_browser():
 @pytest.mark.requires_remote_sfkl_interactivity
 def test_datetime_formats_work_with_tz(custom_date, expected):
 
-    with freeze_time(custom_date):
-        mtl_tz = pytz.timezone("America/Montreal")
-        # MTL:UTC-5 in winter and UTC-4 in the Summer
-        # Make sure freezegun works as expected for local times and takes DST into account 
-        logger.info(datetime.datetime.now(mtl_tz))
-        assert datetime.datetime.now(mtl_tz).strftime('%H:%M') == expected
 
-        SAMPLE_GDF_DATES = SAMPLE_GDF.iloc[:1].copy(deep=True)
-        SAMPLE_GDF_DATES['datetime_tz_mtl_col'] = pd.to_datetime([custom_date],  utc=True).map(lambda x: x.tz_convert("America/Montreal"))
+    SAMPLE_GDF_DATES = SAMPLE_GDF.iloc[:1].copy(deep=True)
+    SAMPLE_GDF_DATES['datetime_tz_mtl_col'] = pd.to_datetime([custom_date],  utc=True).map(lambda x: x.tz_convert("America/Montreal"))
 
 
-        with SnowflakeGeoWriter(
-                shp=SAMPLE_GDF_DATES,
-                sfkl_name=TEST_TBL_NAME,
-                sfkl_connector=SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER),
-                overwrite_tbl=True
-            ) as sfkl_writer:
+    with SnowflakeGeoWriter(
+            shp=SAMPLE_GDF_DATES,
+            sfkl_name=TEST_TBL_NAME,
+            sfkl_connector=SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER),
+            overwrite_tbl=True
+        ) as sfkl_writer:
                 
             sfkl_writer.create_table()
 
-        with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER).get_connection() as conn:
-            df_round_trip = pd.read_sql(f'select * from {TEST_TBL_NAME}   ', conn)
+    with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER).get_connection() as conn:
+        df_round_trip = pd.read_sql(f'select * from {TEST_TBL_NAME}   ', conn)
 
-        assert np.all(df_round_trip['DATETIME_TZ_MTL_COL'].dt.strftime('%H:%M').values == [expected])
+    assert np.all(df_round_trip['DATETIME_TZ_MTL_COL'].dt.strftime('%H:%M').values == [expected])
 
 @pytest.mark.requires_remote_sfkl_interactivity
 def test_datetime_formats_work_no_tz():
