@@ -27,7 +27,7 @@ BASE_DATA =  {
     ID_COL_NAME: [0, 1],
     REAL_COL_NAME: [0.152, 0.1],
     INT_COL_NAME: [8,7],
-    STR_COL_NAME: ['some 8898 ', 'text é ç !"/ '],
+    STR_COL_NAME: ['some 8898 ', 'text é ç !"/ "123,526" '],
     MIXED_COL_NAME: [3,'mixed']
     }
 
