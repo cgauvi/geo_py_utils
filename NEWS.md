@@ -1,5 +1,14 @@
 ================== 
 
+geo_py_utils 1.8.1
+
+
+- patch: 
+    * fixed `SnowflakeCsvWriter`: added new `format_type_options = DEFAULT_FORMAT_TYPE_OPTIONS` parameter (breaking change)
+    
+
+================== 
+
 geo_py_utils 1.8.0
 
 - minor:
