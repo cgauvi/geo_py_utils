@@ -1,7 +1,9 @@
 import logging
 import numpy as np
 import pandas as pd
+from pathlib import Path
 import pytest
+from snowflake.connector.errors import ProgrammingError
 import sys
  
 
@@ -15,7 +17,7 @@ except ImportError:
 
 
 from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
-from geo_py_utils.etl.snowflake.csv_write import SnowflakeCsvWriter
+from geo_py_utils.etl.snowflake.csv_write import SnowflakeCsvWriter, DEFAULT_FORMAT_TYPE_OPTIONS
 from geo_py_utils.etl.snowflake.db_utils import sfkl_show_column
 from geo_py_utils.utilities_testing.data import SAMPLE_DF
 from geo_py_utils.utilities_testing.tmp_file import TempFile
@@ -84,6 +86,27 @@ def test_snowflake_roundtrip_ae():
  
 
 @pytest.mark.requires_remote_sfkl_interactivity
+def test_hwa_ext_browser_fail():
+
+    # Removing the important `FIELD_OPTIONALLY_ENCLOSED_BY` field from the csv format options should crash snowflake
+    format_type_options = DEFAULT_FORMAT_TYPE_OPTIONS.copy() 
+    format_type_options.pop('FIELD_OPTIONALLY_ENCLOSED_BY')
+
+    with pytest.raises(ProgrammingError):
+        # upload to snowflake
+        with SnowflakeCsvWriter(
+            csv_path=Path(__file__).parent.joinpath('./hwa_header.csv'),
+            sfkl_name=TEST_TBL_NAME,
+            sfkl_connector= SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) ,
+            overwrite_tbl = True,
+            format_type_options = format_type_options
+        ) as sfkl_writer:
+            sfkl_writer.create_table()
+
+ 
+    teardown_ext_browser()
+
+@pytest.mark.requires_remote_sfkl_interactivity
 def test_snowflake_roundtrip_ext_browser():
 
     create_df_ext_browser(overwrite=True)
@@ -92,6 +115,7 @@ def test_snowflake_roundtrip_ext_browser():
         df_round_trip = pd.read_sql(f'SELECT * from {TEST_TBL_NAME}', con = connector.get_connection())
 
     assert df_round_trip.shape[0] == SAMPLE_DF.shape[0], 'Fatal error! Roundtrip data not read in as df with right number of rows!'
+    assert df_round_trip.shape[1] == SAMPLE_DF.shape[1], 'Fatal error! Roundtrip data not read in as df with right number of columns!'
     
     teardown_ext_browser()
 
@@ -224,4 +248,4 @@ def test_datetime_formats_work_no_tz():
     teardown_ext_browser()
 
 if __name__ == '__main__':
-    test_datetime_formats_work_no_tz()
+    test_hwa_ext_browser_fail()

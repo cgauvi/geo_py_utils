@@ -11,7 +11,16 @@ from geo_py_utils.etl.snowflake.type_conversion import DF_MAP_PA_SFKL_TYPES
 logger = logging.getLogger(__file__)
 
 DEFAULT_LIST_NA_STRINGS = "'\\N', 'NULL', 'NUL', '', 'None' , 'NA', 'N/A'"
+DEFAULT_FIELD_ENCLOSED = "'\"'"
+DEFAULT_SKIP_HEADER = 1
 
+# https://docs.snowflake.com/en/sql-reference/sql/create-file-format
+DEFAULT_FORMAT_TYPE_OPTIONS = {
+    'SKIP_HEADER': DEFAULT_SKIP_HEADER, 
+    'NULL_IF': f'({DEFAULT_LIST_NA_STRINGS})',
+    'FIELD_OPTIONALLY_ENCLOSED_BY' : DEFAULT_FIELD_ENCLOSED,
+    'ERROR_ON_COLUMN_COUNT_MISMATCH' : 'TRUE'
+}
 
 class SnowflakeCsvWriter:
     """Write a csv directly to snowflake by using pyarrow (without pandas)
@@ -32,16 +41,16 @@ class SnowflakeCsvWriter:
                 sfkl_name: str,
                 sfkl_connector: SnowflakeAbstractConnection,
                 df_type_map = DF_MAP_PA_SFKL_TYPES,
-                na_strings = DEFAULT_LIST_NA_STRINGS,
-                overwrite_tbl = True
+                overwrite_tbl = True,
+                format_type_options = DEFAULT_FORMAT_TYPE_OPTIONS
                 ):
 
         self.csv_path = csv_path
         self.sfkl_name = sfkl_name
         self.sfkl_connector = sfkl_connector
         self.df_type_map= df_type_map
-        self.na_strings = na_strings
         self.overwrite_tbl = overwrite_tbl
+        self.format_type_options = format_type_options
 
         self._init()
 
@@ -114,13 +123,19 @@ class SnowflakeCsvWriter:
 
     def _create_file_format_str_sql(self):
                 
+        # Set the required params
+        format_keys = list(map(lambda x: x.lower(), self.format_type_options.keys() ))
+        if 'type' not in format_keys:
+            self.format_type_options.update({'type': 'csv'})
+       
+        # concat together
+        params_str = " ".join(
+                [fr'{k} = {v}' for k,v in self.format_type_options.items() ]
+        )
+
         query_creation =f"""
                 CREATE OR REPLACE file format myformat 
-                type = 'csv'  
-                field_delimiter = ',' 
-                skip_header = 1  
-                NULL_IF = ({self.na_strings}) 
-                error_on_column_count_mismatch=false;
+                {params_str}
                 """
         
         return "".join(str(query_creation).splitlines())
