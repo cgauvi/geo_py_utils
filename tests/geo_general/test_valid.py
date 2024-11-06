@@ -1,4 +1,3 @@
-import geopandas as gpd
 import pytest
  
 from geo_py_utils.geo_general.valid_geom import make_extra_valid_gpd, make_valid_gpd

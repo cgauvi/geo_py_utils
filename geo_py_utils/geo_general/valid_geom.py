@@ -48,13 +48,13 @@ def make_extra_valid_gpd(
         thresh_area_m = 0.5,
         buffer_size=10**-6,
         sliver_ratio_thres = 10**4,
-        explode_multiparts = False,
+        explode_multiparts_geom_collection = False,
         list_geoms_types_to_keep = None,
         **make_valid_kwargs
         ):
 
     # no GeometryCollection
-    if explode_multiparts:
+    if explode_multiparts_geom_collection:
         gdf = explode_multiparts(gdf)
 
     # get the number of rows after the geometrycollection explosion
