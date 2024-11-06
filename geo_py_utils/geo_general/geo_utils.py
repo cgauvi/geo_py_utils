@@ -7,6 +7,21 @@ import pandas as pd
 from shapely.geometry import shape
 from typing import  Union
 
+
+def explode_multiparts(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    
+    if not isinstance(gdf, gpd.GeoDataFrame):
+        raise TypeError('Fatal error in explode_multiparts: input not GeoDataFrame')
+    
+    # no GeometryCollection
+    gdf = (
+        gdf
+        .reset_index()
+        .explode(index_parts =False)
+    ) #otherwise, indexing gets messed up
+
+    return gdf
+
 def flip_coord(list_points):
     new_poly = []
     for k in range(len(list_points)):
@@ -25,8 +40,10 @@ def get_matrix_point_polygon(shp: gpd.GeoDataFrame) -> pd.DataFrame:
         np.array: _description_
     """
 
-    assert isinstance(shp, gpd.GeoDataFrame)
-    assert np.isin(shp.type.unique(), ['Multipolygon', 'Polygon']).all()
+    if not isinstance(shp, gpd.GeoDataFrame):
+        raise TypeError('Fatal error in get_matrix_point_polygon: input not GeoDataFrame')
+    if not np.isin(shp.type.unique(), ['Multipolygon', 'Polygon']).all():
+        raise RuntimeError('Fatal error in get_matrix_point_polygon: only works with polygon or multipolygon: call `explode_multiparts` first and filter first or `geo_py_utils.geo_general.valid_geom:make_extra_valid_gpd` ' )
 
     dict_coords = {
         k: row['geometry'].exterior.coords.xy for k, row in shp.iterrows()}
