@@ -40,7 +40,7 @@ class SnowflakeGeoWriter:
         na_strings (_type_, optional): For format creation. Tweak only if NAs are custom coded in a weird way. Defaults to DEFAULT_LIST_NA_STRINGS.
         overwrite_tbl (bool, optional): Overwrite the Snowflake table. Defaults to True.
         sfkl_geo_col_name (_type_, optional): Name of geography column in new Snowflake table. Defaults to DEFAULT_SFKL_GEO_COL_NAME.
-
+        nullify_invalid_geometries (bool, optional): If true, then invalid geometries will get replaced by NULL. Thus loosing no rows. Defaults to true
 
     Raises:
         TypeError: if not a geodf
@@ -66,7 +66,8 @@ class SnowflakeGeoWriter:
             na_strings = DEFAULT_LIST_NA_STRINGS,
             overwrite_tbl = True,
             sfkl_geo_col_name = DEFAULT_SFKL_GEO_COL_NAME,
-            max_rows_for_auto_type_inference = DEFAULT_MAX_ROWS_FOR_TYPE_INF
+            max_rows_for_auto_type_inference = DEFAULT_MAX_ROWS_FOR_TYPE_INF,
+            nullify_invalid_geometries = True
             ):
 
         # Geodf or regular df?
@@ -82,6 +83,7 @@ class SnowflakeGeoWriter:
         else:
             self.shp = shp
             
+        self.nullify_invalid_geometries = nullify_invalid_geometries
         self.geom_col_name = self.shp.geometry.name # will need to drop and recreate ..
         self.sfkl_geo_col_name = str(sfkl_geo_col_name).upper()
 
@@ -332,9 +334,11 @@ class SnowflakeGeoWriter:
 
         # Geometry always in FIRST position using ogr2ogr driver 
         # Quotes are hacky, but ensure the WKT is read in in its entirety
+        # TRY_TO_GEOGRAPHY
+        fun  = 'TRY_TO_GEOGRAPHY' if self.nullify_invalid_geometries else 'TO_GEOGRAPHY' 
         query_insert_into =  (
             f"INSERT INTO {self.sfkl_name} "
-            f"SELECT {select_cols_str}, TO_GEOGRAPHY(REPLACE(t.$1, '\"', '')) "
+            f"SELECT {select_cols_str}, {fun}(REPLACE(t.$1, '\"', '')) "
             f"FROM @{self.sfkl_name} (file_format => 'myformat') as t; "
             )
         
