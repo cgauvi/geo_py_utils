@@ -94,3 +94,31 @@ class LocalGDFData:
     SPATIAL_LITE_TBL_GEOMETRY_COL_NAME = 'GEOMETRY'
     DATA = SAMPLE_GDF
  
+
+EPS=10**-6
+ext = [(0, 0), (0, 2), (0+EPS, 2), (0+EPS, 0), (0, 0)]
+GDF_SLIVER = gpd.GeoDataFrame( pd.DataFrame({'index':[0]}), geometry=gpd.GeoSeries(Polygon(ext)))
+
+
+ext = [(0, 0), (1, 1), (0, 1), (1, 0), (0, 0)]
+GDF_INVALID_SELF_INTERSECTING= gpd.GeoDataFrame( pd.DataFrame({'index':[0]}), geometry=gpd.GeoSeries(Polygon(ext)))
+
+
+ext = [(0, 0), (0, 2), (2, 2), (2, 0), (0, 0)]
+int = [(0.5, 0), (1.5, 0), (1.5, 1), (0.5, 1), (0.5, 0)]
+GDF_INVALID_EDGE_TOUCHES_INTERIOR = gpd.GeoDataFrame( pd.DataFrame({'index':[0]}), geometry=gpd.GeoSeries( Polygon(ext, [int])))
+
+# fixes the polygon by removing the interior ring completely
+#GDF_EDGE_INTERIOR.buffer(0) 
+
+
+ext = [(0, 0), (0, 2), (2, 2), (2, 0), (0, 0)]
+int = [(1, 0), (0, 1), (0.5, 1.5), (1.5, 0.5), (1, 0)][::-1]
+GDF_INVALID_RING_TOUCHES_TWO_POINTS = gpd.GeoDataFrame( pd.DataFrame({'index':[0]}), geometry=gpd.GeoSeries( Polygon(ext, [int])))
+
+#GDF_INVALID_RING_TOUCHES_TWO_POINTS.is_valid == False
+#GDF_INVALID_RING_TOUCHES_TWO_POINTS.buffer(0).is_valid == True # fixes the polygon by spliting it into 2 parts
+#GDF_INVALID_RING_TOUCHES_TWO_POINTS.geom_type == 'Polygon'
+#GDF_INVALID_RING_TOUCHES_TWO_POINTS.buffer(0).geom_type == 'MultiPolygon'
+
+LIST_INVALID_GDF = [GDF_INVALID_SELF_INTERSECTING, GDF_INVALID_EDGE_TOUCHES_INTERIOR, GDF_INVALID_RING_TOUCHES_TWO_POINTS ]
