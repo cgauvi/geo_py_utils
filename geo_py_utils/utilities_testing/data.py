@@ -1,7 +1,7 @@
 from os.path import join
 import pandas as pd
 import geopandas as gpd
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, LineString, Point
 
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
@@ -122,3 +122,47 @@ GDF_INVALID_RING_TOUCHES_TWO_POINTS = gpd.GeoDataFrame( pd.DataFrame({'index':[0
 #GDF_INVALID_RING_TOUCHES_TWO_POINTS.buffer(0).geom_type == 'MultiPolygon'
 
 LIST_INVALID_GDF = [GDF_INVALID_SELF_INTERSECTING, GDF_INVALID_EDGE_TOUCHES_INTERIOR, GDF_INVALID_RING_TOUCHES_TWO_POINTS ]
+
+
+
+GDF_GRID =   gpd.GeoDataFrame(
+                    data = {'index': [0,1,2,3]},
+                    geometry=[
+                        Polygon(((0,0), (0,1),  (1,1),   (0,1))) ,
+                        Polygon(((0,1), (0,2),  (1,2),   (1,1))),
+                        Polygon(((1,0), (1,1),  (2,1),   (2,0))),
+                        Polygon(((1,1), (1,2),  (2,2),   (2,1)))
+                    ],
+                    crs=4326
+                )
+
+# One side completely aligned with GDF_GRID
+# The other slightly off so as to create a sliver with area EPS and preimeter 2(EPS+1)
+GDF_SQUARE_OVER_GRID =   gpd.GeoDataFrame(
+                    data = {'index': [0,]},
+                    geometry=[
+                        Polygon(((0,0), (2-EPS,0),  (2-EPS,2),   (0,2))) 
+                    ],
+                    crs=4326
+                )
+
+
+GDF_EMPTY =   gpd.GeoDataFrame(
+                    data = { },
+                    geometry=[  ],
+                    crs=4326
+                )
+
+
+GDF_LINE_OVER_SQUARE_EDGE = gpd.GeoDataFrame(
+                    data = {'index': [0,]},
+                    geometry=[  LineString([[0, 0], [1, 0]]) ],
+                    crs=4326
+                )
+
+
+GDF_POINT_OVER_SQUARE_VERTEX = gpd.GeoDataFrame(
+                    data = {'index': [0,]},
+                    geometry=[  Point([0, 0]) ],
+                    crs=4326
+                )
