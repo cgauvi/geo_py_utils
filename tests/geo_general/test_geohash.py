@@ -5,12 +5,13 @@ from shapely.geometry import Polygon, Point
 from geo_py_utils.geo_general.bbox import get_list_coordinates_from_bbox
 from geo_py_utils.geo_general.geo_utils import get_geodataframe_from_list_coord
 from geo_py_utils.geo_general.geohash_utils import (
-    recursively_partition_geohash_cells, 
     get_geohash_box,
     get_all_geohash_from_gdf,
-    geohash_max_precision
+    geohash_max_precision,
+    recursively_partition_geohash_cells, 
+    recursively_partition_polygons_area_geohash_cells
 )
-from geo_py_utils.utilities_testing.data import US_ALL_CVX_GDF
+from geo_py_utils.utilities_testing.data import US_ALL_CVX_GDF, GDF_BBOX_DONNACONNA
 
 
 def test_basic_geohash_utils():
@@ -122,6 +123,18 @@ def test_recursive_geohash_does_nothing():
     assert shp_part[shp_part['counts'] > 0].shape[0] == shp_bug.shape[0] # same number of non-zero rows: we tried drilling down but cannot go any more recise than the 4 individual points
 
 
+def test_recursive_area_partition_does_nothing_if_thresh_too_high():
+    # get_all_geohash_from_geohash_indices(['f2kbz']).to_crs(3347).area
+    # 1.679750e+07
+
+    gdf_untouched = recursively_partition_polygons_area_geohash_cells(
+        GDF_BBOX_DONNACONNA,
+        geohash_max_precision=5,
+        init_geohash_prec=6,
+        max_area = 1.679750e+07 * 10
+    )
+
+    assert gdf_untouched.shape[0] == GDF_BBOX_DONNACONNA.shape[0]
 
 if __name__ == '__main__':
 
