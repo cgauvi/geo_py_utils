@@ -13,13 +13,13 @@ from geo_py_utils.geo_general.centroid import add_centroid
 from geo_py_utils.data.datasets import get_geohash_worst_dim_path
 from geo_py_utils.geo_general.intersection import intersect_gdf
 from geo_py_utils.geo_general.valid_geom import make_extra_valid_gpd
-
+from geo_py_utils.geo_general.geo_utils import compare_two_gdf_predicate
 
 logger = logging.getLogger(__name__)
 
 
 PATH_GEO_HASH_REFERENCE = get_geohash_worst_dim_path()
-
+LIST_VALID_GEOHASH_PREDICATES = ['within', 'strictly within', 'intersects', 'contains']
 
 def count_by_index(df,
                    group_by_idx='geohash_index',
@@ -139,10 +139,12 @@ def get_geohash_box(current_geohash, lng_first=True):
     return polygon
 
 
-def is_geohash_in_bounding_box(current_geohash,
-                               bbox_coordinates,
-                               lng_first=True,
-                               predicate='intersects'):
+def is_geohash_in_bounding_box(
+        current_geohash,
+        bbox_coordinates,
+        lng_first=True,
+        predicate='intersects'
+    ):
     """Checks if the box of a geohash is inside the bounding box
 
     Not 100% sure what happens if we change the < to <= 
@@ -154,7 +156,8 @@ def is_geohash_in_bounding_box(current_geohash,
     :return: true if the the center of the geohash is in the bounding box
     """
 
-    assert predicate in ['within', 'strictly within', 'intersects', 'contains']
+    if not predicate in LIST_VALID_GEOHASH_PREDICATES:
+        raise ValueError(f'Fatal error inis_geohash_in_bounding_box: redicate must be in {LIST_VALID_GEOHASH_PREDICATES} ')
 
     # List of 4 elements. Each is a 2 dim list representing a point
     coordinates = get_geohash_box(current_geohash, lng_first)
@@ -320,24 +323,33 @@ def get_all_geohash_from_extent(input: Union[List, gpd.GeoDataFrame, gpd.geoseri
     return shp_geohash
 
 
-def get_all_geohash_from_gdf(input:  gpd.GeoDataFrame,
-                             precision: int,
-                             predicate: str = 'within'):
+def get_all_geohash_from_gdf(
+        input:  gpd.GeoDataFrame,
+        precision: int,
+        predicate: str = 'within',
+        bool_fun_predicate = all
+    ):
+
     """Return a single geodataframe containing ALL geohashes from a geodataframe 
 
-    Wrapper over get_all_geohash_from_extent 
-
     Different feature from get_all_geohash_from_extent which returns all geohash inside a bbox
-    For this function, we return only the geohash cell over points/simple feature centroids that are in our input geodataframe
+    Here we perform additional filtering to ensure the final gehash cells repect the selected predicate
 
     Args:
         input : geo df -> each simple feature gets mapped to a geohash (and then we take )
         precision: geohash precision
+        predicate: spatial predicate from within LIST_VALID_GEOHASH_PREDICATES
     Returns:
         list[str]: list of geohash indices
     """
 
-    assert isinstance(input, gpd.GeoDataFrame)
+    if not isinstance(input, gpd.GeoDataFrame):
+        raise ValueError('Fatal error in get_all_geohash_from_gdf: input must be a geodataframe')
+
+
+    if not predicate in LIST_VALID_GEOHASH_PREDICATES:
+        raise ValueError(f'Fatal error inis_geohash_in_bounding_box: redicate must be in {LIST_VALID_GEOHASH_PREDICATES} ')
+
 
     # Get the bounding box over EACH feature - NOT total_bounds
     matrix_bbox = input.bounds.to_numpy()
@@ -351,12 +363,27 @@ def get_all_geohash_from_gdf(input:  gpd.GeoDataFrame,
     # Remove duplicates: might be possible if some of the original input features touch
     shp_geo_all.drop_duplicates(subset='geohash_index', inplace=True)
 
+    # Filter based on predicate
+    # `bool_fun = all`` means a feature of shp_geo_all must relate to all features from input.
+    # `bool_fun = any`` means a feature of shp_geo_all must relate to at least one features from input
+    idx_predicate = compare_two_gdf_predicate(
+        shp_geo_all, 
+        input,
+        predicate=predicate,
+        bool_fun=bool_fun_predicate
+    )
+
+    shp_geo_all=shp_geo_all[idx_predicate.values]
+ 
+
     return shp_geo_all
 
 
-def get_subset_geohash_from_gdf(input:  Union[gpd.GeoDataFrame, gpd.geoseries.GeoSeries],
-                                precision: int,
-                                use_centroid_only: bool = True):
+def get_subset_geohash_from_gdf(
+        input:  Union[gpd.GeoDataFrame, gpd.geoseries.GeoSeries],
+        precision: int,
+        use_centroid_only: bool = True
+    ):
     """Return a single geodataframe containing A SUBSET OF geohashes from a geodataframe by using the centroid from each feature
 
     If trying to refine a geohash cell, THIS WILL NOT NECESSARILY YIELD ALL THE subgoehahs containing it. It will return either the geohahs associated with the centroid 
@@ -489,9 +516,11 @@ def recursively_partition_geohash_cells(shp_points,
 
     # Get all geohash cells - important to use get_all_geohash_from_extent at the beginning to cover the entire extent
     # And then use get_all_geohash_from_gdf within the for loop to break down each cell that needs refining
-    shp_count_by_hash_to_refine = get_all_geohash_from_extent(shp_points,
-                                                              init_precision,
-                                                              predicate='intersects')
+    shp_count_by_hash_to_refine = get_all_geohash_from_extent(
+        shp_points,
+        init_precision,
+        predicate='intersects'
+    )
 
     list_complete = []
     dict_layers = {}
