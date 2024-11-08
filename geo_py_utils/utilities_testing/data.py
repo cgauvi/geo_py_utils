@@ -2,7 +2,7 @@ from os.path import join
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Polygon, LineString, Point
-
+from shapely import wkt
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
 
@@ -31,6 +31,13 @@ BASE_DATA =  {
     MIXED_COL_NAME: [3,'mixed']
     }
 
+GDF_BBOX_DONNACONNA = gpd.GeoDataFrame(
+                    data = {'index':[0]},
+                    geometry= [wkt.loads('Polygon ((-72 46.39999999999999858, -71.5 46.39999999999999858, -71.5 46.70000000000000284, -72 46.70000000000000284, -72 46.39999999999999858))')],
+                    crs=4326
+                )
+
+# This creates 2 triangular polygons over donnacona
 SAMPLE_GDF =   gpd.GeoDataFrame(
                     data = BASE_DATA,
                     geometry=[
@@ -42,6 +49,7 @@ SAMPLE_GDF =   gpd.GeoDataFrame(
 
 BASE_DATA_2 = BASE_DATA.copy()
 BASE_DATA_2.update({ID_COL_NAME:[2,3], STR_COL_NAME: ['new1', 'new2']})
+# same geometry as SAMPLE_GDF
 SAMPLE_GDF_2 =   gpd.GeoDataFrame(
                     data = BASE_DATA_2,
                     geometry=[

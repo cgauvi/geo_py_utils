@@ -10,7 +10,7 @@ import logging
 from geo_py_utils.geo_general.geo_utils import get_geodataframe_from_list_coord, get_matrix_point_coordinates, get_matrix_point_polygon
 from geo_py_utils.geo_general.centroid import add_centroid
 from geo_py_utils.data.datasets import get_geohash_worst_dim_path
-
+from geo_py_utils.geo_general.intersection import intersect_gdf
 
 logger = logging.getLogger(__name__)
 
@@ -566,28 +566,115 @@ def recursively_partition_geohash_cells(shp_points,
     return shp_partionned, dict_layers
 
 
-# %%
-if __name__ == "__main__":
+DEFAULT_AREA_THRESH_SQ_KM = 10**8
+DEFAULT_MIN_GEOHASH_PREC = 3
+DEFAULT_MAX_GEOHASH_PREC = 5
 
-    from shapely.geometry import Point
 
-    GEOHASH_PRECISION = 6
-     
- 
+def filter_by_area(
+        gdf: gpd.GeoDataFrame, 
+        max_area:int = DEFAULT_AREA_THRESH_SQ_KM,
+        temp_crs:int = 3347
+    ) -> dict:
 
-    shp_bug = gpd.GeoDataFrame(
-            {
-            'id' :[0	,1,	2	,3],
-            'geohash_index' : ["drgp",	"drgr",	"f0r9",	"f0rb"],
-            "lat" : [44.997203	,44.996874	,46.722120	,46.521345],
-            "lng": [-74.349024,	-74.084504,	-79.103772	,-78.868221],
-            'counts' : [134, 410, 119	,59],
-            'geometry': [Point(-74.34902, 44.99720), Point(-74.08450,44.99687), Point(-79.10377,46.72212), Point(-78.86822,46.52135)]
-            },
-            crs = 4326          
-    )
-     
-    shp_part_bug, _ = recursively_partition_geohash_cells(shp_bug,
-                                                        count_column_name='counts',
-                                                        min_num_points = 2,
-                                                        max_precision=GEOHASH_PRECISION)
+    crs_init = gdf.crs
+    gdf=gdf.to_crs(temp_crs)
+    gdf_large = gdf[gdf.area > max_area ]
+    gdf_small = gdf[gdf.area <= max_area ]
+
+    return {'large': gdf_large.to_crs(crs_init), 'small' : gdf_small.to_crs(crs_init)}
+
+
+
+def recursively_partition_polygons_area_geohash_cells(
+        gdf: gpd.GeoDataFrame, 
+        gdf_id: str  ,
+        init_geohash_prec:int = DEFAULT_MIN_GEOHASH_PREC,
+        max_geohash_prec:int = DEFAULT_MAX_GEOHASH_PREC,
+        geom_col_name = 'geometry',
+        max_area:int = DEFAULT_AREA_THRESH_SQ_KM,
+        **filter_kwargs
+        ) -> gpd.GeoDataFrame:
+
+    if not isinstance(gdf, gpd.GeoDataFrame):
+        raise TypeError('Fatal error!  gdf should be a GeoDataFrame')
+
+    if init_geohash_prec <= 1 or init_geohash_prec > max_geohash_prec:
+        raise ValueError("Fatal error! invalid geohash precision -> need: 1 <= init_geohash_prec <= max_geohash_prec")
+    
+    if gdf_id not in gdf.columns:
+        raise ValueError(f'Fatal error! {gdf_id} not in the columns! Cannot be used as an id')
+
+    ids_init = gdf[gdf_id].unique()
+    if gdf.shape[0] == 0:
+        raise RuntimeError('Fatal error! gdf contains no rows initially')
+
+    # Check index names
+    geohash_index= 'geohash_index'
+    if gdf_id == 'geohash_index':
+        gdf_id_new  =  gdf_id + '_right'
+        geohash_index_new = geohash_index + '_left'
+    else:
+        geohash_index_new = geohash_index
+        gdf_id_new = gdf_id
+
+    gdf.rename(columns={gdf_id: gdf_id_new}, inplace=True)
+
+    crs_init = gdf.crs
+
+    filtered_resuts = filter_by_area(gdf, max_area=max_area, **filter_kwargs)
+    gdf_large = filtered_resuts['large'].to_crs(4326)
+    gdf_small = filtered_resuts['small']
+
+    split_gdf = []
+
+    if gdf_small.shape[0] > 0:
+        split_gdf.append(gdf_small)
+
+    prec = init_geohash_prec
+    while gdf_large.shape[0] > 0 and prec <= max_geohash_prec:
+
+        shp_geohash = get_all_geohash_from_extent(
+                gdf_large,
+                precision = prec,
+                predicate='intersects'
+        ).rename(columns={geohash_index: geohash_index_new})
+
+        gdf_large_split = intersect_gdf(
+            shp_left=  shp_geohash,
+            shp_left_id = geohash_index_new,
+            shp_right = gdf_large[[gdf_id_new, geom_col_name]],
+            shp_right_id = gdf_id_new
+        )
+
+        prec +=1
+        filtered_resuts = filter_by_area(gdf_large_split, **filter_kwargs)
+        gdf_large = filtered_resuts['large'].to_crs(4326)
+        gdf_small = filtered_resuts['small']
+
+        if gdf_small.shape[0] > 0:
+            split_gdf.append(filtered_resuts['small'].to_crs(crs_init))
+
+    # dont forget to append the large regions we chose not to subdivide even more
+    if gdf_large.shape[0] > 0:
+        split_gdf.append(gdf_large.to_crs(crs_init))
+
+    df_final = pd.concat(split_gdf)
+    ids_final = df_final[gdf_id_new].unique()
+
+    if not pd.Series(ids_final).isin(ids_init).all():
+        raise ValueError('Fatal error! some of the final gdf_ids are not present at the beginning (wtf?)')
+    
+    if not pd.Series(ids_init).isin(ids_final).all():
+        missing = np.setdiff1d(ids_init, ids_final)
+        logger.warning(f'Warning! missing {len(missing)} of the original gdf_ids after applying algo: {missing} ')
+
+    idx_too_large = df_final.geometry.area > float(max_area)
+    if idx_too_large.sum():
+        logger.warning(f'Warning! there are {len(idx_too_large)} geometries that are larger than the threshold {max_area} ')
+
+        if geohash_index_new in gdf_large.columns:
+            if gdf_large[~gdf_large[geohash_index_new].isna()][geohash_index_new].str.len().unique() < max_geohash_prec:
+                raise RuntimeError('Fatal error! the largest polygons should have been subdivided on smaller geohashes')
+
+    return df_final

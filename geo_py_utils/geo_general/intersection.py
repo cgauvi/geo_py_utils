@@ -38,10 +38,12 @@ def intersect_gdf(
 
     crs_init = shp_left_crs
 
+    shp_left_id_new = shp_left_id
+    shp_right_id_new = shp_right_id
     if shp_left_id == shp_right_id:
-        shp_left_id_new  =  shp_left_id + '_left'
-        shp_right_id_new  = shp_right_id + '_right'
-
+        shp_left_id_new += '_left'
+        shp_right_id_new  += '_right'
+ 
     # Adapted from https://stackoverflow.com/questions/14697442/faster-way-of-polygon-intersection-with-shapely 
 
     # Populate R-tree index with bounds of grid cells
