@@ -1,5 +1,6 @@
 import geopandas as gpd
 import geohash
+import numpy as np
 from shapely.geometry import Polygon, Point
  
 from geo_py_utils.geo_general.bbox import get_list_coordinates_from_bbox
@@ -13,6 +14,7 @@ from geo_py_utils.geo_general.geohash_utils import (
 )
 from geo_py_utils.utilities_testing.data import US_ALL_CVX_GDF, GDF_BBOX_DONNACONNA
 
+EPS = 10**-6
 
 def test_basic_geohash_utils():
 
@@ -124,18 +126,50 @@ def test_recursive_geohash_does_nothing():
 
 
 def test_recursive_area_partition_does_nothing_if_thresh_too_high():
-    # get_all_geohash_from_geohash_indices(['f2kbz']).to_crs(3347).area
-    # 1.679750e+07
+ 
+    # GDF_BBOX_DONNACONNA.to_crs(3347).area 1.305043e+09
 
     gdf_untouched = recursively_partition_polygons_area_geohash_cells(
         GDF_BBOX_DONNACONNA,
-        geohash_max_precision=5,
-        init_geohash_prec=6,
-        max_area = 1.679750e+07 * 10
+        gdf_id='index',
+        max_area = GDF_BBOX_DONNACONNA.to_crs(3347).area + EPS
     )
 
     assert gdf_untouched.shape[0] == GDF_BBOX_DONNACONNA.shape[0]
 
+
+
+
+def test_recursive_area_partition_geohash_max_prec_respected_no_issue_idx_collision():
+    # GDF_BBOX_DONNACONNA.to_crs(3347).area 
+    # 1.305043e+09
+    # c.f. 
+    # get_all_geohash_from_geohash_indices(['f2kbz']).to_crs(3347).area # geohash 5
+    # 1.679750e+07
+
+    max_area = float(GDF_BBOX_DONNACONNA.to_crs(3347).area - EPS) # to ensure we will subdivide the gdf at least once
+
+    gdf_broken_down_gh_5 = recursively_partition_polygons_area_geohash_cells(
+        GDF_BBOX_DONNACONNA.rename(columns={'index':"geohash_index"}),
+        init_geohash_prec = 4,
+        max_geohash_prec = 5,
+        gdf_id='geohash_index',
+        max_area = max_area
+    )
+
+    #index names
+    assert np.isin(np.array(['geohash_index_right', 'geohash_index_left']), gdf_broken_down_gh_5.columns).all(), 'Fatal error! should have a collision in column names'
+
+
+    gdf_broken_down_gh_5_broken_down = gdf_broken_down_gh_5[~gdf_broken_down_gh_5['geohash_index_left'].isna()]
+    gdf_broken_down_gh_5_same = gdf_broken_down_gh_5[gdf_broken_down_gh_5['geohash_index_left'].isna()]
+
+    # areas
+    assert (gdf_broken_down_gh_5_broken_down['geohash_index_left'].str.len() <= 5).all(), 'Fatal error! max geohash prec is 5'
+    if gdf_broken_down_gh_5_same.shape[0]:
+        assert (gdf_broken_down_gh_5_same.area <= max_area).all(), 'Fatal error! geom should not have been browken down'
+
+ 
 if __name__ == '__main__':
 
-    test_recursive_geohash_refines()
+    test_recursive_area_partition_geohash_max_prec_respected_no_issue_idx_collision()

@@ -31,12 +31,9 @@ BASE_DATA =  {
     MIXED_COL_NAME: [3,'mixed']
     }
 
-GDF_BBOX_DONNACONNA = 
-
- 
-gpd.GeoDataFrame(
+GDF_BBOX_DONNACONNA = gpd.GeoDataFrame(
                     data = {'index':[0]},
-                    geometry=wkt.loads('Polygon ((-72 46.39999999999999858, -71.5 46.39999999999999858, -71.5 46.70000000000000284, -72 46.70000000000000284, -72 46.39999999999999858))'),
+                    geometry= [wkt.loads('Polygon ((-72 46.39999999999999858, -71.5 46.39999999999999858, -71.5 46.70000000000000284, -72 46.70000000000000284, -72 46.39999999999999858))')],
                     crs=4326
                 )
 

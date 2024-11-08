@@ -609,7 +609,18 @@ def recursively_partition_polygons_area_geohash_cells(
     if gdf.shape[0] == 0:
         raise RuntimeError('Fatal error! gdf contains no rows initially')
 
-    crs_init = gdf.crs 
+    # Check index names
+    geohash_index= 'geohash_index'
+    if gdf_id == 'geohash_index':
+        gdf_id_new  =  gdf_id + '_right'
+        geohash_index_new = geohash_index + '_left'
+    else:
+        geohash_index_new = geohash_index
+        gdf_id_new = gdf_id
+
+    gdf.rename(columns={gdf_id: gdf_id_new}, inplace=True)
+
+    crs_init = gdf.crs
 
     filtered_resuts = filter_by_area(gdf, max_area=max_area, **filter_kwargs)
     gdf_large = filtered_resuts['large'].to_crs(4326)
@@ -627,12 +638,13 @@ def recursively_partition_polygons_area_geohash_cells(
                 gdf_large,
                 precision = prec,
                 predicate='intersects'
-        )
+        ).rename(columns={geohash_index: geohash_index_new})
+
         gdf_large_split = intersect_gdf(
             shp_left=  shp_geohash,
-            shp_left_id = 'geohash_index',
-            shp_right = gdf_large[[gdf_id, geom_col_name]],
-            shp_right_id = gdf_id
+            shp_left_id = geohash_index_new,
+            shp_right = gdf_large[[gdf_id_new, geom_col_name]],
+            shp_right_id = gdf_id_new
         )
 
         prec +=1
@@ -648,7 +660,7 @@ def recursively_partition_polygons_area_geohash_cells(
         split_gdf.append(gdf_large.to_crs(crs_init))
 
     df_final = pd.concat(split_gdf)
-    ids_final = df_final[gdf_id].unique()
+    ids_final = df_final[gdf_id_new].unique()
 
     if not pd.Series(ids_final).isin(ids_init).all():
         raise ValueError('Fatal error! some of the final gdf_ids are not present at the beginning (wtf?)')
@@ -657,12 +669,12 @@ def recursively_partition_polygons_area_geohash_cells(
         missing = np.setdiff1d(ids_init, ids_final)
         logger.warning(f'Warning! missing {len(missing)} of the original gdf_ids after applying algo: {missing} ')
 
-    idx_too_large = df_final.geometry.area > max_area
-    if len(idx_too_large):
+    idx_too_large = df_final.geometry.area > float(max_area)
+    if idx_too_large.sum():
         logger.warning(f'Warning! there are {len(idx_too_large)} geometries that are larger than the threshold {max_area} ')
 
-        if 'geohash_index' in gdf_large.columns:
-            if gdf_large[~gdf_large.geohash_index.isna()].geohash_index.str.len().unique() < max_geohash_prec:
+        if geohash_index_new in gdf_large.columns:
+            if gdf_large[~gdf_large[geohash_index_new].isna()][geohash_index_new].str.len().unique() < max_geohash_prec:
                 raise RuntimeError('Fatal error! the largest polygons should have been subdivided on smaller geohashes')
 
     return df_final
