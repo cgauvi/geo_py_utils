@@ -3,6 +3,7 @@
 import geohash
 import geopandas as gpd
 import pandas as pd
+from shapely import get_num_coordinates
 from typing import Union, List
 import numpy as np
 import logging
@@ -11,6 +12,8 @@ from geo_py_utils.geo_general.geo_utils import get_geodataframe_from_list_coord,
 from geo_py_utils.geo_general.centroid import add_centroid
 from geo_py_utils.data.datasets import get_geohash_worst_dim_path
 from geo_py_utils.geo_general.intersection import intersect_gdf
+from geo_py_utils.geo_general.valid_geom import make_extra_valid_gpd
+
 
 logger = logging.getLogger(__name__)
 
@@ -567,8 +570,8 @@ def recursively_partition_geohash_cells(shp_points,
 
 
 DEFAULT_AREA_THRESH_SQ_KM = 10**8
-DEFAULT_MIN_GEOHASH_PREC = 3
-DEFAULT_MAX_GEOHASH_PREC = 5
+DEFAULT_MIN_GEOHASH_PREC_RECUR_POLY_PART = 3
+DEFAULT_MAX_GEOHASH_PREC_RECUR_POLY_PART = 5
 
 
 def filter_by_area(
@@ -582,22 +585,38 @@ def filter_by_area(
     gdf_large = gdf[gdf.area > max_area ]
     gdf_small = gdf[gdf.area <= max_area ]
 
-    return {'large': gdf_large.to_crs(crs_init), 'small' : gdf_small.to_crs(crs_init)}
+    return {'not_ok': gdf_large.to_crs(crs_init), 'ok' : gdf_small.to_crs(crs_init)}
 
+def filter_by_num_points(
+        gdf: gpd.GeoDataFrame,
+        max_num_points: int = 2000
+):
+    
+    idx_too_complex = get_num_coordinates(gdf.geometry) > max_num_points
+    idx_simple = get_num_coordinates(gdf.geometry) <= max_num_points
 
+    gdf_simple = gdf[idx_simple]
+    gdf_to_simplify = gdf[idx_too_complex]
 
-def recursively_partition_polygons_area_geohash_cells(
+    return {'not_ok': gdf_to_simplify, 'ok' : gdf_simple}
+
+def recursively_partition_polygons_geohash_cells(
         gdf: gpd.GeoDataFrame, 
+        *,
         gdf_id: str  ,
-        init_geohash_prec:int = DEFAULT_MIN_GEOHASH_PREC,
-        max_geohash_prec:int = DEFAULT_MAX_GEOHASH_PREC,
+        init_geohash_prec:int = DEFAULT_MIN_GEOHASH_PREC_RECUR_POLY_PART,
+        max_geohash_prec:int = DEFAULT_MAX_GEOHASH_PREC_RECUR_POLY_PART,
         geom_col_name = 'geometry',
-        max_area:int = DEFAULT_AREA_THRESH_SQ_KM,
+        ensure_valid_polygons = True,
+        filter_fun = filter_by_area,
         **filter_kwargs
         ) -> gpd.GeoDataFrame:
 
     if not isinstance(gdf, gpd.GeoDataFrame):
         raise TypeError('Fatal error!  gdf should be a GeoDataFrame')
+    
+    if not (gdf.geometry.geom_type.isin(['Polygon', 'Multipolygon'])).all():
+        raise ValueError('Fatal error! function only meant to split polygons. Split you geodf into (multi)polyons and other if desired')
 
     if init_geohash_prec <= 1 or init_geohash_prec > max_geohash_prec:
         raise ValueError("Fatal error! invalid geohash precision -> need: 1 <= init_geohash_prec <= max_geohash_prec")
@@ -622,9 +641,9 @@ def recursively_partition_polygons_area_geohash_cells(
 
     crs_init = gdf.crs
 
-    filtered_resuts = filter_by_area(gdf, max_area=max_area, **filter_kwargs)
-    gdf_large = filtered_resuts['large'].to_crs(4326)
-    gdf_small = filtered_resuts['small']
+    filtered_resuts = filter_fun(gdf, **filter_kwargs)
+    gdf_large = filtered_resuts['not_ok'].to_crs(4326)
+    gdf_small = filtered_resuts['ok']
 
     split_gdf = []
 
@@ -648,12 +667,12 @@ def recursively_partition_polygons_area_geohash_cells(
         )
 
         prec +=1
-        filtered_resuts = filter_by_area(gdf_large_split, **filter_kwargs)
-        gdf_large = filtered_resuts['large'].to_crs(4326)
-        gdf_small = filtered_resuts['small']
+        filtered_resuts = filter_fun(gdf_large_split, **filter_kwargs)
+        gdf_large = filtered_resuts['not_ok'].to_crs(4326)
+        gdf_small = filtered_resuts['ok']
 
         if gdf_small.shape[0] > 0:
-            split_gdf.append(filtered_resuts['small'].to_crs(crs_init))
+            split_gdf.append(filtered_resuts['ok'].to_crs(crs_init))
 
     # dont forget to append the large regions we chose not to subdivide even more
     if gdf_large.shape[0] > 0:
@@ -669,12 +688,17 @@ def recursively_partition_polygons_area_geohash_cells(
         missing = np.setdiff1d(ids_init, ids_final)
         logger.warning(f'Warning! missing {len(missing)} of the original gdf_ids after applying algo: {missing} ')
 
-    idx_too_large = df_final.geometry.area > float(max_area)
-    if idx_too_large.sum():
-        logger.warning(f'Warning! there are {len(idx_too_large)} geometries that are larger than the threshold {max_area} ')
 
-        if geohash_index_new in gdf_large.columns:
-            if gdf_large[~gdf_large[geohash_index_new].isna()][geohash_index_new].str.len().unique() < max_geohash_prec:
-                raise RuntimeError('Fatal error! the largest polygons should have been subdivided on smaller geohashes')
+    # Minimal validity
+    # The function is meant to work on polyons
+    if ensure_valid_polygons:
+        df_final = make_extra_valid_gpd(
+            df_final,
+            thresh_area_m = 0, # dont filter on area
+            buffer_size = 0, # dummy valid still ensures validity
+            sliver_ratio_thres = 10**10, # basically no sliver filtering
+            explode_multiparts_geom_collection = True,
+            list_geoms_types_to_keep = ['Polygon','Multipolygon']
+        )
 
     return df_final

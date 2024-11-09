@@ -2,7 +2,8 @@ import geopandas as gpd
 import geohash
 import numpy as np
 from shapely.geometry import Polygon, Point
- 
+from shapely import get_num_coordinates
+
 from geo_py_utils.geo_general.bbox import get_list_coordinates_from_bbox
 from geo_py_utils.geo_general.geo_utils import get_geodataframe_from_list_coord
 from geo_py_utils.geo_general.geohash_utils import (
@@ -10,7 +11,8 @@ from geo_py_utils.geo_general.geohash_utils import (
     get_all_geohash_from_gdf,
     geohash_max_precision,
     recursively_partition_geohash_cells, 
-    recursively_partition_polygons_area_geohash_cells
+    recursively_partition_polygons_geohash_cells,
+    filter_by_num_points
 )
 from geo_py_utils.utilities_testing.data import US_ALL_CVX_GDF, GDF_BBOX_DONNACONNA
 
@@ -129,7 +131,7 @@ def test_recursive_area_partition_does_nothing_if_thresh_too_high():
  
     # GDF_BBOX_DONNACONNA.to_crs(3347).area 1.305043e+09
 
-    gdf_untouched = recursively_partition_polygons_area_geohash_cells(
+    gdf_untouched = recursively_partition_polygons_geohash_cells(
         GDF_BBOX_DONNACONNA,
         gdf_id='index',
         max_area = GDF_BBOX_DONNACONNA.to_crs(3347).area + EPS
@@ -149,7 +151,7 @@ def test_recursive_area_partition_geohash_max_prec_respected_no_issue_idx_collis
 
     max_area = float(GDF_BBOX_DONNACONNA.to_crs(3347).area - EPS) # to ensure we will subdivide the gdf at least once
 
-    gdf_broken_down_gh_5 = recursively_partition_polygons_area_geohash_cells(
+    gdf_broken_down_gh_5 = recursively_partition_polygons_geohash_cells(
         GDF_BBOX_DONNACONNA.rename(columns={'index':"geohash_index"}),
         init_geohash_prec = 4,
         max_geohash_prec = 5,
@@ -170,6 +172,49 @@ def test_recursive_area_partition_geohash_max_prec_respected_no_issue_idx_collis
         assert (gdf_broken_down_gh_5_same.area <= max_area).all(), 'Fatal error! geom should not have been browken down'
 
  
-if __name__ == '__main__':
 
-    test_recursive_area_partition_geohash_max_prec_respected_no_issue_idx_collision()
+def test_recursive_area_partition_geohash_only_polygons_and_expected_cells ():
+
+    max_area = float(GDF_BBOX_DONNACONNA.to_crs(3347).area - EPS) # to ensure we will subdivide the gdf at least once
+
+    gdf_broken_down_gh_4 = recursively_partition_polygons_geohash_cells(
+        GDF_BBOX_DONNACONNA,
+        init_geohash_prec = 4,
+        max_geohash_prec = 4,
+        gdf_id='index',
+        max_area = max_area
+    )
+
+    df_expected_geohash = get_all_geohash_from_gdf(GDF_BBOX_DONNACONNA, 4, 'intersects')
+
+    assert gdf_broken_down_gh_4.geom_type.isin(['Polygon']).all()
+    assert gdf_broken_down_gh_4.shape[0] == df_expected_geohash.shape[0], 'Fatal error! there should be 5 intersecting geohashes '
+    assert gdf_broken_down_gh_4['geohash_index'].isin(df_expected_geohash['geohash_index']).all()
+
+
+def test_recursive_num_points_partition_geohash_give_exp_number_polygons():
+
+
+    # 16 points by quarter circle: 16*4+1 = 65 point in total
+    # If we intersect the circle with the 4 level 4 geohash that intersect it, we should get 4 polygons, each wich 16 + 4 = 18 points instead
+    # (Assuming we split the circle perfectly in the middle - which is not the case here)
+    geo_series_buffer = GDF_BBOX_DONNACONNA.centroid.buffer(0.1,resolution=16)
+    gdf_broken_down_gh_4=recursively_partition_polygons_geohash_cells(
+        gdf = gpd.GeoDataFrame({'index':[0]}, geometry=geo_series_buffer, crs=4326),
+        gdf_id='index',
+        init_geohash_prec = 4,
+        max_geohash_prec = 4,
+        filter_fun=filter_by_num_points,
+        max_num_points = float(get_num_coordinates(geo_series_buffer) - 1)
+    )
+
+    # 4 polyons
+    assert gdf_broken_down_gh_4.shape[0] == 4
+
+    #We have more point in total
+    assert get_num_coordinates(gdf_broken_down_gh_4.geometry).sum() > float(get_num_coordinates(geo_series_buffer))
+    
+    # however, each polygon has less than the threshold
+    assert get_num_coordinates(gdf_broken_down_gh_4.geometry).max() <  float(get_num_coordinates(geo_series_buffer) - 1)
+ 
+# %%
