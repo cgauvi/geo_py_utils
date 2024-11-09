@@ -468,10 +468,12 @@ def add_geohash_index(shp_to_add, precision, new_col_name='geohash_index', keep_
     return shp
 
 
-def recursively_partition_geohash_cells(shp_points,
-                                        count_column_name=None,
-                                        min_num_points=10,
-                                        max_precision=7):
+def recursively_partition_geohash_cells(
+        shp_points,
+        count_column_name=None,
+        min_num_points=10,
+        max_precision=7
+    ):
     """From a gpd.GeoDataFrame with point geometry, form a geohash grid with flexible spatial precision.
 
     Warning! Only works with POINT geometry
@@ -588,7 +590,9 @@ def recursively_partition_geohash_cells(shp_points,
             shp_count_by_hash_to_refine = get_all_geohash_from_gdf(
                 shp_count_by_hash_not_suff_precise, 
                 precision=p+1, 
-                predicate='within')
+                predicate='within',
+                bool_fun_predicate = any
+                )
         elif shp_count_by_hash_not_suff_precise.shape[0] == 0:
             # We are done: shp_count_by_hash_not_suff_precise has no rows 
             break
@@ -621,6 +625,10 @@ def filter_by_num_points(
         max_num_points: int = 2000
 ):
     
+    # Watch out, get_num_coordinates returns the total number of points
+    # since a valid polygon has the same start and end, there are get_num_coordinates() - 1 distinct points
+    # invalid polygons can have more than 2 repeated points (see utilities_testing.data:GDF_INVALID_EDGE_TOUCHES_INTERIOR)
+    # in this case, get_num_coordinates() > unique points + 1
     idx_too_complex = get_num_coordinates(gdf.geometry) > max_num_points
     idx_simple = get_num_coordinates(gdf.geometry) <= max_num_points
 
@@ -695,13 +703,15 @@ def recursively_partition_polygons_geohash_cells(
             shp_right_id = gdf_id_new
         )
 
-        prec +=1
+        
         filtered_resuts = filter_fun(gdf_large_split, **filter_kwargs)
         gdf_large = filtered_resuts['not_ok'].to_crs(4326)
         gdf_small = filtered_resuts['ok']
 
         if gdf_small.shape[0] > 0:
             split_gdf.append(filtered_resuts['ok'].to_crs(crs_init))
+        
+        prec +=1
 
     # dont forget to append the large regions we chose not to subdivide even more
     if gdf_large.shape[0] > 0:

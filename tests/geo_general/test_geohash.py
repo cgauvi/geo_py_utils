@@ -1,8 +1,9 @@
 import geopandas as gpd
 import geohash
 import numpy as np
-from shapely.geometry import Polygon, Point
-from shapely import get_num_coordinates
+import pytest
+from shapely.geometry import Polygon, Point, LineString
+from shapely import get_num_coordinates, GeometryCollection
 
 from geo_py_utils.geo_general.bbox import get_list_coordinates_from_bbox
 from geo_py_utils.geo_general.geo_utils import get_geodataframe_from_list_coord
@@ -120,9 +121,11 @@ def test_recursive_geohash_does_nothing():
             crs = 4326          
     )
         
-    shp_part, _ = recursively_partition_geohash_cells(shp_bug,
-                                                        count_column_name='counts',
-                                                        min_num_points = 2)
+    shp_part, _ = recursively_partition_geohash_cells(
+        shp_bug,
+        count_column_name='counts',
+        min_num_points = 2
+    )
 
     assert shp_part[shp_part['counts'] > 0].shape[0] == shp_bug.shape[0] # same number of non-zero rows: we tried drilling down but cannot go any more recise than the 4 individual points
 
@@ -138,6 +141,42 @@ def test_recursive_area_partition_does_nothing_if_thresh_too_high():
     )
 
     assert gdf_untouched.shape[0] == GDF_BBOX_DONNACONNA.shape[0]
+
+
+def test_recursive_polyon_geohash_parttion_fails_on_non_geom():
+
+    with pytest.raises(Exception):
+        gdf_point = gpd.GeoDataFrame(
+             { 'id': [0,],  "geometry": [Point (-71.16451, 46.86968)] }   ,
+             crs = 4326
+             )
+         
+        recursively_partition_polygons_geohash_cells(gdf_point, gdf_id='id')
+
+    with pytest.raises(Exception):
+        gdf_line = gpd.GeoDataFrame(
+             { 'id': [0,],  "geometry": [LineString( [(-71.16451, 46.86968), (-71.16451, 46.86968)])] }   ,
+             crs = 4326
+             )
+        recursively_partition_polygons_geohash_cells(gdf_line, gdf_id='id')
+        
+    with pytest.raises(Exception):
+        gdf_geom_collection = gpd.GeoDataFrame(
+             { 
+                 'id': [0,],  
+                 "geometry": [
+                     GeometryCollection( 
+                        [
+                            LineString( [(-71.16451, 46.86968),(-72.16451, 47.86968)]),
+                            Polygon(((-71.5, 46.5), (-71.6, 46.4),  (-71.5, 46.7),   (-71.5, 46.5))) 
+                        ]
+                    )
+                 ] 
+            }   ,
+            crs = 4326
+            )
+        recursively_partition_polygons_geohash_cells(gdf_geom_collection, gdf_id='id')
+         
 
 
 
@@ -229,13 +268,21 @@ def test_recursive_polygon_num_points_partition_geohash_multi_precision_not_over
             init_geohash_prec = 4,
             max_geohash_prec = 6,
             filter_fun=filter_by_num_points,
-            max_num_points = 4
+            max_num_points =  5 # a valid rectangle Polygon has 5 points since beginning and end are repeated
         )
+        gdf_broken_down_gh_5 = gdf_broken_down_gh_4[gdf_broken_down_gh_4['geohash_index'].str.len()==5]
 
-        gdf_geohash_no_sub = get_all_geohash_from_gdf(gdf_buffer, 5, 'within')
+        gdf_geohash_level_5_4_points = get_all_geohash_from_gdf(gdf_buffer, 5, 'strictly within')
 
-        # the geohash 5 that are strictly within the original circle/buffer should not be further subdivided
-        # indeed they all have 4 points < max_num_points
+        # gdf_geohash_level_5_4_points is a subset (in fact strict) of gdf_broken_down_gh_5
+        assert (
+            gdf_geohash_level_5_4_points['geohash_index'].isin(gdf_broken_down_gh_5['geohash_index']).all()
+        ),'''
+        Fatal error! The geohash 5 that are strictly within the original circle/buffer should not be further subdivided
+        indeed they all have 4 points < max_num_points
+        '''
+
+        
 
 
 def test_geohash_from_gdf_works_all_predicates():
@@ -264,34 +311,41 @@ def test_geohash_from_gdf_works_all_predicates():
     assert len(set(list_gh_5_within_buffer)) == 8
     assert len(set(list_gh_5_strictly_bbox_12)) == 12
 
-    # within - test case where only edges overlap 
+    # within - test case where only edges overlap
     gdf_buffer_bbox = gpd.GeoDataFrame(
         {'index': [0]},
         geometry = gdf_buffer.envelope, # gdf_buffer.unary_union.envelope is POLYGON not geoseries
         crs=4326
     )
-    df_expected_geohash_within = get_all_geohash_from_gdf(gdf_buffer_bbox, 5, 'within')
+    gdf_12_within_buffer_bbox = get_all_geohash_from_gdf(gdf_buffer_bbox, 5, 'within')
     assert (
-        df_expected_geohash_within['geohash_index'].isin(list_gh_5_strictly_bbox_12).all() and 
-        np.isin(list_gh_5_strictly_bbox_12, df_expected_geohash_within['geohash_index']).all()
+        gdf_12_within_buffer_bbox['geohash_index'].isin(list_gh_5_strictly_bbox_12).all() and 
+        np.isin(list_gh_5_strictly_bbox_12, gdf_12_within_buffer_bbox['geohash_index']).all()
     ), 'Fatal error with within'
 
 
-    # strictly within - test case where only edges overlap 
+    # strictly within - same results as within since edge don't touch
     gdf_12_strict_within_buffer_bbox = gpd.GeoDataFrame(
         {'geohash_index': list_gh_5_strictly_bbox_12},
-        geometry = [Polygon(get_geohash_box(h)) for h in list_gh_5_strictly_bbox_12], # gdf_buffer.unary_union.envelope is POLYGON not geoseries
+        geometry = [Polygon(get_geohash_box(h)) for h in list_gh_5_strictly_bbox_12], # gdf_12_strict_within_buffer_bbox.unary_union.envelope is POLYGON not geoseries
         crs=4326
     )
 
+    gdf_gh_bbox = gpd.GeoDataFrame(
+        {'index': [0]},
+        geometry = [gdf_12_within_buffer_bbox.unary_union.envelope], # gdf_buffer.unary_union.envelope is POLYGON not geoseries
+        crs=4326
+    )
 
-    df_expected_geohash_strict_within = get_all_geohash_from_gdf(gdf_12_strict_within_buffer_bbox, 5, 'strictly within')
+    # strictly within vs within - diff results since edge touch
+    gdf_gh_bbox_gh_5_within = get_all_geohash_from_gdf(gdf_gh_bbox, 5, 'within')
+    gdf_gh_bbox_gh_5_strict_within = get_all_geohash_from_gdf(gdf_gh_bbox, 5, 'strictly within')
+ 
     assert (
-        df_expected_geohash_strict_within['geohash_index'].isin(list_gh_5_strict_within_bbox).all() and 
-        np.isin(list_gh_5_strict_within_bbox, df_expected_geohash_strict_within['geohash_index']).all()
+        (gdf_gh_bbox_gh_5_within.shape[0] == gdf_12_within_buffer_bbox.shape[0]) and
+        (gdf_gh_bbox_gh_5_strict_within.shape[0] == gdf_12_within_buffer_bbox.shape[0] - 10) and 
+        (gdf_gh_bbox_gh_5_strict_within['geohash_index'].isin(list_gh_5_strict_within_bbox)).all()
     ), 'Fatal error with strictly within'
-
-
 
     # within - tests case where gdf_buffer is not the same as gdf_buffer.envelope (bounding box)
     df_expected_geohash_within = get_all_geohash_from_gdf(gdf_buffer, 5, 'within')
@@ -303,8 +357,7 @@ def test_geohash_from_gdf_works_all_predicates():
 
     # intersects - also tests case where gdf_buffer is not the same as gdf_buffer.envelope  
     # df_expected_geohash_intersect.shape[0] == 30 (5*6) if using the enveloppe 
-    gdf_envelope_buffer = gpd.GeoDataFrame( {'index': [0]}, geometry=gdf_buffer.envelope, crs=4326)
-    df_expected_geohash_intersect_env = get_all_geohash_from_gdf(gdf_envelope_buffer, 5, 'intersects')
+    df_expected_geohash_intersect_env = get_all_geohash_from_gdf(gdf_buffer_bbox, 5, 'intersects')
     df_expected_geohash_intersect = get_all_geohash_from_gdf(gdf_buffer, 5, 'intersects')
 
     assert df_expected_geohash_intersect_env.shape[0] == 30
@@ -324,7 +377,7 @@ def test_geohash_from_gdf_works_all_predicates():
     ), 'Fatal error with contains'
 
  
-if __name__ == '__main__':
-    test_geohash_from_gdf_works_all_predicates()    
 
 # %%
+if __name__ == '__main__':
+    test_recursive_polygon_num_points_partition_geohash_multi_precision_not_overly_subdivided()
