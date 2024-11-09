@@ -7,6 +7,89 @@ import pandas as pd
 from shapely.geometry import shape
 from typing import  Union
 
+LIST_VALID_PREDICATES = ['within', 'strictly within', 'intersects', 'contains', 'strictly contains', 'touches']
+
+def compare_two_gdf_predicate(
+        gdf_left: gpd.GeoDataFrame,
+        gdf_right: gpd.GeoDataFrame,
+        predicate: str,
+        bool_fun = all
+        ) -> pd.Series:
+    
+    """
+    Compare 2 gdf feature by feature (cartesian join) and returns a series indicating if any of the left features are related to the right 
+
+    Example:
+    ```
+    
+    gdf1_within_2 = gdf1[compare_two_gdf_predicate(gdf1, gdf2, 'within')]
+
+    ```
+
+    Raises:
+        ValueError: If invalid predicate
+
+    Returns:
+        pd.Series (bool): Same size as gdf_left.shape[0] so can be used as indexing 
+    """
+
+
+    if not predicate in LIST_VALID_PREDICATES:
+        raise ValueError(f'Fatal error! predicate should be within {LIST_VALID_PREDICATES}') 
+    
+    if predicate == 'contains':
+        # "Every point of b is a point of (the interior or boundary of) a"
+        df_join = pd.DataFrame(
+            { 
+                k: gdf_left.covers(g) for
+                k,g in enumerate(gdf_right.geometry)
+            } 
+        )
+    elif predicate == 'strictly contains':
+        # geometry b lies in a, and the interiors intersect
+        df_join = pd.DataFrame(
+            { 
+                k: gdf_left.covers(g) & ~gdf_left.boundary.intersects(g.boundary)  for
+                k,g in enumerate(gdf_right.geometry)
+            } 
+        )
+
+    elif predicate == 'within':
+        # Every point of a is a point of (the interior or boundary of) b
+        df_join = pd.DataFrame(
+            { 
+                k: gdf_left.covered_by(g) for
+                k,g in enumerate(gdf_right.geometry)
+            } 
+        )
+    elif predicate == 'strictly within':
+        #a is within b: a lies in the interior of b.	
+        df_join = pd.DataFrame(
+            { 
+                k: gdf_left.covered_by(g) & ~gdf_left.boundary.intersects(g.boundary)  for
+                k,g in enumerate(gdf_right.geometry)
+            } 
+        )
+    elif predicate == 'intersects':
+        # a and b have at least one point in common.	
+        df_join = pd.DataFrame(
+            { 
+                k: gdf_left.intersects(g)  for
+                k,g in enumerate(gdf_right.geometry)
+            } 
+        )
+    elif predicate == 'touches':
+        # a and b have at least one point in common, but their interiors do not intersect.   
+        df_join = pd.DataFrame(
+            { 
+                k: gdf_left.touches(g)  for
+                k,g in enumerate(gdf_right.geometry)
+            } 
+        )
+    else:
+        raise ValueError(f'Invalid predicate {predicate}. Choose from {LIST_VALID_PREDICATES}')
+    
+    return df_join.apply(bool_fun, axis=1)
 
 def explode_multiparts(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     
