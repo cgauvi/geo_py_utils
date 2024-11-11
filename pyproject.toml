@@ -25,7 +25,7 @@ munkres= {version ="*"}
 seaborn = {version ="*", optional = true}
 matplotlib = {version ="*", optional = true}
 folium = {version ="*", optional = true}
-mapclassify = {version =*", optional = true}
+mapclassify = {version ="*", optional = true}
 contextily = {version ="*", optional = true}
 xyzservices = {version ="*", optional = true}
 pytest = {version = "*", optional = true}
