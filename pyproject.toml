@@ -5,7 +5,7 @@ description = "Python functions for generic geospatial manipulations"
 authors = ["Charles Gauvin"]
 
 [tool.poetry.dependencies] 
-python = {version = ">=3.9,<=3.10"}
+python = {version = ">=3.9,<=3.11"}
 brotlipy= {version =">=0.7.0,<0.8.0"}
 psycopg2= {version =">=2.9.5,<3.0.0"}
 pyarrow= {version ="*"}
@@ -27,7 +27,6 @@ matplotlib = {version ="*", optional = true}
 folium = {version ="*", optional = true}
 mapclassify = {version ="*", optional = true}
 contextily = {version ="*", optional = true}
-xyzservices = {version ="*", optional = true}
 pytest = {version = "*", optional = true}
 flake8 = {version = "*", optional = true}
 pyproject-flake8 = {version = "*", optional = true}
@@ -35,7 +34,7 @@ oscrypto = {version ="*"}
 Unidecode =  {version ="*"}
 
 [tool.poetry.extras]
-notebooks=["seaborn" , "matplotlib", "folium", "mapclassify", "contextily", "xyzservices"]
+notebooks=["seaborn" , "matplotlib", "folium", "mapclassify", "contextily"]
 dev=['pytest','flake8']
 
 [build-system]
