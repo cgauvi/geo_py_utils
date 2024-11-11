@@ -43,7 +43,7 @@ jobs:
           conda activate geo_py_utils 
           python -m pip install --upgrade pip
           pip install poetry
-          poetry install --with dev
+          poetry install --group=dev
 
         shell: bash -l {0}
 
