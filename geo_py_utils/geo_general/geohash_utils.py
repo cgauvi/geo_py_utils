@@ -373,7 +373,7 @@ def get_all_geohash_from_gdf(
         bool_fun=bool_fun_predicate
     )
 
-    shp_geo_all=shp_geo_all[idx_predicate.values]
+    shp_geo_all=shp_geo_all[idx_predicate]
  
 
     return shp_geo_all

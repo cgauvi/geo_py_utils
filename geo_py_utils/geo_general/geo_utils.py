@@ -14,7 +14,7 @@ def compare_two_gdf_predicate(
         gdf_right: gpd.GeoDataFrame,
         predicate: str,
         bool_fun = all
-        ) -> pd.Series:
+        ) -> np.array :
     
     """
     Compare 2 gdf feature by feature (cartesian join) and returns a series indicating if any of the left features are related to the right 
@@ -30,7 +30,7 @@ def compare_two_gdf_predicate(
         ValueError: If invalid predicate
 
     Returns:
-        pd.Series (bool): Same size as gdf_left.shape[0] so can be used as indexing 
+         np.array (bool): Same size as gdf_left.shape[0] so can be used as indexing e.g. `gdf_left[ compare_two_gdf_predicate (gdf_left, gdf_right, 'intersects') ]`
     """
 
 
@@ -89,7 +89,7 @@ def compare_two_gdf_predicate(
     else:
         raise ValueError(f'Invalid predicate {predicate}. Choose from {LIST_VALID_PREDICATES}')
     
-    return df_join.apply(bool_fun, axis=1)
+    return df_join.apply(bool_fun, axis=1).values
 
 def explode_multiparts(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     

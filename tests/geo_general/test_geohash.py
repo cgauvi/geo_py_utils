@@ -375,9 +375,4 @@ def test_geohash_from_gdf_works_all_predicates():
         df_expected_contains['geohash_index'].isin(list_gh_4_contain_all).all() and 
         np.isin(list_gh_4_contain_all, df_expected_contains['geohash_index']).all()
     ), 'Fatal error with contains'
-
  
-
-# %%
-if __name__ == '__main__':
-    test_recursive_polygon_num_points_partition_geohash_multi_precision_not_overly_subdivided()
