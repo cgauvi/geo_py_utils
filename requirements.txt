@@ -20,6 +20,4 @@ Unidecode
 oscrypto
 python-dotenv
 unzip
-geopandas
 pyproj
-shapely
