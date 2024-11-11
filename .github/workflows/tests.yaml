@@ -41,6 +41,7 @@ jobs:
         run: |
           conda create --name geo_py_utils python=${{ matrix.python-version }} "geopandas<1.0.0" "shapely>=2.0.0"
           conda activate geo_py_utils 
+          conda update --all -c conda-forge
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
