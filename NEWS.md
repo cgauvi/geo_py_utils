@@ -1,3 +1,9 @@
+================== 
+
+geo_py_utils 1.9.1
+
+- patch: 
+    * fix: changed the expectation for `test_muni_dissolved` - based on https://www.donneesquebec.ca/recherche/dataset/decoupages-administratifs# - `MUS_CO_GEO == "92903"` - "Sainte-Élisabeth-de-Proulx" added - `MUS_CO_MOD == CONTNO` (Constitution en territoire non organisé)
 
 ================== 
 
