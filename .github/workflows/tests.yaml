@@ -5,7 +5,7 @@ on:
       [master, main]
   push:
     branches:
-      [master, main, build/charles/ci_py_310 ]
+      [master, main]
 
 
 
@@ -43,7 +43,7 @@ jobs:
           conda activate geo_py_utils 
           python -m pip install --upgrade pip
           pip install poetry
-          poetry install .[dev]
+          poetry install --with dev
 
         shell: bash -l {0}
 
