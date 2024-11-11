@@ -18,9 +18,9 @@ except ImportError:
 
 from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
 from geo_py_utils.etl.snowflake.gdf_load import sfkl_to_gpd
-from geo_py_utils.etl.snowflake.db_utils import sfkl_get_table_srid, sfkl_show_column
+from geo_py_utils.etl.snowflake.db_utils import sfkl_get_table_srid, sfkl_show_column, sfkl_get_specific_col_types
 from geo_py_utils.etl.snowflake.gdf_write import SnowflakeGeoWriter
-from geo_py_utils.utilities_testing.data import SAMPLE_GDF, SAMPLE_GDF_2, SAMPLE_DF
+from geo_py_utils.utilities_testing.data import SAMPLE_GDF, SAMPLE_GDF_2, SAMPLE_DF, GDF_INVALID_SELF_INTERSECTING
 from geo_py_utils.constants import ProjectPaths
  
 PATH_CONFIG_EXT_BROWSER = ProjectPaths.CONFIG_PATH / 'snowflake' / 'extbrowser' / ".env"
@@ -38,6 +38,48 @@ def teardown_ext_browser():
     with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) as connector:
         connector.get_connection().cursor().execute(f"DROP TABLE if exists {TEST_TBL_NAME}")
  
+
+ 
+@pytest.mark.requires_remote_sfkl_interactivity
+def test_gdf_invalid_geom_no_nullify_fails():
+
+    with pytest.raises(Exception):
+        with SnowflakeGeoWriter(
+            shp=GDF_INVALID_SELF_INTERSECTING.set_crs(3347),
+            sfkl_name=TEST_TBL_NAME,
+            sfkl_connector= SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) ,
+            sfkl_geo_col_name = SFKL_GEO_COL_NAME,
+            overwrite_tbl = True,
+            nullify_invalid_geometries=False
+        ) as sfkl_writer:
+            
+            sfkl_writer.create_table()
+
+@pytest.mark.requires_remote_sfkl_interactivity
+def test_gdf_invalid_geom_with_nullify_creates_null_geom_success():
+
+    with SnowflakeGeoWriter(
+        shp=GDF_INVALID_SELF_INTERSECTING.set_crs(3347),
+        sfkl_name=TEST_TBL_NAME,
+        sfkl_connector= SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) ,
+        sfkl_geo_col_name = SFKL_GEO_COL_NAME,
+        overwrite_tbl = True,
+        nullify_invalid_geometries=True
+    ) as sfkl_writer:
+        
+        sfkl_writer.create_table()
+
+    with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER).get_connection() as conn:
+        df_results = pd.read_sql(  f'select count(*) NUMROWS from {TEST_TBL_NAME}', conn )
+
+        assert df_results ['NUMROWS'].values[0] == GDF_INVALID_SELF_INTERSECTING.shape[0], 'Fatal error! should not have written same number of rows'
+
+        df_results = pd.read_sql(  f'select ST_ISVALID({SFKL_GEO_COL_NAME}) IS_VALID from {TEST_TBL_NAME}', conn )
+        assert df_results['IS_VALID'].isna().all(), 'Fatal error! All geometries should be NULL'
+
+        df_type_geo = sfkl_get_specific_col_types(conn, TEST_TBL_NAME, [SFKL_GEO_COL_NAME])
+        type_geo = df_type_geo[df_type_geo['column_name'] == SFKL_GEO_COL_NAME]['data_type'].values[0]
+        assert type_geo == 'GEOGRAPHY', f'Fatal error! {SFKL_GEO_COL_NAME} should be of type SFKL_GEO_COL_NAME'
 
  
 def create_gdf_ext_browser(overwrite, use_1 = True):

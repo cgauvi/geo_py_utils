@@ -3,6 +3,7 @@
 import geohash
 import geopandas as gpd
 import pandas as pd
+from shapely import get_num_coordinates
 from typing import Union, List
 import numpy as np
 import logging
@@ -10,13 +11,15 @@ import logging
 from geo_py_utils.geo_general.geo_utils import get_geodataframe_from_list_coord, get_matrix_point_coordinates, get_matrix_point_polygon
 from geo_py_utils.geo_general.centroid import add_centroid
 from geo_py_utils.data.datasets import get_geohash_worst_dim_path
-
+from geo_py_utils.geo_general.intersection import intersect_gdf
+from geo_py_utils.geo_general.valid_geom import make_extra_valid_gpd
+from geo_py_utils.geo_general.geo_utils import compare_two_gdf_predicate
 
 logger = logging.getLogger(__name__)
 
 
 PATH_GEO_HASH_REFERENCE = get_geohash_worst_dim_path()
-
+LIST_VALID_GEOHASH_PREDICATES = ['within', 'strictly within', 'intersects', 'contains']
 
 def count_by_index(df,
                    group_by_idx='geohash_index',
@@ -136,10 +139,12 @@ def get_geohash_box(current_geohash, lng_first=True):
     return polygon
 
 
-def is_geohash_in_bounding_box(current_geohash,
-                               bbox_coordinates,
-                               lng_first=True,
-                               predicate='intersects'):
+def is_geohash_in_bounding_box(
+        current_geohash,
+        bbox_coordinates,
+        lng_first=True,
+        predicate='intersects'
+    ):
     """Checks if the box of a geohash is inside the bounding box
 
     Not 100% sure what happens if we change the < to <= 
@@ -151,7 +156,8 @@ def is_geohash_in_bounding_box(current_geohash,
     :return: true if the the center of the geohash is in the bounding box
     """
 
-    assert predicate in ['within', 'strictly within', 'intersects', 'contains']
+    if not predicate in LIST_VALID_GEOHASH_PREDICATES:
+        raise ValueError(f'Fatal error inis_geohash_in_bounding_box: redicate must be in {LIST_VALID_GEOHASH_PREDICATES} ')
 
     # List of 4 elements. Each is a 2 dim list representing a point
     coordinates = get_geohash_box(current_geohash, lng_first)
@@ -317,24 +323,33 @@ def get_all_geohash_from_extent(input: Union[List, gpd.GeoDataFrame, gpd.geoseri
     return shp_geohash
 
 
-def get_all_geohash_from_gdf(input:  gpd.GeoDataFrame,
-                             precision: int,
-                             predicate: str = 'within'):
+def get_all_geohash_from_gdf(
+        input:  gpd.GeoDataFrame,
+        precision: int,
+        predicate: str = 'within',
+        bool_fun_predicate = all
+    ):
+
     """Return a single geodataframe containing ALL geohashes from a geodataframe 
 
-    Wrapper over get_all_geohash_from_extent 
-
     Different feature from get_all_geohash_from_extent which returns all geohash inside a bbox
-    For this function, we return only the geohash cell over points/simple feature centroids that are in our input geodataframe
+    Here we perform additional filtering to ensure the final gehash cells repect the selected predicate
 
     Args:
         input : geo df -> each simple feature gets mapped to a geohash (and then we take )
         precision: geohash precision
+        predicate: spatial predicate from within LIST_VALID_GEOHASH_PREDICATES
     Returns:
         list[str]: list of geohash indices
     """
 
-    assert isinstance(input, gpd.GeoDataFrame)
+    if not isinstance(input, gpd.GeoDataFrame):
+        raise ValueError('Fatal error in get_all_geohash_from_gdf: input must be a geodataframe')
+
+
+    if not predicate in LIST_VALID_GEOHASH_PREDICATES:
+        raise ValueError(f'Fatal error inis_geohash_in_bounding_box: redicate must be in {LIST_VALID_GEOHASH_PREDICATES} ')
+
 
     # Get the bounding box over EACH feature - NOT total_bounds
     matrix_bbox = input.bounds.to_numpy()
@@ -348,12 +363,27 @@ def get_all_geohash_from_gdf(input:  gpd.GeoDataFrame,
     # Remove duplicates: might be possible if some of the original input features touch
     shp_geo_all.drop_duplicates(subset='geohash_index', inplace=True)
 
+    # Filter based on predicate
+    # `bool_fun = all`` means a feature of shp_geo_all must relate to all features from input.
+    # `bool_fun = any`` means a feature of shp_geo_all must relate to at least one features from input
+    idx_predicate = compare_two_gdf_predicate(
+        shp_geo_all, 
+        input,
+        predicate=predicate,
+        bool_fun=bool_fun_predicate
+    )
+
+    shp_geo_all=shp_geo_all[idx_predicate]
+ 
+
     return shp_geo_all
 
 
-def get_subset_geohash_from_gdf(input:  Union[gpd.GeoDataFrame, gpd.geoseries.GeoSeries],
-                                precision: int,
-                                use_centroid_only: bool = True):
+def get_subset_geohash_from_gdf(
+        input:  Union[gpd.GeoDataFrame, gpd.geoseries.GeoSeries],
+        precision: int,
+        use_centroid_only: bool = True
+    ):
     """Return a single geodataframe containing A SUBSET OF geohashes from a geodataframe by using the centroid from each feature
 
     If trying to refine a geohash cell, THIS WILL NOT NECESSARILY YIELD ALL THE subgoehahs containing it. It will return either the geohahs associated with the centroid 
@@ -438,10 +468,12 @@ def add_geohash_index(shp_to_add, precision, new_col_name='geohash_index', keep_
     return shp
 
 
-def recursively_partition_geohash_cells(shp_points,
-                                        count_column_name=None,
-                                        min_num_points=10,
-                                        max_precision=7):
+def recursively_partition_geohash_cells(
+        shp_points,
+        count_column_name=None,
+        min_num_points=10,
+        max_precision=7
+    ):
     """From a gpd.GeoDataFrame with point geometry, form a geohash grid with flexible spatial precision.
 
     Warning! Only works with POINT geometry
@@ -486,9 +518,11 @@ def recursively_partition_geohash_cells(shp_points,
 
     # Get all geohash cells - important to use get_all_geohash_from_extent at the beginning to cover the entire extent
     # And then use get_all_geohash_from_gdf within the for loop to break down each cell that needs refining
-    shp_count_by_hash_to_refine = get_all_geohash_from_extent(shp_points,
-                                                              init_precision,
-                                                              predicate='intersects')
+    shp_count_by_hash_to_refine = get_all_geohash_from_extent(
+        shp_points,
+        init_precision,
+        predicate='intersects'
+    )
 
     list_complete = []
     dict_layers = {}
@@ -556,7 +590,9 @@ def recursively_partition_geohash_cells(shp_points,
             shp_count_by_hash_to_refine = get_all_geohash_from_gdf(
                 shp_count_by_hash_not_suff_precise, 
                 precision=p+1, 
-                predicate='within')
+                predicate='within',
+                bool_fun_predicate = any
+                )
         elif shp_count_by_hash_not_suff_precise.shape[0] == 0:
             # We are done: shp_count_by_hash_not_suff_precise has no rows 
             break
@@ -566,28 +602,142 @@ def recursively_partition_geohash_cells(shp_points,
     return shp_partionned, dict_layers
 
 
-# %%
-if __name__ == "__main__":
+DEFAULT_AREA_THRESH_SQ_KM = 10**8
+DEFAULT_MIN_GEOHASH_PREC_RECUR_POLY_PART = 3
+DEFAULT_MAX_GEOHASH_PREC_RECUR_POLY_PART = 5
 
-    from shapely.geometry import Point
 
-    GEOHASH_PRECISION = 6
-     
- 
+def filter_by_area(
+        gdf: gpd.GeoDataFrame, 
+        max_area:int = DEFAULT_AREA_THRESH_SQ_KM,
+        temp_crs:int = 3347
+    ) -> dict:
 
-    shp_bug = gpd.GeoDataFrame(
-            {
-            'id' :[0	,1,	2	,3],
-            'geohash_index' : ["drgp",	"drgr",	"f0r9",	"f0rb"],
-            "lat" : [44.997203	,44.996874	,46.722120	,46.521345],
-            "lng": [-74.349024,	-74.084504,	-79.103772	,-78.868221],
-            'counts' : [134, 410, 119	,59],
-            'geometry': [Point(-74.34902, 44.99720), Point(-74.08450,44.99687), Point(-79.10377,46.72212), Point(-78.86822,46.52135)]
-            },
-            crs = 4326          
-    )
-     
-    shp_part_bug, _ = recursively_partition_geohash_cells(shp_bug,
-                                                        count_column_name='counts',
-                                                        min_num_points = 2,
-                                                        max_precision=GEOHASH_PRECISION)
+    crs_init = gdf.crs
+    gdf=gdf.to_crs(temp_crs)
+    gdf_large = gdf[gdf.area > max_area ]
+    gdf_small = gdf[gdf.area <= max_area ]
+
+    return {'not_ok': gdf_large.to_crs(crs_init), 'ok' : gdf_small.to_crs(crs_init)}
+
+def filter_by_num_points(
+        gdf: gpd.GeoDataFrame,
+        max_num_points: int = 2000
+):
+    
+    # Watch out, get_num_coordinates returns the total number of points
+    # since a valid polygon has the same start and end, there are get_num_coordinates() - 1 distinct points
+    # invalid polygons can have more than 2 repeated points (see utilities_testing.data:GDF_INVALID_EDGE_TOUCHES_INTERIOR)
+    # in this case, get_num_coordinates() > unique points + 1
+    idx_too_complex = get_num_coordinates(gdf.geometry) > max_num_points
+    idx_simple = get_num_coordinates(gdf.geometry) <= max_num_points
+
+    gdf_simple = gdf[idx_simple]
+    gdf_to_simplify = gdf[idx_too_complex]
+
+    return {'not_ok': gdf_to_simplify, 'ok' : gdf_simple}
+
+def recursively_partition_polygons_geohash_cells(
+        gdf: gpd.GeoDataFrame, 
+        *,
+        gdf_id: str  ,
+        init_geohash_prec:int = DEFAULT_MIN_GEOHASH_PREC_RECUR_POLY_PART,
+        max_geohash_prec:int = DEFAULT_MAX_GEOHASH_PREC_RECUR_POLY_PART,
+        geom_col_name = 'geometry',
+        ensure_valid_polygons = True,
+        filter_fun = filter_by_area,
+        **filter_kwargs
+        ) -> gpd.GeoDataFrame:
+
+    if not isinstance(gdf, gpd.GeoDataFrame):
+        raise TypeError('Fatal error!  gdf should be a GeoDataFrame')
+    
+    if not (gdf.geometry.geom_type.isin(['Polygon', 'Multipolygon'])).all():
+        raise ValueError('Fatal error! function only meant to split polygons. Split you geodf into (multi)polyons and other if desired')
+
+    if init_geohash_prec <= 1 or init_geohash_prec > max_geohash_prec:
+        raise ValueError("Fatal error! invalid geohash precision -> need: 1 <= init_geohash_prec <= max_geohash_prec")
+    
+    if gdf_id not in gdf.columns:
+        raise ValueError(f'Fatal error! {gdf_id} not in the columns! Cannot be used as an id')
+
+    ids_init = gdf[gdf_id].unique()
+    if gdf.shape[0] == 0:
+        raise RuntimeError('Fatal error! gdf contains no rows initially')
+
+    # Check index names
+    geohash_index= 'geohash_index'
+    if gdf_id == 'geohash_index':
+        gdf_id_new  =  gdf_id + '_right'
+        geohash_index_new = geohash_index + '_left'
+    else:
+        geohash_index_new = geohash_index
+        gdf_id_new = gdf_id
+
+    gdf.rename(columns={gdf_id: gdf_id_new}, inplace=True)
+
+    crs_init = gdf.crs
+
+    filtered_resuts = filter_fun(gdf, **filter_kwargs)
+    gdf_large = filtered_resuts['not_ok'].to_crs(4326)
+    gdf_small = filtered_resuts['ok']
+
+    split_gdf = []
+
+    if gdf_small.shape[0] > 0:
+        split_gdf.append(gdf_small)
+
+    prec = init_geohash_prec
+    while gdf_large.shape[0] > 0 and prec <= max_geohash_prec:
+
+        shp_geohash = get_all_geohash_from_extent(
+                gdf_large,
+                precision = prec,
+                predicate='intersects'
+        ).rename(columns={geohash_index: geohash_index_new})
+
+        gdf_large_split = intersect_gdf(
+            shp_left=  shp_geohash,
+            shp_left_id = geohash_index_new,
+            shp_right = gdf_large[[gdf_id_new, geom_col_name]],
+            shp_right_id = gdf_id_new
+        )
+
+        
+        filtered_resuts = filter_fun(gdf_large_split, **filter_kwargs)
+        gdf_large = filtered_resuts['not_ok'].to_crs(4326)
+        gdf_small = filtered_resuts['ok']
+
+        if gdf_small.shape[0] > 0:
+            split_gdf.append(filtered_resuts['ok'].to_crs(crs_init))
+        
+        prec +=1
+
+    # dont forget to append the large regions we chose not to subdivide even more
+    if gdf_large.shape[0] > 0:
+        split_gdf.append(gdf_large.to_crs(crs_init))
+
+    df_final = pd.concat(split_gdf)
+    ids_final = df_final[gdf_id_new].unique()
+
+    if not pd.Series(ids_final).isin(ids_init).all():
+        raise ValueError('Fatal error! some of the final gdf_ids are not present at the beginning (wtf?)')
+    
+    if not pd.Series(ids_init).isin(ids_final).all():
+        missing = np.setdiff1d(ids_init, ids_final)
+        logger.warning(f'Warning! missing {len(missing)} of the original gdf_ids after applying algo: {missing} ')
+
+
+    # Minimal validity
+    # The function is meant to work on polyons
+    if ensure_valid_polygons:
+        df_final = make_extra_valid_gpd(
+            df_final,
+            thresh_area_m = 0, # dont filter on area
+            buffer_size = 0, # dummy valid still ensures validity
+            sliver_ratio_thres = 10**10, # basically no sliver filtering
+            explode_multiparts_geom_collection = True,
+            list_geoms_types_to_keep = ['Polygon','Multipolygon']
+        )
+
+    return df_final

@@ -11,7 +11,7 @@ def get_grid_over_shp(shp: gpd.GeoDataFrame,
                       height_y_m: float = None,
                       width_x_m: float = None,
                       cell_dim: tuple = None,
-                      crs=None) -> gpd.GeoDataFrame:
+                      crs_to_use_for_grid=None) -> gpd.GeoDataFrame:
     """Generate a rectangular grid over a geodataframe extent 
 
     Based on https://gis.stackexchange.com/questions/269243/creating-polygon-grid-using-geopandas
@@ -20,18 +20,25 @@ def get_grid_over_shp(shp: gpd.GeoDataFrame,
         shp (gpd.GeoDataFrame): _description_
         height_y_m: height/lenth of each cell in meters
         width_x_m: width of each cell in meters
-        crs: crs used - to ensure we are working in meters and not degrees, Default = 3857
+        crs_to_use_for_grid: crs used - to ensure we are working in meters and not degrees, Default = 3857
     Returns:
-        gpd.GeoDataFrame: _description_
+        gpd.GeoDataFrame: gdf with the SAME crs as the initial shp
     """
 
     # ^ is xor
-    assert (cell_dim is not None) ^ (height_y_m is not None and width_x_m is not None), \
-        'Fatal error! use either the deired number of cells of set the cell width and height manually '
-
+    if not ( (cell_dim is not None) ^ (height_y_m is not None and width_x_m is not None) ):
+        raise RuntimeError( 'Fatal error! use either the deired number of cells of set the cell width and height manually ')
+       
     # Project
     crs_init = shp.crs
-    crs_used = 3857 if crs is None else crs_init
+
+    if crs_init is None:
+        raise RuntimeError('Fatal error! initial gdf has no crs specified!')
+    
+
+    crs_used = crs_to_use_for_grid if crs_to_use_for_grid else crs_init
+
+
     shp_proj = shp.to_crs(crs_used)
 
     # Get the extent/bounding box
@@ -40,13 +47,13 @@ def get_grid_over_shp(shp: gpd.GeoDataFrame,
     # Get the cell dimensions based on parameters
     if (height_y_m is not None and width_x_m is not None):
 
-        if height_y_m > (xmax - xmin):
+        if width_x_m  > (xmax - xmin):
             raise ValueError(
-                'Warning! cannot use such a large heigth, the total extent height is %f' % (xmax - xmin))
+                f'Warning! cannot use such a large heigth, the total extent height is {(xmax - xmin)} (max) vs {width_x_m} (requested)')
 
-        if width_x_m > (ymax - ymin):
+        if height_y_m > (ymax - ymin):
             raise ValueError(
-                'Warning! cannot use such a large width, the total extent width is %f' % (ymax - ymin))
+                f'Warning! cannot use such a large width, the total extent width is {(ymax - ymin)} (max) vs {height_y_m} (requested)')
 
     else:
 

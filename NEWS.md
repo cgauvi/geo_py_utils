@@ -1,5 +1,41 @@
 ================== 
 
+geo_py_utils 1.9.2
+
+- patch: 
+    * fix the requirements: `shapely.get_num_coordinates()` requires >= 2.0.1 (used in `geohash_utils.py`)
+
+================== 
+
+geo_py_utils 1.9.1
+
+- patch: 
+
+    * fix: changed the expectation for `test_muni_dissolved` - based on https://www.donneesquebec.ca/recherche/dataset/decoupages-administratifs# - `MUS_CO_GEO == "92903"` - "Sainte-Élisabeth-de-Proulx" added - `MUS_CO_MOD == CONTNO` (Constitution en territoire non organisé)
+
+================== 
+
+geo_py_utils 1.9.0
+
+
+- patch: 
+    * fixed `SnowflakeCsvWriter`: added new `nullify_invalid_geometries = True` parameter. By default, we will now write invalid geometries to snowflake and these will get nulled out (better than being strict and always throwing errors)
+    * fix: minor bugs like replacing assertion by tests + Exceptions 
+    * chore: linted some old code for formatting
+- minor:
+    * feat: created `compare_two_gdf_predicate` that returns a np.array to compare 2 geodataframes 
+    * fix: `get_all_geohash_from_gdf` now returns the appropriate geohashes based on the spatial predicate. Previously, spatial relation was based on bounding box rather than exact geometry.
+    * feat: implemented `recursively_partition_polygons_geohash_cells` that can recursively subdivide a polygon with finer and finer geohases, based e.g. on area or number of points until a condition is met
+    * fix: fixed a bug in `geo_py_utils/geo_general/grid.py`: `width_x_m > (xmax - xmin)` used to consider ymax-ymin + init crs manipulations where weird
+    - feat: implemented `geo_py_utils/geo_general/intersection.py:intersect_gdf` : that does the equivalent of `st_intersection` in postgis (but is less efficient and creates a bunch of artefacts like points and edges)
+    - feat: implemented `geo_py_utils/geo_general/valid_geom.py:make_extra_valid_gpd` that makes valid + checks for slivers, area, geom type, can remove geom collections, etc.
+    - feat: added back `geo_py_utils/misc/ssl.py:no_ssl_verification` and `geo_py_utils/misc/profiler.py:time_function`
+
+    
+
+
+================== 
+
 geo_py_utils 1.8.1
 
 

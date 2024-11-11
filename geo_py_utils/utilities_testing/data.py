@@ -1,8 +1,8 @@
 from os.path import join
 import pandas as pd
 import geopandas as gpd
-from shapely.geometry import Polygon
-
+from shapely.geometry import Polygon, LineString, Point
+from shapely import wkt
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
 
@@ -31,6 +31,13 @@ BASE_DATA =  {
     MIXED_COL_NAME: [3,'mixed']
     }
 
+GDF_BBOX_DONNACONNA = gpd.GeoDataFrame(
+                    data = {'index':[0]},
+                    geometry= [wkt.loads('Polygon ((-72 46.39999999999999858, -71.5 46.39999999999999858, -71.5 46.70000000000000284, -72 46.70000000000000284, -72 46.39999999999999858))')],
+                    crs=4326
+                )
+
+# This creates 2 triangular polygons over donnacona
 SAMPLE_GDF =   gpd.GeoDataFrame(
                     data = BASE_DATA,
                     geometry=[
@@ -42,6 +49,7 @@ SAMPLE_GDF =   gpd.GeoDataFrame(
 
 BASE_DATA_2 = BASE_DATA.copy()
 BASE_DATA_2.update({ID_COL_NAME:[2,3], STR_COL_NAME: ['new1', 'new2']})
+# same geometry as SAMPLE_GDF
 SAMPLE_GDF_2 =   gpd.GeoDataFrame(
                     data = BASE_DATA_2,
                     geometry=[
@@ -94,3 +102,75 @@ class LocalGDFData:
     SPATIAL_LITE_TBL_GEOMETRY_COL_NAME = 'GEOMETRY'
     DATA = SAMPLE_GDF
  
+
+EPS=10**-6
+ext = [(0, 0), (0, 2), (0+EPS, 2), (0+EPS, 0), (0, 0)]
+GDF_SLIVER = gpd.GeoDataFrame( pd.DataFrame({'index':[0]}), geometry=gpd.GeoSeries(Polygon(ext)))
+
+
+ext = [(0, 0), (1, 1), (0, 1), (1, 0), (0, 0)]
+GDF_INVALID_SELF_INTERSECTING= gpd.GeoDataFrame( pd.DataFrame({'index':[0]}), geometry=gpd.GeoSeries(Polygon(ext)))
+
+
+ext = [(0, 0), (0, 2), (2, 2), (2, 0), (0, 0)]
+int = [(0.5, 0), (1.5, 0), (1.5, 1), (0.5, 1), (0.5, 0)]
+GDF_INVALID_EDGE_TOUCHES_INTERIOR = gpd.GeoDataFrame( pd.DataFrame({'index':[0]}), geometry=gpd.GeoSeries( Polygon(ext, [int])))
+
+# fixes the polygon by removing the interior ring completely
+#GDF_EDGE_INTERIOR.buffer(0) 
+
+
+ext = [(0, 0), (0, 2), (2, 2), (2, 0), (0, 0)]
+int = [(1, 0), (0, 1), (0.5, 1.5), (1.5, 0.5), (1, 0)][::-1]
+GDF_INVALID_RING_TOUCHES_TWO_POINTS = gpd.GeoDataFrame( pd.DataFrame({'index':[0]}), geometry=gpd.GeoSeries( Polygon(ext, [int])))
+
+#GDF_INVALID_RING_TOUCHES_TWO_POINTS.is_valid == False
+#GDF_INVALID_RING_TOUCHES_TWO_POINTS.buffer(0).is_valid == True # fixes the polygon by spliting it into 2 parts
+#GDF_INVALID_RING_TOUCHES_TWO_POINTS.geom_type == 'Polygon'
+#GDF_INVALID_RING_TOUCHES_TWO_POINTS.buffer(0).geom_type == 'MultiPolygon'
+
+LIST_INVALID_GDF = [GDF_INVALID_SELF_INTERSECTING, GDF_INVALID_EDGE_TOUCHES_INTERIOR, GDF_INVALID_RING_TOUCHES_TWO_POINTS ]
+
+
+
+GDF_GRID =   gpd.GeoDataFrame(
+                    data = {'index': [0,1,2,3]},
+                    geometry=[
+                        Polygon(((0,0), (0,1),  (1,1),   (0,1))) ,
+                        Polygon(((0,1), (0,2),  (1,2),   (1,1))),
+                        Polygon(((1,0), (1,1),  (2,1),   (2,0))),
+                        Polygon(((1,1), (1,2),  (2,2),   (2,1)))
+                    ],
+                    crs=4326
+                )
+
+# One side completely aligned with GDF_GRID
+# The other slightly off so as to create a sliver with area EPS and preimeter 2(EPS+1)
+GDF_SQUARE_OVER_GRID =   gpd.GeoDataFrame(
+                    data = {'index': [0,]},
+                    geometry=[
+                        Polygon(((0,0), (2-EPS,0),  (2-EPS,2),   (0,2))) 
+                    ],
+                    crs=4326
+                )
+
+
+GDF_EMPTY =   gpd.GeoDataFrame(
+                    data = { },
+                    geometry=[  ],
+                    crs=4326
+                )
+
+
+GDF_LINE_OVER_SQUARE_EDGE = gpd.GeoDataFrame(
+                    data = {'index': [0,]},
+                    geometry=[  LineString([[0, 0], [1, 0]]) ],
+                    crs=4326
+                )
+
+
+GDF_POINT_OVER_SQUARE_VERTEX = gpd.GeoDataFrame(
+                    data = {'index': [0,]},
+                    geometry=[  Point([0, 0]) ],
+                    crs=4326
+                )
