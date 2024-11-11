@@ -1,8 +1,16 @@
 ================== 
 
+geo_py_utils 1.9.2
+
+- patch: 
+    * fix the requirements: `shapely.get_num_coordinates()` requires >= 2.0.1 (used in `geohash_utils.py`)
+
+================== 
+
 geo_py_utils 1.9.1
 
 - patch: 
+
     * fix: changed the expectation for `test_muni_dissolved` - based on https://www.donneesquebec.ca/recherche/dataset/decoupages-administratifs# - `MUS_CO_GEO == "92903"` - "Sainte-Élisabeth-de-Proulx" added - `MUS_CO_MOD == CONTNO` (Constitution en territoire non organisé)
 
 ================== 
