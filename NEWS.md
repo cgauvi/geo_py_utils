@@ -1,5 +1,17 @@
 ================== 
 
+geo_py_utils 1.9.3
+
+- patch: 
+    * fix: passing tuple of shapely Polygon to instantiate a pandas df seemed to cause bugs in `intersect_gdf`: pass a list of polyons instead 
+    * fix: removed the deprecated `op` argument from geopandas.sjoin and replaced with `predicate`
+    * fix: writing to gepparquet requires geos >= 3.10 -> this is a lib that is bundled with `pygeos >=0.14` (only available from pypi)
+    * fix: added libspatialite sqlite geopandas to test.yaml: libspatialite needs to be installed through conda (or sudo apt-get or some windows manual download)
+    * build: relaxed dependencies when possible
+
+
+================== 
+
 geo_py_utils 1.9.2
 
 - patch: 

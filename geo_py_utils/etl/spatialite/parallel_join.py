@@ -307,10 +307,12 @@ class ParallelSpatialJoin:
             gpd.GeoDataFrame: _description_
         """
 
-        shp_merged = gpd.sjoin(self.shp_left, 
-                                self.shp_right,
-                                how='inner',
-                                predicate='within')
+        shp_merged = gpd.sjoin(
+            self.shp_left, 
+            self.shp_right,
+            how='inner',
+            predicate='within'
+        )
 
         return shp_merged
 

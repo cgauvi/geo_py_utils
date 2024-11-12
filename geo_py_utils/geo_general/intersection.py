@@ -48,25 +48,27 @@ def intersect_gdf(
 
     # Populate R-tree index with bounds of grid cells
     idx = index.Index()
-    for pos, cell in enumerate(shp_left.geometry.envelope):
+    for pos, (_,row) in enumerate(shp_left.iterrows()):
         # assuming cell is a shapely object
+        cell = row.geometry.envelope
         idx.insert(pos, cell.bounds)
 
     # Loop through each Shapely polygon
     all_df_merged = []
 
-    for k,  poly in enumerate(shp_right.geometry):
-    
+    for k,  (_,row) in enumerate(shp_right.iterrows()):
+
+        poly = row.geometry
         intersecting_poly = { pos: shp_left.geometry.iloc[pos] for pos in idx.intersection(poly.bounds)}
 
         # Now do actual intersection
         shp_intersection = gpd.GeoDataFrame(
-            pd.DataFrame.from_dict(
-                { k:  poly.intersection(v) for k,v in intersecting_poly.items() },
-                orient='index'
-            )
-            .reset_index()
-            .rename(columns={ 0: new_shp_geometry_name}),
+            pd.DataFrame(
+                    {
+                        'index': list(intersecting_poly.keys()),
+                        new_shp_geometry_name: [poly.intersection(v) for v in intersecting_poly.values()] 
+                    }
+            ),
             geometry=new_shp_geometry_name,
             crs=crs_init
         )
