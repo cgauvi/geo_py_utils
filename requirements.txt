@@ -23,6 +23,5 @@ unzip
 geopandas
 pyproj
 shapely
-geos>=3.10
-pygeos
+pygeos>=0.14
 pyogrio

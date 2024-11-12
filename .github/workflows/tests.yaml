@@ -45,7 +45,7 @@ jobs:
 
       - name: Create env
         run: |
-          conda create --name geo_py_utils python=${{ matrix.os_py_version.python-version }} geopandas "geos>=3.10"
+          conda create --name geo_py_utils python=${{ matrix.os_py_version.python-version }} geopandas "pygeos>=0.14"
           conda activate geo_py_utils
         shell: bash -l {0}
 
