@@ -90,7 +90,12 @@ def download_ca_cmas(year : int = 2016,
  
         
         num_qc_ca_cmas = np.sum(shp_ca_cmas_all.CMAPUID.str[:2] == str(pr_code))
-        shp_cas_cmas_prov = gpd.sjoin(shp_ca_cmas_all, shp_prov[['geometry']], how="inner", op="within" )
+        shp_cas_cmas_prov = gpd.sjoin(
+            shp_ca_cmas_all, 
+            shp_prov[['geometry']], 
+            how="inner", 
+            predicate="within"  #op deprecated
+        )
 
         # Some CAs+CMAs straddle multiple provinces
         if num_qc_ca_cmas != shp_cas_cmas_prov.shape[0] :
@@ -162,7 +167,12 @@ def download_das(year : int = 2021,
                                         new_crs = shp_das_all.crs)
 
         num_das= np.sum(shp_das_all.DAUID.str[:2] == str(pr_code))
-        shp_das_prov = gpd.sjoin(shp_das_all, shp_prov[['geometry']], how="inner", op="within" )
+        shp_das_prov = gpd.sjoin(
+            shp_das_all, 
+            shp_prov[['geometry']], 
+            how="inner", 
+            predicate="within" 
+        )
 
         # Some DAs in sask + alberta might overlap 2 provinces? not sure
         if num_das != shp_das_prov.shape[0]:
