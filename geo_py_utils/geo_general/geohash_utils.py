@@ -3,7 +3,6 @@
 import geohash
 import geopandas as gpd
 import pandas as pd
-from shapely import get_num_coordinates
 from typing import Union, List
 import numpy as np
 import logging
@@ -13,7 +12,8 @@ from geo_py_utils.geo_general.centroid import add_centroid
 from geo_py_utils.data.datasets import get_geohash_worst_dim_path
 from geo_py_utils.geo_general.intersection import intersect_gdf
 from geo_py_utils.geo_general.valid_geom import make_extra_valid_gpd
-from geo_py_utils.geo_general.geo_utils import compare_two_gdf_predicate
+from geo_py_utils.geo_general.geo_utils import compare_two_gdf_predicate, get_num_points_in_geoseries
+
 
 logger = logging.getLogger(__name__)
 
@@ -625,12 +625,12 @@ def filter_by_num_points(
         max_num_points: int = 2000
 ):
     
-    # Watch out, get_num_coordinates returns the total number of points
-    # since a valid polygon has the same start and end, there are get_num_coordinates() - 1 distinct points
+    # Watch out, get_num_points_in_geoseries returns the total number of points
+    # since a valid polygon has the same start and end, there are get_num_points_in_geoseries() - 1 distinct points
     # invalid polygons can have more than 2 repeated points (see utilities_testing.data:GDF_INVALID_EDGE_TOUCHES_INTERIOR)
-    # in this case, get_num_coordinates() > unique points + 1
-    idx_too_complex = get_num_coordinates(gdf.geometry) > max_num_points
-    idx_simple = get_num_coordinates(gdf.geometry) <= max_num_points
+    # in this case, get_num_points_in_geoseries() > unique points + 1
+    idx_too_complex = get_num_points_in_geoseries(gdf.geometry) > max_num_points
+    idx_simple = get_num_points_in_geoseries(gdf.geometry) <= max_num_points
 
     gdf_simple = gdf[idx_simple]
     gdf_to_simplify = gdf[idx_too_complex]

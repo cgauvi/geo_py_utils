@@ -1,7 +1,7 @@
 from os.path import join
 import pandas as pd
 import geopandas as gpd
-from shapely.geometry import Polygon, LineString, Point
+from shapely.geometry import Polygon, LineString, Point, GeometryCollection, MultiLineString, MultiPoint, MultiPolygon
 from shapely import wkt
 from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
@@ -174,3 +174,48 @@ GDF_POINT_OVER_SQUARE_VERTEX = gpd.GeoDataFrame(
                     geometry=[  Point([0, 0]) ],
                     crs=4326
                 )
+
+
+
+GDF_POINT_OVER_SQUARE_VERTEX = gpd.GeoDataFrame(
+                    data = {'index': [0,]},
+                    geometry=[  Point([0, 0]) ],
+                    crs=4326
+                )
+
+
+GDF_GEOM_COLLECTION = gpd.GeoDataFrame(
+    data = {'index':[0]},
+    geometry=[ 
+        GeometryCollection ([ 
+            LineString([[0, 0], [1, 0]]),
+            Point([0, 3]) , 
+            Polygon(((5,5), (2-EPS,5),  (2-EPS,2),   (5,5))) ,
+            MultiLineString([[[0, 0], [1, -2]], [[4, 4], [5, -6]]]), 
+            MultiPoint([[-2, 2],[-2, 3]]), 
+            MultiPolygon( [
+                Polygon(((5,5), (2,5),  (2,2),   (5,5))) , 
+                Polygon(((1,1), (1,5),  (2,2),   (1,1)))  
+            ])
+        ])
+    ]   
+)
+
+
+GDF_GEOM_EXPLODED = gpd.GeoDataFrame(
+    data = {
+        'index':[0,1,2,3,4,5],
+        'expected_coord_count':[2,1,4,4,2,8]
+        },
+    geometry=[ 
+            LineString([[0, 0], [1, 0]]),
+            Point([0, 3]) , 
+            Polygon(((5,5), (2-EPS,5),  (2-EPS,2),   (5,5))) ,
+            MultiLineString([[[0, 0], [1, -2]], [[4, 4], [5, -6]]]), 
+            MultiPoint([[-2, 2],[-2, 3]]), 
+            MultiPolygon( [
+                Polygon(((5,5), (2,5),  (2,2),   (5,5))) , 
+                Polygon(((1,1), (1,5),  (2,2),   (1,1)))  
+            ])
+    ]   
+)
