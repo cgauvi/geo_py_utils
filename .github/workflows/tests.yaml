@@ -54,6 +54,7 @@ jobs:
         if: matrix.os_py_version.python-version == '3.12'
         run: |
           python -m ensurepip --upgrade
+          pip install --upgrade pip
           python -m pip install --upgrade setuptools
         shell: bash -l {0}
 
