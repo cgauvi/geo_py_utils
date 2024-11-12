@@ -5,7 +5,7 @@ description = "Python functions for generic geospatial manipulations"
 authors = ["Charles Gauvin"]
 
 [tool.poetry.dependencies] 
-python = {version = ">=3.8"}
+python = {version = ">=3.9,<=3.12"}
 brotlipy= {version =">=0.7.0,<1.0.0"}
 psycopg2= {version =">=2.0.0,<3.0.0"}
 pyarrow= {version ="*"}
@@ -16,7 +16,7 @@ unicodedata2= {version =">=15.0.0,<16.0.0"}
 python-geohash= {version =">=0.8.5,<0.9.0"}
 shapely= {version ="*"}
 sqlalchemy= {version =">=1.4.44,<2"}
-snowflake-connector-python= {version =">=3.0.0,<4.0.0"}
+snowflake-connector-python= {version =">=3.0.0,<4.0.0", python = ">=3.8"}
 python-dotenv= {version ="*"}
 geopandas= {version ="<1.0.0"}
 pandas= {version ="<2.2.0"}
