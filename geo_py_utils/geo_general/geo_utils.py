@@ -243,16 +243,16 @@ def get_num_points_in_geoseries(geoseries: gpd.GeoSeries) -> np.array:
     n_vertices = []
     for geo in geoseries:
 
-        if "Line" in geo.type:
+        if "Line" in geo.geom_type:
             n=get_num_point_linestring(geo)
-        elif "Point" in geo.type:
+        elif "Point" in geo.geom_type:
             n=get_num_point_point(geo)
-        elif "Poly" in geo.type:
+        elif "Poly" in geo.geom_type:
              n=get_num_point_polygon(geo)
         elif 'GeometryCollection':
             n=np.sum(get_num_points_in_geoseries(geoseries.explode()))
         else:
-            raise RuntimeError(f'Error! invalid gem type: {geo.type}')
+            raise RuntimeError(f'Error! invalid gem type: {geo.geom_type}')
 
         n_vertices.append(n)
 

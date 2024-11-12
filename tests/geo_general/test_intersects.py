@@ -56,7 +56,7 @@ def test_intersect_fails_with_zero_rows():
     
 
 
-def test_intersect_yields_plower_dim_point():
+def test_intersect_yields_lower_dim_point():
 
  
     gdf_merged = intersect_gdf(GDF_SQUARE_OVER_GRID , 'index' , GDF_POINT_OVER_SQUARE_VERTEX , 'index'  )
@@ -66,7 +66,7 @@ def test_intersect_yields_plower_dim_point():
 
 
 
-def test_intersect_yields_plower_dim_line():
+def test_intersect_yields_lower_dim_line():
 
  
     gdf_merged = intersect_gdf(GDF_SQUARE_OVER_GRID , 'index' , GDF_LINE_OVER_SQUARE_EDGE , 'index'  )
