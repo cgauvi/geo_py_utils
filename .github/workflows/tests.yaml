@@ -51,6 +51,7 @@ jobs:
 
       - name: Upgrade pip
         if: matrix.os_py_version.python-version == '3.12'
+        run: |
           python -m ensurepip --upgrade
           python -m pip install --upgrade setuptools
 
