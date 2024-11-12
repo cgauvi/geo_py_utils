@@ -2,8 +2,7 @@ import geopandas as gpd
 import geohash
 import numpy as np
 import pytest
-from shapely.geometry import Polygon, Point, LineString
-from shapely import GeometryCollection
+from shapely.geometry import Polygon, Point, LineString, GeometryCollection
 
 from geo_py_utils.geo_general.bbox import get_list_coordinates_from_bbox
 from geo_py_utils.geo_general.geo_utils import get_geodataframe_from_list_coord
