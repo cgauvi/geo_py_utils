@@ -41,8 +41,10 @@ jobs:
         run: |
           conda create --name geo_py_utils python=${{ matrix.python-version }} "geopandas<1.0.0" 
           conda activate geo_py_utils 
+          python -m ensurepip --upgrade
+          python -m pip install --upgrade setuptools
           python -m pip install --upgrade pip
-          pip install poetry
+          python -m pip install poetry
           poetry install --extras "dev"
 
 
