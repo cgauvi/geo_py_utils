@@ -4,7 +4,7 @@
 import numpy as np
 import geopandas as gpd
 import pandas as pd
-from shapely.geometry import shape
+from shapely.geometry import shape, Polygon, LineString, Point, GeometryCollection
 from typing import  Union
 
 LIST_VALID_PREDICATES = ['within', 'strictly within', 'intersects', 'contains', 'strictly contains', 'touches']
@@ -198,7 +198,40 @@ def get_geodataframe_from_list_coord(list_coordinates: list, crs):
 
     return shp
 
-def get_num_points_in_geoseries(geoseries: gpd.GeoSeries):
+def get_num_point_polygon(geo: Polygon) -> int:
+    if geo.geom_type.startswith("Multi"):
+        n = 0
+        for part in geo.geoms:
+            n += len(part.exterior.coords)
+            for ring in part.interiors:
+                n += len(ring.coords)
+    else:
+        n = len(geo.exterior.coords)
+        for ring in geo.interiors:
+            n += len(ring.coords)
+
+    return n
+
+def get_num_point_point(geo: Point) -> int:
+    if geo.geom_type.startswith("Multi"):
+        n=0
+        for part in geo.geoms:
+            n+=1
+    else:
+        n = 1
+
+    return n
+
+def get_num_point_linestring(geo: LineString) -> int:
+    if geo.geom_type.startswith("Multi"):
+        n = 0
+        for part in geo.geoms:
+            n += len(part.coords)
+    else:
+        n = len(geo.coords)
+    return n
+
+def get_num_points_in_geoseries(geoseries: gpd.GeoSeries) -> np.array:
     """Count the number of coordinates in each feature in a geoseries
 
    Args:
@@ -210,13 +243,16 @@ def get_num_points_in_geoseries(geoseries: gpd.GeoSeries):
     n_vertices = []
     for geo in geoseries:
 
-        if geo.type.startswith("Multi"):
-            n = 0
-            # iterate over all parts of multigeometry
-            for part in geo.geoms:
-                n += len(part.exterior.coords)
+        if "Line" in geo.type:
+            n=get_num_point_linestring(geo)
+        elif "Point" in geo.type:
+            n=get_num_point_point(geo)
+        elif "Poly" in geo.type:
+             n=get_num_point_polygon(geo)
+        elif 'GeometryCollection':
+            n=np.sum(get_num_points_in_geoseries(geoseries.explode()))
         else:
-            n = len(geo.exterior.coords)
+            raise RuntimeError(f'Error! invalid gem type: {geo.type}')
 
         n_vertices.append(n)
 

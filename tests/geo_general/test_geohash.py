@@ -3,7 +3,7 @@ import geohash
 import numpy as np
 import pytest
 from shapely.geometry import Polygon, Point, LineString
-from shapely import get_num_coordinates, GeometryCollection
+from shapely import GeometryCollection
 
 from geo_py_utils.geo_general.bbox import get_list_coordinates_from_bbox
 from geo_py_utils.geo_general.geo_utils import get_geodataframe_from_list_coord
@@ -13,7 +13,8 @@ from geo_py_utils.geo_general.geohash_utils import (
     geohash_max_precision,
     recursively_partition_geohash_cells, 
     recursively_partition_polygons_geohash_cells,
-    filter_by_num_points
+    filter_by_num_points,
+    get_num_points_in_geoseries
 )
 from geo_py_utils.utilities_testing.data import US_ALL_CVX_GDF, GDF_BBOX_DONNACONNA
 
@@ -244,17 +245,17 @@ def test_recursive_polygon_num_points_partition_geohash_give_exp_number_polygons
         init_geohash_prec = 4,
         max_geohash_prec = 4,
         filter_fun=filter_by_num_points,
-        max_num_points = float(get_num_coordinates(geo_series_buffer) - 1)
+        max_num_points = float(get_num_points_in_geoseries(geo_series_buffer) - 1)
     )
 
     # 4 polyons
     assert gdf_broken_down_gh_4.shape[0] == 4
 
     #We cannot remove any points without loosing precision
-    assert get_num_coordinates(gdf_broken_down_gh_4.geometry).sum() >= float(get_num_coordinates(geo_series_buffer))
+    assert get_num_points_in_geoseries(gdf_broken_down_gh_4.geometry).sum() >= float(get_num_points_in_geoseries(geo_series_buffer))
     
     # however, each polygon has less than the threshold
-    assert get_num_coordinates(gdf_broken_down_gh_4.geometry).max() <  float(get_num_coordinates(geo_series_buffer) - 1)
+    assert get_num_points_in_geoseries(gdf_broken_down_gh_4.geometry).max() <  float(get_num_points_in_geoseries(geo_series_buffer) - 1)
 
 
 def test_recursive_polygon_num_points_partition_geohash_multi_precision_not_overly_subdivided():
