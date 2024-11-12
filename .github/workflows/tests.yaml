@@ -42,7 +42,7 @@ jobs:
           conda create --name geo_py_utils python=${{ matrix.python-version }} geopandas
           conda activate geo_py_utils 
           python -m pip install --upgrade pip
-          python -m pip install --upgrade setuptools
+          pip install -U setuptools[core]
           python -m pip install -r requirements.txt
 
 
