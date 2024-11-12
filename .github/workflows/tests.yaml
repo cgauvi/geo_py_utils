@@ -45,7 +45,7 @@ jobs:
           python -m pip install --upgrade setuptools
           python -m pip install --upgrade pip
           python -m pip install poetry
-          pip install --no-use-pep517  numpy 
+          poetry run python -m pip install snowflake-connector-python numpy --no-use-pep517
           poetry install --extras "dev"
 
 
