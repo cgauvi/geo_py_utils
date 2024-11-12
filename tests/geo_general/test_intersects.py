@@ -1,3 +1,4 @@
+
 import geopandas as gpd
 import numpy as np
 import pytest
@@ -72,3 +73,7 @@ def test_intersect_yields_plower_dim_line():
 
     assert gdf_merged.shape[0] == 1
     assert gdf_merged.geom_type.values[0] == 'LineString'
+# %%
+
+if __name__ == '__main__':
+    test_intersect_creates_same_results_regardless_flipped_order()
