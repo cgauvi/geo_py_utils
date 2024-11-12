@@ -45,14 +45,15 @@ jobs:
 
       - name: Create env
         run: |
-          conda create --name geo_py_utils python=${{ matrix.os_py_version.python-version }}
+          conda create --name geo_py_utils python=${{ matrix.os_py_version.python-version }} libspatialite sqlite geopandas 
           conda activate geo_py_utils
         shell: bash -l {0}
 
 
-      - name: Install dependencies rest
+      - name: Install dependencies
         if: matrix.os_py_version.python-version != '3.12'
         run: |
+          python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
         shell: bash -l {0}
 
