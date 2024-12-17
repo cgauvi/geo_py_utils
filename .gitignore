@@ -1,0 +1,31 @@
+/anaconda-project-local.yml
+
+# Python caching
+*.pyc
+*.pyd
+*.pyo
+__pycache__/
+
+# nodejs caching
+.cache/
+
+# Jupyter & Spyder stuff
+.ipynb_checkpoints/
+.Trash-*/
+/.spyderproject
+
+# Anaconda-project work directories
+/tmp/
+/envs/
+
+# These lines ensure that the convenience links that AE
+# creates for data, user, and NFS home directory volumes
+# are not added to version control. If you replace those
+# links with your own directories, the "!" lines will
+# ensure that Git still detects those.
+/data
+!/data/
+/home
+!/home/
+/user
+!/user/
