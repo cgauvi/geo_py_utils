@@ -1,0 +1,81 @@
+import geopandas as gpd
+import pytest
+from pathlib import Path, WindowsPath
+import sys
+
+from geo_py_utils.utilities_testing.data import SAMPLE_GDF
+from geo_py_utils.misc.cli_windows import ogr2ogr_windows_wrapper
+from geo_py_utils.etl.spatialite.gdf_load import spatialite_db_to_gdf
+
+PATH_READ = Path('samplegdf_in.sqlite')
+PATH_WRITE = Path('samplegdf_out.sqlite')
+LAYER_NAME='mytest'
+
+STR_MULTILINE_1 = "ogr2ogr " \
+                " -progress " \
+                " -f 'SQLite' " \
+                " -dsco SPATIALITE=YES "\
+                "-overwrite"
+
+# Was failing without the join(.splitlines())
+STR_MULTILINE_2 = """
+    ogr2ogr
+    -progress
+    -f 'SQLite' 
+    -dsco SPATIALITE=YES
+    -overwrite
+"""
+
+@pytest.fixture(autouse=True)
+def setup_teardown():
+    if not PATH_READ.exists():
+        SAMPLE_GDF.to_file(PATH_READ, driver="SQLite",   layer=LAYER_NAME ,mode ='w')
+
+    try:
+        PATH_WRITE.unlink(missing_ok=True)    
+    except PermissionError as e:
+        print(f'Windows file permission error - {e}')
+
+    yield
+
+    try:
+        PATH_READ.unlink(missing_ok=True)
+    except PermissionError as e:
+        print(f'Windows file permission error - {e}')
+        
+    try:
+        PATH_WRITE.unlink(missing_ok=True)    
+    except PermissionError as e:
+        print(f'Windows file permission error - {e}')
+
+@pytest.mark.windows_specific
+@pytest.mark.parametrize('ogrcmd', [STR_MULTILINE_1, STR_MULTILINE_2])
+def test_windows_ogr(ogrcmd):
+
+    if 'win' in sys.platform:
+
+        source =  WindowsPath(PATH_READ) 
+        dest = WindowsPath(PATH_WRITE)
+
+        cmd = ogrcmd
+        
+        cmd += fr" {dest} {source} " 
+
+        ogr2ogr_windows_wrapper(cmd)
+
+        assert PATH_WRITE.exists()
+
+        # Would be nice to check but always getting permisson errors because of the 
+        try:
+            shp_write= spatialite_db_to_gdf(
+                db_name = PATH_WRITE,
+                tbl_name = LAYER_NAME, # table name corresponds to first soure spatialite table
+                current_geo_col_name='geometry'
+            ) 
+
+            assert isinstance(shp_write, gpd.GeoDataFrame)
+            assert shp_write.shape[0] == SAMPLE_GDF.shape[0]
+        except PermissionError as e:
+            print(f'Windows file permission error - {e}')
+
+ 
