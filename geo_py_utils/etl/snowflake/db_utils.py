@@ -1,11 +1,21 @@
 import json
+import logging 
 import numpy as np
 import pandas as pd
 from snowflake.connector.connection import SnowflakeConnection
 
 
+logger = logging.getLogger(__name__)
+
+
 def table_exists(conn: SnowflakeConnection, tbl_name) -> bool:
-            
+
+    if conn.schema :
+         schema_str =f" and table_schema = '{str(conn.schema).upper()}' " 
+    else:
+        schema_str =""
+        logger.warning(f'Warning in `table_exists`! could not infer schema from connection;')
+
     query_tbl_exists = f"""
         select to_boolean(count(1)) as tbl_exists
         from information_schema.tables 
