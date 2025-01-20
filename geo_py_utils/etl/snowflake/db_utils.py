@@ -8,24 +8,41 @@ from snowflake.connector.connection import SnowflakeConnection
 logger = logging.getLogger(__name__)
 
 
-def table_exists(conn: SnowflakeConnection, tbl_name) -> bool:
+def table_exists(conn: SnowflakeConnection, tbl_name:str, strict_check_schema:bool = False) -> bool:
+    """Determine if a table exists given a connection object
+
+    Args:
+        conn (SnowflakeConnection): _description_
+        tbl_name (str): sfkl table name
+        strict_check_schema (bool): if True and conn has no schema for some reason. Defaults to False
+    Raises:
+        ValueError if conn.schema is None and strict_check_schema is true
+    Returns:
+        True if table exists (in any schema if strict_check_schema is False)
+    """
 
     if conn.schema :
-         schema_str =f" and table_schema = '{str(conn.schema).upper()}' " 
+        schema_str =f" and table_schema = '{str(conn.schema).upper()}' " 
+    elif strict_check_schema:
+        raise ValueError(f'Fatal error! could not infer schema and `strict_check_schema` True')
     else:
         schema_str =""
-        logger.warning(f'Warning in `table_exists`! could not infer schema from connection;')
+        logger.warning(f'Warning in `table_exists`! could not infer schema from connection; result may be unreliable')
 
     query_tbl_exists = f"""
-        select to_boolean(count(1)) as tbl_exists
+        select TABLE_CATALOG, TABLE_SCHEMA
         from information_schema.tables 
-        where table_schema = '{str(conn.schema).upper()}' and 
-        table_name = '{str(tbl_name).upper()}';
+        where   table_name = '{str(tbl_name).upper()}' {schema_str}
     """
 
     df_results = pd.read_sql(query_tbl_exists, conn)
 
-    return df_results.TBL_EXISTS.values[0]
+    tbl_exists = df_results.shape[0] > 0
+
+    if tbl_exists and not conn.schema :
+        logger.warning(f'Found table in schema {df_results.TABLE_SCHEMA.values}. Make sure this is ok.')
+                       
+    return tbl_exists
 
 
 

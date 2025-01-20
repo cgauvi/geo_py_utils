@@ -64,9 +64,9 @@ def get_dummy_conn_no_schema(path_config = PATH_CONFIG_DEFAULT):
     # Point to the correct DB + schema
     # That way, no need to use statements like `select * from db.schema.table`
     with conn.cursor() as cursor:
-            cursor.execute(f"USE ROLE {self.role};")
-            cursor.execute(f"USE WAREHOUSE {self.warehouse}")
-            cursor.execute(f"USE DATABASE {self.db};")
+            cursor.execute(f"USE ROLE {os.environ['ROLE']};")
+            cursor.execute(f"USE WAREHOUSE {os.environ['WAREHOUSE']}")
+            cursor.execute(f"USE DATABASE {os.environ['DB']};")
             #deliberately dont set a schema
 
     return conn
@@ -81,6 +81,12 @@ def test_table_exists_with_no_schema(sfkl_connector = SFKL_CONNECTOR_DEFAULT, pa
         tbl_exists = table_exists(conn, TEST_TBL_NAME)
 
         assert tbl_exists, 'Table should exist!'
+
+        # Strict check
+        with pytest.raises(ValueError):
+            table_exists(conn, TEST_TBL_NAME, strict_check_schema=True)
+
+
     except Exception as e:
         print(f'Fatal error trying to generate dummy connection without schema - {e}')
     finally :
@@ -97,4 +103,4 @@ def test_table_exists_with_no_schema(sfkl_connector = SFKL_CONNECTOR_DEFAULT, pa
 
 if __name__ == '__main__':
 
-    test_table_exists_with_no_schema(SFKL_CONNECTOR_AE, PATH_CONFIG_AE)
+    test_table_exists_with_no_schema(SFKL_CONNECTOR_DEFAULT, PATH_CONFIG_DEFAULT)
