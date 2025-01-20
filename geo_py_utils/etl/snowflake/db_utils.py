@@ -24,10 +24,10 @@ def table_exists(conn: SnowflakeConnection, tbl_name:str, strict_check_schema:bo
     if conn.schema :
         schema_str =f" and table_schema = '{str(conn.schema).upper()}' " 
     elif strict_check_schema:
-        raise ValueError(f'Fatal error! could not infer schema and `strict_check_schema` True')
+        raise ValueError('Fatal error! could not infer schema and `strict_check_schema` True')
     else:
         schema_str =""
-        logger.warning(f'Warning in `table_exists`! could not infer schema from connection; result may be unreliable')
+        logger.warning('Warning in `table_exists`! could not infer schema from connection; result may be unreliable')
 
     query_tbl_exists = f"""
         select TABLE_CATALOG, TABLE_SCHEMA

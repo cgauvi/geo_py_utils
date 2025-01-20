@@ -3,8 +3,7 @@ import os
 import pytest
 from snowflake.connector.pandas_tools import write_pandas 
 import snowflake.connector
-from snowflake.connector import connection
-import sys
+
 
 from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
 from geo_py_utils.etl.snowflake.snowflake_ae_connection import SnowflakeAEConnection
