@@ -51,6 +51,15 @@ class SnowflakeAEConnection(SnowflakeAbstractConnection):
 
         self.conn = self.snowflake_wrapper.get_connection()
 
+        # Make sure role, warehouse and the like are really set
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            with self.conn.cursor() as cursor:
+                cursor.execute(f"USE ROLE {self.role};")
+                cursor.execute(f"USE WAREHOUSE {self.warehouse}")
+                cursor.execute(f"USE DATABASE {self.db};")
+                cursor.execute(f"USE SCHEMA {self.schema};")
+
         return self.conn
 
     def __enter__(self):
@@ -67,7 +76,7 @@ class SnowflakeAEConnection(SnowflakeAbstractConnection):
             logger.debug(f'Error closing AE cursor  - {str(e)}')
     
         try:
-            self.snowflake_wrapper.get_connection().close() #closes the actual connection
+            self.conn.close() #closes the actual connection
         except Exception as e:
             logger.debug(f'Error closing AE connection - {str(e)}')
 
