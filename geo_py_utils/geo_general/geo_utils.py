@@ -4,7 +4,7 @@
 import numpy as np
 import geopandas as gpd
 import pandas as pd
-from shapely.geometry import shape, Polygon, LineString, Point, GeometryCollection
+from shapely.geometry import shape, Polygon, LineString, Point
 from typing import  Union
 
 LIST_VALID_PREDICATES = ['within', 'strictly within', 'intersects', 'contains', 'strictly contains', 'touches']
