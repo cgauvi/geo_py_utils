@@ -1,5 +1,16 @@
 ================== 
 
+geo_py_utils 1.10.0
+
+- minor:
+    * `map_simple` function can take in functions of numerical data in the features from the geojson. Works for colors and weights. Actually a breaking change for non default calls since some arguments like cmap were removed. Offloads a lot of work to the styler function but `get_default_map_fun_weight_numeric_data` and `get_default_map_fun_color_numeric_data`  help creating styling based on some numerical column
+
+- patch: 
+    * `table_exists` works even if connection object has no associated schema (for snowflake)
+    * `SnowflakeAEConnection` forced to have a schema, db and warehouse associated by using same sql as `SnowflakeExternalBrowserConnection`
+
+================== 
+
 geo_py_utils 1.9.3
 
 - patch: 
