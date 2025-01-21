@@ -40,8 +40,12 @@ def get_default_map_fun_weight_numeric_data(
     def eval_sklearn (dat) : 
         with warnings.catch_warnings(action='ignore'):
             return scaler.transform(np.array(dat).reshape(-1,1))[0][0]
-    min_val = eval_sklearn(df[col_numeric_name]).min()
-
+    
+    # Get the min value for the affine transform 
+    if is_sklearn:
+        min_val = eval_sklearn(df[col_numeric_name]).min()
+    else:
+        min_val  = min([ scaler(x) for x in df[col_numeric_name].values ])
 
     # Wrapper over scaler eval to force positive values
     def eval_scaler(dat):

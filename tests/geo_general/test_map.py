@@ -110,3 +110,41 @@ def test_leaflet_generated_on_numerical_std_scaler_works():
     assert isinstance(m, folium.folium.Map)
 
  
+def test_leaflet_generated_on_numerical_custom_weight_scaler_neg_weights_works():
+     
+    # Default forces non neative weights 
+    weight_fun = get_default_map_fun_weight_numeric_data(
+        pd.concat([SAMPLE_GDF_SAFE, SAMPLE_GDF_2]),
+        col_numeric_name='id',
+        scaler = lambda x: x-10000
+    )
+
+    weights = [weight_fun(f) for f in  json.loads(SAMPLE_GDF_SAFE.to_json())['features']]
+    assert min(weights) > 0
+
+    m=map_simple(
+        {'d': SAMPLE_GDF_SAFE},
+        weight_edge = weight_fun
+    )
+    assert isinstance(m, folium.folium.Map)
+
+    # Possible to stil force negative weights 
+    # (not sure this would be useful: possibly to mask some features since these wont show)
+    weight_fun_neg = get_default_map_fun_weight_numeric_data(
+        pd.concat([SAMPLE_GDF_SAFE, SAMPLE_GDF_2]),
+        col_numeric_name='id',
+        scaler = lambda x: x-10000,
+        force_positive=False
+    )
+    weights = [weight_fun_neg(f) for f in  json.loads(SAMPLE_GDF_SAFE.to_json())['features']]
+    assert min(weights) <    0
+
+    # Weight funtion also works for opacity
+    m=map_simple(
+        {'d': SAMPLE_GDF_SAFE},
+        weight_edge = weight_fun_neg,
+        opacity = weight_fun_neg
+    )
+    assert isinstance(m, folium.folium.Map)
+    
+# %%
