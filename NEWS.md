@@ -1,5 +1,11 @@
 ================== 
 
+geo_py_utils 1.10.
+- patch: 
+    * fix for the warning filter in map_simple: compatibility with python 3.9,3.10,3.11
+
+================== 
+
 geo_py_utils 1.10.0
 
 - minor:
@@ -27,7 +33,6 @@ geo_py_utils 1.9.2
 
 - patch: 
     * fix the requirements: `shapely.get_num_coordinates()` requires >= 2.0.1 (used in `geohash_utils.py`)
-
 ================== 
 
 geo_py_utils 1.9.1
