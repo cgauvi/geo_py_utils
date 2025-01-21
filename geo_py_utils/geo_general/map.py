@@ -38,7 +38,8 @@ def get_default_map_fun_weight_numeric_data(
         scaler = scaler.fit(df[[col_numeric_name]])
     
     def eval_sklearn (dat) : 
-        with warnings.catch_warnings(action='ignore'):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
             return scaler.transform(np.array(dat).reshape(-1,1))[0][0]
     
     # Get the min value for the affine transform 
