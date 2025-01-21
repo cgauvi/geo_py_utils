@@ -7,7 +7,7 @@ from geo_py_utils.misc.constants import DATA_DIR
 from geo_py_utils.census_open_data.open_data import DEFAULT_QC_CITY_NEIGH_URL
 
 # Easier to all have in caps, but for tests, useful
-ID_COL_NAME= ' id'
+ID_COL_NAME= 'id'
 INT_COL_NAME = 'integer_data'
 REAL_COL_NAME = 'real_data'
 STR_COL_NAME = 'text_data'
