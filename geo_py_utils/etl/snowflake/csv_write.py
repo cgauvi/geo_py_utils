@@ -184,7 +184,7 @@ class SnowflakeCsvWriter:
         connector = self.sfkl_connector
         conn = connector.get_connection()
         with conn.cursor() as cursor:
-            cursor.execute(f"CREATE OR REPLACE  stage {self.sfkl_stage}")
+            cursor.execute(f"CREATE OR REPLACE TEMPORARY stage {self.sfkl_stage}")
 
 
     def _clean_table(self):
