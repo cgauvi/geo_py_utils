@@ -18,7 +18,7 @@ except ImportError:
 
 from geo_py_utils.etl.snowflake.snowflake_ext_browser_connection import SnowflakeExternalBrowserConnection
 from geo_py_utils.etl.snowflake.csv_write import SnowflakeCsvWriter, DEFAULT_FORMAT_TYPE_OPTIONS
-from geo_py_utils.etl.snowflake.db_utils import sfkl_show_column
+from geo_py_utils.etl.snowflake.db_utils import sfkl_show_column, stage_exists, table_exists
 from geo_py_utils.utilities_testing.data import SAMPLE_DF
 from geo_py_utils.utilities_testing.tmp_file import TempFile
 from geo_py_utils.constants import ProjectPaths
@@ -33,13 +33,43 @@ TEST_TBL_NAME = 'TEST_CSV_WRITE_SFKL'
 def teardown_ae():
     with SnowflakeAEConnection(PATH_CONFIG_AE) as connector:
         connector.get_connection().cursor().execute(f"DROP TABLE if exists {TEST_TBL_NAME}")
+        connector.get_connection().cursor().execute(f"DROP STAGE if exists {TEST_TBL_NAME}")
  
 def teardown_ext_browser():
     with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) as connector:
         connector.get_connection().cursor().execute(f"DROP TABLE if exists {TEST_TBL_NAME}")
- 
- 
- 
+        connector.get_connection().cursor().execute(f"DROP STAGE if exists {TEST_TBL_NAME}")
+
+@pytest.mark.requires_remote_sfkl_interactivity
+def test_csv_upload_success_existing_stage():
+
+    sql_stage_find = "  select STAGE_NAME  from information_schema.stages  "
+    with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) as connector:
+        df_stage_find = pd.read_sql(sql_stage_find, connector.get_connection())
+    
+    if df_stage_find.shape[0] > 0:
+        with TempFile() as temp_csv:
+            # Create the temp csv
+            SAMPLE_DF.to_csv(temp_csv.name,index=False)
+
+            # upload to snowflake
+            with SnowflakeCsvWriter(
+                csv_path=temp_csv.name,
+                sfkl_name=TEST_TBL_NAME,
+                sfkl_stage=df_stage_find['STAGE_NAME'].values[0],
+                sfkl_connector= SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) ,
+                overwrite_tbl = True
+            ) as sfkl_writer:
+                
+                sfkl_writer.create_table()
+
+   
+    with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) as connector:
+         # stage not deleted
+        assert stage_exists(connector.get_connection(), df_stage_find['STAGE_NAME'].values[0])
+        # table exists 
+        assert table_exists(connector.get_connection(), TEST_TBL_NAME)
+
 def create_df_ext_browser(overwrite):
 
     with TempFile() as temp_csv:
@@ -95,7 +125,7 @@ def test_hwa_ext_browser_fail():
     with pytest.raises(ProgrammingError):
         # upload to snowflake
         with SnowflakeCsvWriter(
-            csv_path=Path(__file__).parent.joinpath('./hwa_header.csv'),
+            csv_path=Path(__file__).parent.joinpath('./hwa_header.csv'), # also good to test passing an existing full path instead of just a temp file
             sfkl_name=TEST_TBL_NAME,
             sfkl_connector= SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) ,
             overwrite_tbl = True,
@@ -117,6 +147,10 @@ def test_snowflake_roundtrip_ext_browser():
     assert df_round_trip.shape[0] == SAMPLE_DF.shape[0], 'Fatal error! Roundtrip data not read in as df with right number of rows!'
     assert df_round_trip.shape[1] == SAMPLE_DF.shape[1], 'Fatal error! Roundtrip data not read in as df with right number of columns!'
     
+    # stage deleted
+    with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) as connector:
+        assert not stage_exists(connector.get_connection(), TEST_TBL_NAME)
+
     teardown_ext_browser()
 
 

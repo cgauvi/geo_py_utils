@@ -24,7 +24,7 @@ def create_df(sfkl_connector = SFKL_CONNECTOR_DEFAULT, path_config = PATH_CONFIG
         conn = connector.get_connection()
         write_pandas(
             conn, 
-            SAMPLE_DF_SAFE, 
+            SAMPLE_DF_SAFE.rename(columns={'id': ' id'}),  # what the actual fuck. `Got snowflake.connector.errors.ProgrammingError` invalid identifier 'ID' and invalid identifier 'id'`  with id or ID
             TEST_TBL_NAME, 
             schema=conn.schema, 
             database=conn.database, 

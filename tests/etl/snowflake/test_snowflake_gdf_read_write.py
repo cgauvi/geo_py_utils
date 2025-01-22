@@ -39,7 +39,28 @@ def teardown_ext_browser():
         connector.get_connection().cursor().execute(f"DROP TABLE if exists {TEST_TBL_NAME}")
  
 
- 
+@pytest.mark.requires_remote_sfkl_interactivity
+def test_gdf_upload_success_existing_stage():
+
+    sql_stage_find = "  select STAGE_NAME  from information_schema.stages  "
+    with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) as connector:
+        df_stage_find = pd.read_sql(sql_stage_find, connector.get_connection())
+    
+    if df_stage_find.shape[0] > 0:
+
+        # upload to snowflake
+        with SnowflakeGeoWriter(
+            shp=GDF_INVALID_SELF_INTERSECTING.set_crs(3347),
+            sfkl_name=TEST_TBL_NAME,
+            sfkl_stage=df_stage_find['STAGE_NAME'].values[0],
+            sfkl_connector= SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) ,
+            sfkl_geo_col_name = SFKL_GEO_COL_NAME,
+            overwrite_tbl = True,
+            nullify_invalid_geometries=True
+        ) as sfkl_writer:
+            
+            sfkl_writer.create_table()
+    
 @pytest.mark.requires_remote_sfkl_interactivity
 def test_gdf_invalid_geom_no_nullify_fails():
 

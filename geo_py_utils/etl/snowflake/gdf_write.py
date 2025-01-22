@@ -10,7 +10,7 @@ from shapely.geometry import Point
 from snowflake.connector.pandas_tools import write_pandas 
 from unidecode import unidecode
 
-from geo_py_utils.etl.snowflake.db_utils import table_exists
+from geo_py_utils.etl.snowflake.db_utils import table_exists, stage_exists
 from geo_py_utils.etl.snowflake.snowflake_abstract_connection import SnowflakeAbstractConnection
 
 logger = logging.getLogger(__file__)
@@ -61,6 +61,7 @@ class SnowflakeGeoWriter:
             shp: gpd.GeoDataFrame,
             sfkl_name: str,
             sfkl_connector: SnowflakeAbstractConnection,
+            sfkl_stage: str = None, 
             local_tmp_file_dir = Path("") ,
             keep_tmp_local_files = False,
             na_strings = DEFAULT_LIST_NA_STRINGS,
@@ -88,6 +89,8 @@ class SnowflakeGeoWriter:
         self.sfkl_geo_col_name = str(sfkl_geo_col_name).upper()
 
         self.sfkl_name = str(sfkl_name).upper() # safer to convert all to caps
+        self.sfkl_stage_none = sfkl_stage is None
+        self.sfkl_stage = sfkl_name if self.sfkl_stage_none else sfkl_stage
 
         self.local_tmp_file_dir = local_tmp_file_dir # could be a tmpfile() also
         self.local_tmp_file_path = Path(self.local_tmp_file_dir) / self.sfkl_name
@@ -190,14 +193,24 @@ class SnowflakeGeoWriter:
     def _clean_staging(self):
         connector = self.sfkl_connector
         conn = connector.get_connection()
-        with conn.cursor() as cursor:
-            cursor.execute(f"DROP STAGE IF EXISTS {self.sfkl_name}")
-    
+        
+        # New temp stage to create
+        if self.sfkl_stage_none :
+            with conn.cursor() as cursor:
+                cursor.execute(f"DROP STAGE IF EXISTS {self.sfkl_stage}")
+        elif not stage_exists(conn, self.sfkl_stage):
+            raise ValueError(f'Fatal error! stage {self.sfkl_stage} does not exist')
+        # Existing stage content
+        else:
+            with conn.cursor() as cursor:
+                cursor.execute(f"remove @{self.sfkl_stage}/{self.sfkl_name}.csv.gz")
+
     def _create_staging(self):
-        connector = self.sfkl_connector
-        conn = connector.get_connection()
-        with conn.cursor() as cursor:
-            cursor.execute(f"CREATE OR REPLACE stage {self.sfkl_name}")
+        if self.sfkl_stage_none :
+            connector = self.sfkl_connector
+            conn = connector.get_connection()
+            with conn.cursor() as cursor:
+                cursor.execute(f"CREATE OR REPLACE temporary stage {self.sfkl_stage}")
     
     def _remove_tmp_files(self):
 
@@ -223,6 +236,7 @@ class SnowflakeGeoWriter:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        
         self._clean_staging()
         self._remove_tmp_files()
         self.sfkl_connector.close_connection()
@@ -240,7 +254,7 @@ class SnowflakeGeoWriter:
     def _create_file_format_str(self):
             
         return  (
-            "CREATE OR REPLACE file format " 
+            "CREATE OR REPLACE TEMPORARY file format " 
             f"myformat type =  'csv' "
             f"field_delimiter = '\t' "
             f"skip_header = 1 NULL_IF = ({self.na_strings}) "
@@ -264,7 +278,7 @@ class SnowflakeGeoWriter:
         connector=self.sfkl_connector
         conn = connector.get_connection()
         with conn.cursor() as cursor:
-            cursor.execute(f"put file://{self.local_tmp_file_path}.csv @{self.sfkl_name};")
+            cursor.execute(f"put file://{self.local_tmp_file_path}.csv @{self.sfkl_stage};")
 
         if not self.keep_tmp_local_files:
             self._remove_tmp_files()
@@ -339,7 +353,7 @@ class SnowflakeGeoWriter:
         query_insert_into =  (
             f"INSERT INTO {self.sfkl_name} "
             f"SELECT {select_cols_str}, {fun}(REPLACE(t.$1, '\"', '')) "
-            f"FROM @{self.sfkl_name} (file_format => 'myformat') as t; "
+            f"FROM @{self.sfkl_stage}/{self.sfkl_name}.csv.gz (file_format => 'myformat') as t; "
             )
         
         connector = self.sfkl_connector
