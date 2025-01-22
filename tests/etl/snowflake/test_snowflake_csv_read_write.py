@@ -125,7 +125,7 @@ def test_hwa_ext_browser_fail():
     with pytest.raises(ProgrammingError):
         # upload to snowflake
         with SnowflakeCsvWriter(
-            csv_path=Path(__file__).parent.joinpath('./hwa_header.csv'),
+            csv_path=Path(__file__).parent.joinpath('./hwa_header.csv'), # also good to test passing an existing full path instead of just a temp file
             sfkl_name=TEST_TBL_NAME,
             sfkl_connector= SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) ,
             overwrite_tbl = True,
@@ -150,7 +150,7 @@ def test_snowflake_roundtrip_ext_browser():
     # stage deleted
     with SnowflakeExternalBrowserConnection(PATH_CONFIG_EXT_BROWSER) as connector:
         assert not stage_exists(connector.get_connection(), TEST_TBL_NAME)
-        
+
     teardown_ext_browser()
 
 
@@ -282,4 +282,4 @@ def test_datetime_formats_work_no_tz():
     teardown_ext_browser()
 
 if __name__ == '__main__':
-    test_csv_upload_success_existing_stage()
+    test_hwa_ext_browser_fail()

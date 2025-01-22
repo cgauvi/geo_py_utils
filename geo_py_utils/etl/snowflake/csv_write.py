@@ -65,11 +65,8 @@ class SnowflakeCsvWriter:
             self._clean_staging()
             self._create_staging()
         else:
-            connector = self.sfkl_connector
-            conn = connector.get_connection()
-            if not stage_exists(conn, self.sfkl_stage):
-                raise ValueError(f'Fatal error! stage {self.sfkl_stage} does not exist')
-
+            self._clear_existing_staging_content()
+            
         if self.overwrite_tbl:
             self._clean_table()
 
@@ -77,9 +74,22 @@ class SnowflakeCsvWriter:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if self.sfkl_stage_none is None:
+        if self.sfkl_stage_none:
             self._clean_staging()
+        else:
+            self._clear_existing_staging_content()
+
         self.sfkl_connector.close_connection()
+
+    def _clear_existing_staging_content(self):
+        connector = self.sfkl_connector
+        conn = connector.get_connection()
+        if not stage_exists(conn, self.sfkl_stage):
+            raise ValueError(f'Fatal error! stage {self.sfkl_stage} does not exist')
+    
+        with conn.cursor() as cursor:
+            cursor.execute(f"remove @{self.sfkl_stage}/{self.csv_path}.csv.gz")
+                    
 
     def _create_empty_table_sql(self):
 
@@ -161,10 +171,11 @@ class SnowflakeCsvWriter:
         # 1 based indexing 
         select_cols_str = ",".join( [f't.${ind+1}' for ind in range(len(csv_ds.schema.names))])
 
+        # For the file in the staging, use only the file name, NOT the entire path that might have been used in the put command
         query_insert_into =  (
             f"INSERT INTO {self.sfkl_name} "
             f"SELECT {select_cols_str} "
-            f"FROM @{self.sfkl_stage} (file_format => 'myformat') as t; "
+            f"FROM @{self.sfkl_stage}/{Path(self.csv_path).name}.gz (file_format => 'myformat') as t; "
         )
 
         return query_insert_into
@@ -173,7 +184,7 @@ class SnowflakeCsvWriter:
         connector = self.sfkl_connector
         conn = connector.get_connection()
         with conn.cursor() as cursor:
-            cursor.execute(f"CREATE OR REPLACE TEMPORARY stage {self.sfkl_stage}")
+            cursor.execute(f"CREATE OR REPLACE  stage {self.sfkl_stage}")
 
 
     def _clean_table(self):
