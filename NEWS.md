@@ -1,5 +1,29 @@
 ================== 
 
+geo_py_utils 1.11.0
+- minor: 
+    * implemented ability to use an existing stage when one exists and create a temporary one otherwise
+    * implemented `stage_exists` to check for stage existence using same basic structure as `table_exists`
+
+================== 
+
+geo_py_utils 1.10.1
+- patch: 
+    * fix for the warning filter in map_simple: compatibility with python 3.9,3.10,3.11
+
+================== 
+
+geo_py_utils 1.10.0
+
+- minor:
+    * `map_simple` function can take in functions of numerical data in the features from the geojson. Works for colors and weights. Actually a breaking change for non default calls since some arguments like cmap were removed. Offloads a lot of work to the styler function but `get_default_map_fun_weight_numeric_data` and `get_default_map_fun_color_numeric_data`  help creating styling based on some numerical column
+
+- patch: 
+    * `table_exists` works even if connection object has no associated schema (for snowflake)
+    * `SnowflakeAEConnection` forced to have a schema, db and warehouse associated by using same sql as `SnowflakeExternalBrowserConnection`
+
+================== 
+
 geo_py_utils 1.9.3
 
 - patch: 
@@ -16,7 +40,6 @@ geo_py_utils 1.9.2
 
 - patch: 
     * fix the requirements: `shapely.get_num_coordinates()` requires >= 2.0.1 (used in `geohash_utils.py`)
-
 ================== 
 
 geo_py_utils 1.9.1

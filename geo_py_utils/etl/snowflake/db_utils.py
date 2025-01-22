@@ -1,22 +1,88 @@
 import json
+import logging 
 import numpy as np
 import pandas as pd
 from snowflake.connector.connection import SnowflakeConnection
 
 
-def table_exists(conn: SnowflakeConnection, tbl_name) -> bool:
-            
-    query_tbl_exists = f"""
-        select to_boolean(count(1)) as tbl_exists
-        from information_schema.tables 
-        where table_schema = '{str(conn.schema).upper()}' and 
-        table_name = '{str(tbl_name).upper()}';
+logger = logging.getLogger(__name__)
+
+
+
+def _stage_table_generic_exists(
+        conn: SnowflakeConnection, 
+        stage_table_name: str, 
+        check_stage: bool = False,
+        strict_check_schema:bool = False
+        ):
+    """Determine if a schema or table exists given a connection object
+    """
+    
+    stage_or_tbl = "stage" if check_stage else "table"
+
+
+    if conn.schema :
+        schema_str =f" and {stage_or_tbl}_schema = '{str(conn.schema)}' " 
+    elif strict_check_schema:
+        raise ValueError('Fatal error! could not infer schema and `strict_check_schema` True')
+    else:
+        schema_str =""
+        logger.warning(f'Warning in `{stage_or_tbl}_exists`! could not infer schema from connection; result may be unreliable')
+
+    query_exists = f"""
+        select {stage_or_tbl.upper()}_CATALOG, {stage_or_tbl.upper()}_SCHEMA, {stage_or_tbl.upper()}_NAME
+        from information_schema.{stage_or_tbl}s 
+        where  {stage_or_tbl}_name = \'{str(stage_table_name)}\' {schema_str}
     """
 
-    df_results = pd.read_sql(query_tbl_exists, conn)
+    df_results = pd.read_sql(query_exists, conn)
 
-    return df_results.TBL_EXISTS.values[0]
+    tbl_schema_exists = df_results.shape[0] > 0
 
+    if tbl_schema_exists and not conn.schema :
+        logger.warning(f'Found {stage_or_tbl} in schema {df_results.TABLE_SCHEMA.values}. Make sure this is ok.')
+                       
+    return tbl_schema_exists
+
+def stage_exists(conn: SnowflakeConnection, stage_name: str, strict_check_schema:bool = False) -> bool:
+    """Determine if a schema exists given a connection object
+
+    Args:
+        conn (SnowflakeConnection): _description_
+        tbl_name (str): sfkl table name
+        strict_check_schema (bool): if True and conn has no schema for some reason. Defaults to False
+    Raises:
+        ValueError if conn.schema is None and strict_check_schema is true
+    Returns:
+        True if table exists (in any schema if strict_check_schema is False)
+    """
+
+    return _stage_table_generic_exists(
+            conn = conn ,
+            stage_table_name= stage_name, 
+            check_stage = True,
+            strict_check_schema  = strict_check_schema
+    )
+
+def table_exists(conn: SnowflakeConnection, tbl_name:str, strict_check_schema:bool = False) -> bool:
+    """Determine if a table exists given a connection object
+
+    Args:
+        conn (SnowflakeConnection): _description_
+        tbl_name (str): sfkl table name
+        strict_check_schema (bool): if True and conn has no schema for some reason. Defaults to False
+    Raises:
+        ValueError if conn.schema is None and strict_check_schema is true
+    Returns:
+        True if table exists (in any schema if strict_check_schema is False)
+    """
+
+    return _stage_table_generic_exists(
+            conn = conn ,
+            stage_table_name= tbl_name, 
+            check_stage = False,
+            strict_check_schema  = strict_check_schema
+    )
 
 
 def sfkl_show_column(conn: SnowflakeConnection, tbl_name: str) -> pd.DataFrame:

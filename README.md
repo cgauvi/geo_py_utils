@@ -46,7 +46,7 @@ The project has been tested by installing geopandas through `conda`. The rest of
 
 ```bash
 # Tested for python [3.9, 3.10, 3.11] X [Windows ubuntu]
-conda create --name geo_py_utils python=3.10 geopandas 
+conda create --name geo_py_utils python=3.10 geopandas psycopg2 python-geohash
 conda activate geo_py_utils
 python -m pip install --upgrade pip
 python -m pip install "geo_py_utils @ git+https://git@github.com/LaCapitale/geo_py_utils.git"
@@ -56,10 +56,14 @@ python -m pip install "geo_py_utils @ git+https://git@github.com/LaCapitale/geo_
 
 ### Installing the Anaconda package SnowflakeWrapper (optional)
 
+[Old anaconda 5.6.0]
 ```bash
 conda install -c https://ae.int.beneva.ca/repository/conda/custom-package snowflakewrapper=3.0.14
 ```
-
+[New anaconda 5.7.1]
+```bash
+conda install -c https://anaconda.int.beneva.ca/repository/conda/custom-package snowflakewrapper=4.0.2
+```
 
 ### Installing on anaconda enterprise (purely with conda to avoid pip & conda conflicts)
 

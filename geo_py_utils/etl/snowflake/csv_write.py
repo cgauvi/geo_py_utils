@@ -4,7 +4,7 @@ import pandas as pd
 from pyarrow import csv as pa_csv
 import pyarrow.dataset as pa_ds
 
-from geo_py_utils.etl.snowflake.db_utils import table_exists
+from geo_py_utils.etl.snowflake.db_utils import table_exists, stage_exists
 from geo_py_utils.etl.snowflake.snowflake_abstract_connection import SnowflakeAbstractConnection
 from geo_py_utils.etl.snowflake.type_conversion import DF_MAP_PA_SFKL_TYPES
 
@@ -30,6 +30,7 @@ class SnowflakeCsvWriter:
     Args:
         csv_path (Path): path to csv file
         sfkl_name (str): name of snowflake table
+        sfkl_stage(str, optional): name of stage. If none, will try to create a temp stage names sfkl_name. Otherwise, will try to read an existing stage
         sfkl_connector (SnowflakeAbstractConnection): snowflake connection wrapper.
         df_type_map (_type_, optional): dict of pyarrow types to snowflake types for conversion. Defaults to DF_MAP_PA_SFKL_TYPES.
         na_strings (_type_, optional): list of na strings in the csv. Defaults to DEFAULT_LIST_NA_STRINGS.
@@ -40,6 +41,7 @@ class SnowflakeCsvWriter:
                 csv_path: Path,
                 sfkl_name: str,
                 sfkl_connector: SnowflakeAbstractConnection,
+                sfkl_stage: str = None, 
                 df_type_map = DF_MAP_PA_SFKL_TYPES,
                 overwrite_tbl = True,
                 format_type_options = DEFAULT_FORMAT_TYPE_OPTIONS
@@ -47,6 +49,8 @@ class SnowflakeCsvWriter:
 
         self.csv_path = csv_path
         self.sfkl_name = sfkl_name
+        self.sfkl_stage_none = sfkl_stage is None
+        self.sfkl_stage = sfkl_name if self.sfkl_stage_none else sfkl_stage
         self.sfkl_connector = sfkl_connector
         self.df_type_map= df_type_map
         self.overwrite_tbl = overwrite_tbl
@@ -56,9 +60,13 @@ class SnowflakeCsvWriter:
 
     def _init(self):
         
-        self._clean_staging()
-        self._create_staging()
-
+        # New temp stage to create
+        if self.sfkl_stage_none :
+            self._clean_staging()
+            self._create_staging()
+        else:
+            self._clear_existing_staging_content()
+            
         if self.overwrite_tbl:
             self._clean_table()
 
@@ -66,8 +74,22 @@ class SnowflakeCsvWriter:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self._clean_staging()
+        if self.sfkl_stage_none:
+            self._clean_staging()
+        else:
+            self._clear_existing_staging_content()
+
         self.sfkl_connector.close_connection()
+
+    def _clear_existing_staging_content(self):
+        connector = self.sfkl_connector
+        conn = connector.get_connection()
+        if not stage_exists(conn, self.sfkl_stage):
+            raise ValueError(f'Fatal error! stage {self.sfkl_stage} does not exist')
+    
+        with conn.cursor() as cursor:
+            cursor.execute(f"remove @{self.sfkl_stage}/{self.csv_path}.csv.gz")
+                    
 
     def _create_empty_table_sql(self):
 
@@ -134,7 +156,7 @@ class SnowflakeCsvWriter:
         )
 
         query_creation =f"""
-                CREATE OR REPLACE file format myformat 
+                CREATE OR REPLACE TEMPORARY file format myformat 
                 {params_str}
                 """
         
@@ -149,10 +171,11 @@ class SnowflakeCsvWriter:
         # 1 based indexing 
         select_cols_str = ",".join( [f't.${ind+1}' for ind in range(len(csv_ds.schema.names))])
 
+        # For the file in the staging, use only the file name, NOT the entire path that might have been used in the put command
         query_insert_into =  (
             f"INSERT INTO {self.sfkl_name} "
             f"SELECT {select_cols_str} "
-            f"FROM @{self.sfkl_name} (file_format => 'myformat') as t; "
+            f"FROM @{self.sfkl_stage}/{Path(self.csv_path).name}.gz (file_format => 'myformat') as t; "
         )
 
         return query_insert_into
@@ -161,7 +184,7 @@ class SnowflakeCsvWriter:
         connector = self.sfkl_connector
         conn = connector.get_connection()
         with conn.cursor() as cursor:
-            cursor.execute(f"CREATE OR REPLACE stage {self.sfkl_name}")
+            cursor.execute(f"CREATE OR REPLACE TEMPORARY stage {self.sfkl_stage}")
 
 
     def _clean_table(self):
@@ -181,17 +204,17 @@ class SnowflakeCsvWriter:
         connector = self.sfkl_connector
         conn = connector.get_connection()
         with conn.cursor() as cursor:
-            cursor.execute(f"DROP STAGE IF EXISTS {self.sfkl_name}")
+            cursor.execute(f"DROP STAGE IF EXISTS {self.sfkl_stage}")
 
     def _upload_local_to_staging(self):
 
-        query_put_local_file = f"put 'file://{self.csv_path.as_posix()}' @{self.sfkl_name};"
+        query_put_local_file = f"put 'file://{self.csv_path.as_posix()}' @{self.sfkl_stage};"
 
         conn = self.sfkl_connector.get_connection()
         with conn.cursor() as cur:
             cur.execute(query_put_local_file)
         
-        logger.info(f'Sucessfully wrote local {self.csv_path} to stage {self.sfkl_name}')
+        logger.info(f'Sucessfully wrote local {self.csv_path} to stage {self.sfkl_stage}')
     
 
     def _upload_staging_to_table(self):
@@ -206,18 +229,9 @@ class SnowflakeCsvWriter:
             logger.info('Sucessfully created csv format')
 
             cur.execute(query_insert_into)
-            logger.info(f'Sucessfully copied staging {self.sfkl_name} into table {self.sfkl_name}')
+            logger.info(f'Sucessfully copied staging {self.sfkl_stage} into table {self.sfkl_name}')
 
-
-    def _cleanup(self):
-
-        query_drop_stage = f"DROP stage if exists {self.sfkl_name}"
-        
-        conn = self.sfkl_connector.get_connection()
-        with conn.cursor() as cur:
-            cur.execute(query_drop_stage)
-
-        logger.info(f'Sucessfully dropped stage {self.sfkl_name}')
+ 
 
     def _create_empty_table(self):
         query_empty_table = self._create_empty_table_sql()
@@ -249,7 +263,9 @@ class SnowflakeCsvWriter:
 
         self._upload_local_to_staging()
         self._upload_staging_to_table()
-        self._cleanup()
+
+        if self.sfkl_stage_none:
+            self._clean_staging()
 
         df_num=pd.read_sql(  f'select count(*) NUM from {self.sfkl_name}', conn )
         n_after = df_num.NUM.values[0]
