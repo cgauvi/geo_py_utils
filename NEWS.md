@@ -1,6 +1,13 @@
 ================== 
 
-geo_py_utils 1.10.
+geo_py_utils 1.11.0
+- minor: 
+    * implemented ability to use an existing stage when one exists and create a temporary one otherwise
+    * implemented `stage_exists` to check for stage existence using same basic structure as `table_exists`
+
+================== 
+
+geo_py_utils 1.10.1
 - patch: 
     * fix for the warning filter in map_simple: compatibility with python 3.9,3.10,3.11
 
