@@ -15,7 +15,8 @@ def pg_create_connection_str(database:str,
                     user: str,
                     password: str,
                     host: str,
-                    port: Union[int,str]) -> str:
+                    port: Union[int,str]
+                    ) -> str:
 
     """Super thin convenience wrapper to create connection string from credentials
 
@@ -27,12 +28,13 @@ def pg_create_connection_str(database:str,
         password (str): _description_
         host (str): _description_
         port (Union[int,str]): _description_
+        default_schema: optional
 
     Returns:
         str
     """
-    
-    return f'postgresql://{user}:{password}@{host}:{str(port)}/{database}'
+
+    return  f'postgresql://{user}:{password}@{host}:{str(port)}/{database}'
 
 
 def pg_create_ogr2ogr_str(
@@ -53,6 +55,8 @@ def pg_create_ogr2ogr_str(
         port (Union[int,str]): _description_
     """
 
+    
+
     return f' "PG:host={host} dbname={database} user={user} password={password} port={port}" '
 
 
@@ -61,7 +65,8 @@ def pg_create_engine(
     user: str,
     password: str,
     host: str,
-    port: Union[int, str]) -> sqlalchemy.engine.base.Engine:
+    port: Union[int, str],
+    default_schema: str = None) -> sqlalchemy.engine.base.Engine:
 
     """Super thin convenience wrapper to create an abstract string details
 
@@ -75,6 +80,13 @@ def pg_create_engine(
     Returns:
         sqlalchemy.engine.base.Engine: _description_
     """
+
+    if default_schema:
+        return create_engine(
+            pg_create_connection_str(database, user, password, host, port),
+            connect_args={'options': '-csearch_path={}'.format(default_schema)}
+        )
+    
     return create_engine(pg_create_connection_str(database, user, password, host, port))
 
 
@@ -163,7 +175,7 @@ def pg_create_db(database: str,
         logger.info(f"{database} already exists")
 
 
-def pg_list_tables(engine: sqlalchemy.engine.base.Engine, database: str) -> List[str]:
+def pg_list_tables(engine: sqlalchemy.engine.base.Engine, database: str, schema:str = None) -> List[str]:
     """ List tables in a postgres db
 
     Args:
@@ -183,8 +195,13 @@ def pg_list_tables(engine: sqlalchemy.engine.base.Engine, database: str) -> List
         SELECT tablename, schemaname
         FROM pg_catalog.pg_tables
         WHERE schemaname != 'pg_catalog'
-        AND   schemaname != 'information_schema';
+        AND   schemaname != 'information_schema'
         """
+    
+    # Look in a specific schema
+    # Otherwise we will list all tables from ALL schemas
+    if schema:
+        query += f" AND schemaname = '{schema}' "
 
     with engine.connect() as conn:
         df_results = pd.read_sql(query, conn)
