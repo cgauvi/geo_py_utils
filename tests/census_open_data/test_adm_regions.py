@@ -27,7 +27,7 @@ NUM_UNIQUE_OPUS = len(set([v  for v  in DownloadQcDissolvedAdmReg.DICT_MAPPING.v
 NUM_UNIQUE_ADM_REGIONS = len(set([re.sub('[-–]','',s) for s in DownloadQcDissolvedAdmReg.DICT_MAPPING.keys()]))
     
 NUM_DISSOLVED_MUNI  = 2
-NUM_FILTERED_NO_NAME_MUNI  = 7 # shp_raw[ shp_raw['MUS_NM_NMC'].str.match('.*[tT]opo.*') ].shape[0]
+NUM_FILTERED_NO_NAME_MUNI  = 8# shp_raw[ shp_raw['MUS_NM_NMC'].str.match('.*[tT]opo.*') ].shape[0]
  
 
 class MockCacheOpenData(MockTmpCache):
@@ -157,5 +157,5 @@ def test_qa_adm_boundaries():
 
 if __name__ == '__main__':
     #test_muni_dissolved()
-    #test_muni_dissolved_raw()
-    test_qa_adm_boundaries()
+    test_muni_dissolved_raw()
+    #test_qa_adm_boundaries()
