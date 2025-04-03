@@ -1,6 +1,5 @@
 # %%
-import pandas as pd
-from psycopg2 import sql, connect
+ 
 
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
 from geo_py_utils.constants import ProjectPaths

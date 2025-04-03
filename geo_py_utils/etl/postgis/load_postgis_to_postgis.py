@@ -106,7 +106,7 @@ class LoadPostgis2Postgis:
         
         # Warning message for empty schema
         if not self.src_default_schema:
-            logger.warning(f'Warning! No src schema specified: will consider transfering ALL tables from ALL schemas in the DB')
+            logger.warning('Warning! No src schema specified: will consider transfering ALL tables from ALL schemas in the DB')
 
         # Check which tables we want to transfer
         if self.tables_to_transfer :
