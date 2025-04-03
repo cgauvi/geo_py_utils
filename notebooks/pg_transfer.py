@@ -110,7 +110,7 @@ for db in ['gcp_dev', 'gcp_prod']:
          **all_params
     )
 
-loader.upload_url_to_database()
+    loader.upload_url_to_database()
 
 # %%
 
