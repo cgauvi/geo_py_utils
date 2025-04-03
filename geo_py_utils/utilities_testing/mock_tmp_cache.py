@@ -45,7 +45,7 @@ class MockTmpCache:
             if isdir(mocked_data_dir): rmtree(mocked_data_dir)
             mkdir(mocked_data_dir)
         except Exception as e:
-            logger.warnin(f'Warning! Couldnt delete mocked cache dir: {mocked_data_dir} at teardown: prob windows permission issue: {e}')
+            logger.warning(f'Warning! Couldnt delete mocked cache dir: {mocked_data_dir} at teardown: prob windows permission issue: {e}')
 
         return mocked_data_dir
 
