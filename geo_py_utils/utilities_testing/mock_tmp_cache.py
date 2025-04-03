@@ -25,7 +25,7 @@ class MockTmpCache:
         try:
             if isdir(self.mocked_dir): rmtree(self.mocked_dir)
         except Exception as e:
-            logger.warn(f'Warning! Couldnt delete mocked cache dir: {self.mocked_dir} at teardown: prob windows permission issue: {e}')
+            logger.warning(f'Warning! Couldnt delete mocked cache dir: {self.mocked_dir} at teardown: prob windows permission issue: {e}')
 
 
     def _create_mock_cache_dir(self) -> str:
@@ -45,7 +45,7 @@ class MockTmpCache:
             if isdir(mocked_data_dir): rmtree(mocked_data_dir)
             mkdir(mocked_data_dir)
         except Exception as e:
-            logger.warn(f'Warning! Couldnt delete mocked cache dir: {mocked_data_dir} at teardown: prob windows permission issue: {e}')
+            logger.warnin(f'Warning! Couldnt delete mocked cache dir: {mocked_data_dir} at teardown: prob windows permission issue: {e}')
 
         return mocked_data_dir
 
