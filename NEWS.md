@@ -1,3 +1,15 @@
+
+================== 
+
+geo_py_utils 1.12.0
+- minor: 
+    * implemented `LoadPostgis2Postgis` to transfer from two pg DBs
+    * wrote a shitty manual script `notebooks/pg_transfer.py` to transfer tables from gcp to aws
+    * added optional `default_schema` arguments to a few pg util functions to tweak the default path and search tables within a given schema only
+- patch:
+    * fixed the tests for adm regions: now have 1346 regions
+    * misc refators: warn -> warning 
+
 ================== 
 
 geo_py_utils 1.11.0
