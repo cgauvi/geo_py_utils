@@ -93,6 +93,9 @@ tables_to_transfer['gcp_prod'] = [
 for db in ['gcp_dev', 'gcp_prod']:
 
     # Set up transfer params from gcp to aws
+    # LoadPostgis2Postgis takes in arguments like dest_port and src_host 
+    # However PostGISDBConnection returns a dict with keys port, host, db, etc. 
+    # So we need to append an extra src_ or dest_ prefix to kwargs
     creds = {}
     creds_new = {}
     for k,o in [ (connectors['aws'],'dest'), (connectors[db], 'src')]:
