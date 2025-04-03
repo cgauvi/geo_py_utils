@@ -19,7 +19,7 @@ from geo_py_utils.census_open_data.open_data import (
 DICT_CHECK_NUM_RECORDS = {
             DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_METRO: 2,
             DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MRC: 106,
-            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI: 1345,
+            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI: 1346,
             DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ARROND: 41
     }
 
@@ -28,7 +28,7 @@ NUM_UNIQUE_ADM_REGIONS = len(set([re.sub('[-–]','',s) for s in DownloadQcDisso
     
 NUM_DISSOLVED_MUNI  = 2
 NUM_FILTERED_NO_NAME_MUNI  = 7 # shp_raw[ shp_raw['MUS_NM_NMC'].str.match('.*[tT]opo.*') ].shape[0]
-
+ 
 
 class MockCacheOpenData(MockTmpCache):
     """Class to manually implement unittest.patch which never actually works
@@ -129,7 +129,7 @@ def test_muni_dissolved_raw():
             shp_muni_dissolved_with_unknown, shp_raw = mocked.download_dissolved_muni_and_raw(filter_out_unknown_muni=False)
 
             assert shp_raw.shape[0] == DICT_CHECK_NUM_RECORDS[DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI]
-            assert shp_raw.shape[0] == shp_muni_dissolved_with_unknown.shape[0] + 2
+            assert shp_raw.shape[0] == shp_muni_dissolved_with_unknown.shape[0] + NUM_DISSOLVED_MUNI
 
     except RequestException as e:
         print(f'Error with network: {e} - skipping test')
@@ -156,6 +156,6 @@ def test_qa_adm_boundaries():
 
 
 if __name__ == '__main__':
-    test_muni_dissolved()
-    test_muni_dissolved_raw()
+    #test_muni_dissolved()
+    #test_muni_dissolved_raw()
     test_qa_adm_boundaries()
