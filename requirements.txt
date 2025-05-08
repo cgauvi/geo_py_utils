@@ -22,4 +22,6 @@ python-dotenv
 unzip
 geopandas
 pyproj
+shapely
+pygeos>=0.14
 pyogrio
