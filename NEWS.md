@@ -1,6 +1,13 @@
 
 ================== 
 
+geo_py_utils 1.12.1
+
+- patch:
+    * fixed python requirements < 3.12
+
+================== 
+
 geo_py_utils 1.12.0
 - minor: 
     * implemented `LoadPostgis2Postgis` to transfer from two pg DBs
