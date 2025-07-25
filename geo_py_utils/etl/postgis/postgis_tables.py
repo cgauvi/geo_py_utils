@@ -1,5 +1,5 @@
 
-
+import collections
 import logging
 import pandas as pd
 from typing import List
@@ -68,7 +68,7 @@ class PostGISDBTablesIdentifier:
          
         # Read in tables
         engine = self.pg_connect.get_sql_alchemy_engine()
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             df_tables = pd.read_sql(text(query), conn)
 
         # Anti join on views
@@ -106,14 +106,21 @@ class PostGISDBTablesIdentifier:
 
         # Schema filter
         if self.selected_schemas is not None:
-            schema_str = ", ".join([f"'{str(ss)}'" for ss in self.selected_schemas])
+            # iterable (not a string) - e.g. list, set
+            if isinstance(self.selected_schemas, collections.abc.Iterable) and not isinstance(self.selected_schemas, str):
+                schema_str = ", ".join([f"'{str(ss)}'" for ss in self.selected_schemas])
+            elif isinstance(self.selected_schemas, str): 
+                schema_str = f"'{str(self.selected_schemas)}'"
+            else:
+                raise TypeError(f'Fatal error! got {self.selected_schemas} for schemas to look up!')
+
             query += f"""
                 {string_to_add} table_schema in ({schema_str})
             """
 
         # Read in results
         engine = self.pg_connect.get_sql_alchemy_engine()
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             df_results = pd.read_sql(text(query), conn)
 
         return df_results
@@ -138,7 +145,14 @@ class PostGISDBTablesIdentifier:
                 AND   schemaname != 'information_schema'
             """
         else:
-            schema_str = ", ".join([f"'{str(ss)}'" for ss in self.selected_schemas])
+            # iterable (not a string) - e.g. list, set
+            if isinstance(self.selected_schemas, collections.abc.Iterable) and not isinstance(self.selected_schemas, str):
+                schema_str = ", ".join([f"'{str(ss)}'" for ss in self.selected_schemas])
+            elif isinstance(self.selected_schemas, str): 
+                schema_str = f"'{str(self.selected_schemas)}'"
+            else:
+                raise TypeError(f'Fatal error! got {self.selected_schemas} for schemas to look up!')
+
             query += f"""
                 WHERE schemaname in ({schema_str})
             """
@@ -153,7 +167,7 @@ class PostGISDBTablesIdentifier:
 
         # Read in results
         engine = self.pg_connect.get_sql_alchemy_engine()
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             df_results = pd.read_sql(text(query), conn)
 
         return df_results
