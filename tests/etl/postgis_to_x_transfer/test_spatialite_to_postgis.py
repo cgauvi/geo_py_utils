@@ -17,7 +17,7 @@ from geo_py_utils.utilities_testing.spatialite_io import upload_qc_neigh_test_db
 
 @pytest.fixture
 def connection_remote_admin_dev():
-    return PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "gcp" / "dev" / ".env")
+    return PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "aws" / "dev" / ".env")
 
 
 @pytest.mark.requires_remote_pg_connection_dev

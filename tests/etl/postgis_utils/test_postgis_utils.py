@@ -31,12 +31,12 @@ def connection_localhost():
 
 @pytest.fixture
 def connection_remote_admin_dev():
-    return PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "gcp" / "dev" / ".env")
+    return PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "aws" / "dev" / ".env")
 
 
 @pytest.fixture
 def connection_remote_ro_dev():
-    return PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "gcp" / "dev" / "ro.env")
+    return PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "aws" / "dev" / "ro.env")
 
 
 
@@ -98,7 +98,7 @@ def test_list_tables_postgis_remote_dev(connection_remote_admin_dev):
     
 
 
-@pytest.mark.requires_remote_pg_connection_dev
+@pytest.mark.requires_remote_pg_connection_dev_ro
 def test_list_tables_postgis_remote_dev_ro(connection_remote_ro_dev):
 
     DB_NAME_DOES_NOT_EXIST = "RANDOMTBLDOESNOTEXIST"

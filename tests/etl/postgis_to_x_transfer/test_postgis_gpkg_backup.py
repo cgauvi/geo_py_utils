@@ -15,7 +15,7 @@ from pathlib import Path
 from psycopg2 import sql, connect
 
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
-from geo_py_utils.etl.postgis.postgis_tables import PostGISDBPublicTablesIdentifier
+from geo_py_utils.etl.postgis.postgis_tables import PostGISDBTablesIdentifier
 from geo_py_utils.etl.postgis.postgis_backup import PostGISDBBackupGPK
 from geo_py_utils.constants import ProjectPaths
 from geo_py_utils.utilities_testing.data import SAMPLE_GDF_SAFE
@@ -27,11 +27,11 @@ HERE = Path(abspath(dirname(__file__)))
 
 @pytest.fixture
 def connection_remote_admin_prod():
-    return PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "gcp" / "prod" / ".env")
+    return PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "aws" / "prod" / ".env")
 
 @pytest.fixture
 def connection_remote_admin_dev():
-    return PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "gcp" /  "dev" / ".env")
+    return PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "aws" /  "dev" / ".env")
 
   
 @pytest.mark.requires_remote_pg_connection_dev
@@ -40,20 +40,21 @@ def test_backup_to_gpkg(connection_remote_admin_dev):
     tbl_dummy_name = 'dummy_table'
 
     # List public tables
-    pg_list_public_tables = PostGISDBPublicTablesIdentifier(
+    pg_list_tables = PostGISDBTablesIdentifier(
         connection_remote_admin_dev, 
-        list_tables=[tbl_dummy_name]
+        selected_schemas=connection_remote_admin_dev.default_schema,
+        selected_tables=[tbl_dummy_name]
     )
 
     # Load a dummy table
-    engine = pg_list_public_tables.get_pg_connection().get_sql_alchemy_engine()
+    engine = pg_list_tables.get_pg_connection().get_sql_alchemy_engine()
     with engine.connect() as conn:
-        SAMPLE_GDF_SAFE.to_postgis(tbl_dummy_name, conn, if_exists='replace')
+        SAMPLE_GDF_SAFE.to_postgis(tbl_dummy_name, conn, schema = connection_remote_admin_dev.default_schema, if_exists='replace')
 
     # Backup selected tables to gpkg 
     db_backup_creator = PostGISDBBackupGPK(
         dest_gpkg = HERE / "backuptest.gpkg", 
-        pg_tables_identifier = pg_list_public_tables,
+        pg_tables_identifier = pg_list_tables,
         overwrite=True
     )
 
@@ -61,7 +62,7 @@ def test_backup_to_gpkg(connection_remote_admin_dev):
 
     # Teardown
     # Drop table
-    creds = pg_list_public_tables.get_pg_connection().get_credentials()
+    creds = pg_list_tables.get_pg_connection().get_credentials()
     with connect(**creds) as conn:
         cur = conn.cursor()
         cur.execute(sql.SQL('DROP TABLE IF EXISTS %s' % tbl_dummy_name))
@@ -73,27 +74,27 @@ def test_backup_to_gpkg(connection_remote_admin_dev):
 
 
 
-@pytest.mark.requires_remote_pg_connection_dev
-@pytest.mark.requires_remote_pg_connection_prod
+@pytest.mark.requires_remote_pg_connection_prod_dev
 def test_backup_to_gpkg_dev_prod(connection_remote_admin_prod, connection_remote_admin_dev):
 
     tbl_dummy_name = 'dummy_table'
 
-    # List public tables
-    pg_list_public_tables = PostGISDBPublicTablesIdentifier(
+    # List tables
+    pg_list_tables = PostGISDBTablesIdentifier(
         connection_remote_admin_prod, 
-        list_tables=[tbl_dummy_name]
+        selected_schemas=connection_remote_admin_prod.default_schema,
+        selected_tables=[tbl_dummy_name]
     )
 
     # Load a dummy table
-    engine = pg_list_public_tables.get_pg_connection().get_sql_alchemy_engine()
-    with engine.connect() as conn:
-        SAMPLE_GDF_SAFE.to_postgis(tbl_dummy_name, conn, if_exists='replace')
+    engine = pg_list_tables.get_pg_connection().get_sql_alchemy_engine()
+    with engine.begin() as conn:
+        SAMPLE_GDF_SAFE.to_postgis(tbl_dummy_name, conn, schema = connection_remote_admin_prod.default_schema, if_exists='replace')
 
     # Backup selected tables to gpkg 
     db_backup_creator = PostGISDBBackupGPK(
-        dest_gpkg = HERE / "backuptest.gpkg", 
-        pg_tables_identifier = pg_list_public_tables,
+        dest_gpkg = f'"{HERE / "backuptest.gpkg"}"', 
+        pg_tables_identifier = pg_list_tables,
         overwrite=True
     )
 
@@ -101,7 +102,7 @@ def test_backup_to_gpkg_dev_prod(connection_remote_admin_prod, connection_remote
 
     # Teardown
     # Drop table - prod
-    creds = pg_list_public_tables.get_pg_connection().get_credentials()
+    creds = pg_list_tables.get_pg_connection().get_credentials()
     with connect(**creds) as conn:
         cur = conn.cursor()
         cur.execute(sql.SQL('DROP TABLE IF EXISTS %s' % tbl_dummy_name))
@@ -111,14 +112,15 @@ def test_backup_to_gpkg_dev_prod(connection_remote_admin_prod, connection_remote
     # Reload back  to different DB
     db_backup_creator.gpkg_to_postgis(connection_remote_admin_dev, overwrite_pg_tbl =True)
 
-    pg_list_public_tables_dev = PostGISDBPublicTablesIdentifier(
+    pg_list_tables_dev = PostGISDBTablesIdentifier(
         connection_remote_admin_dev, 
-        list_tables=[tbl_dummy_name]
+        selected_schemas=connection_remote_admin_dev.default_schema,
+        selected_tables=[tbl_dummy_name]
     )
-    assert tbl_dummy_name in pg_list_public_tables_dev.get_df_tables().tablename.values 
+    assert tbl_dummy_name in pg_list_tables_dev.get_df_tables().tablename.values 
 
     # Drop table - dev
-    creds = pg_list_public_tables_dev.get_pg_connection().get_credentials()
+    creds = pg_list_tables_dev.get_pg_connection().get_credentials()
     with connect(**creds) as conn:
         cur = conn.cursor()
         cur.execute(sql.SQL('DROP TABLE IF EXISTS %s' % tbl_dummy_name))
@@ -133,20 +135,21 @@ def test_backup_to_gpkg_prod_roundtrip(connection_remote_admin_prod):
     tbl_dummy_name = 'dummy_table'
 
     # List public tables
-    pg_list_public_tables = PostGISDBPublicTablesIdentifier(
+    pg_list_tables = PostGISDBTablesIdentifier(
         connection_remote_admin_prod, 
-        list_tables=[tbl_dummy_name]
+        selected_schemas=connection_remote_admin_prod.default_schema,
+        selected_tables=[tbl_dummy_name]
     )
 
     # Load a dummy table
-    engine = pg_list_public_tables.get_pg_connection().get_sql_alchemy_engine()
+    engine = pg_list_tables.get_pg_connection().get_sql_alchemy_engine()
     with engine.connect() as conn:
-        SAMPLE_GDF_SAFE.to_postgis(tbl_dummy_name, conn, if_exists='replace')
+        SAMPLE_GDF_SAFE.to_postgis(tbl_dummy_name, conn, schema = connection_remote_admin_prod.default_schema, if_exists='replace')
 
     # Backup selected tables to gpkg 
     db_backup_creator = PostGISDBBackupGPK(
-        dest_gpkg = HERE / "backuptest.gpkg", 
-        pg_tables_identifier = pg_list_public_tables,
+        dest_gpkg = f'"{HERE / "backuptest.gpkg"}"', 
+        pg_tables_identifier = pg_list_tables,
         overwrite=True
     )
 
@@ -154,7 +157,7 @@ def test_backup_to_gpkg_prod_roundtrip(connection_remote_admin_prod):
 
     # Teardown
     # Drop table - prod
-    creds = pg_list_public_tables.get_pg_connection().get_credentials()
+    creds = pg_list_tables.get_pg_connection().get_credentials()
     with connect(**creds) as conn:
         cur = conn.cursor()
         cur.execute(sql.SQL('DROP TABLE IF EXISTS %s' % tbl_dummy_name))
@@ -164,10 +167,10 @@ def test_backup_to_gpkg_prod_roundtrip(connection_remote_admin_prod):
     # Reload back  to SAME DB
     db_backup_creator.gpkg_to_postgis(overwrite_pg_tbl = False)
  
-    assert tbl_dummy_name in pg_list_public_tables.get_df_tables().tablename.values 
+    assert tbl_dummy_name in pg_list_tables.get_df_tables().tablename.values 
 
     # Drop table - dev
-    creds = pg_list_public_tables.get_pg_connection().get_credentials()
+    creds = pg_list_tables.get_pg_connection().get_credentials()
     with connect(**creds) as conn:
         cur = conn.cursor()
         cur.execute(sql.SQL('DROP TABLE IF EXISTS %s' % tbl_dummy_name))
@@ -185,20 +188,21 @@ def test_backup_to_gpkg_dev_roundtrip(connection_remote_admin_dev):
     tbl_dummy_name = 'dummy_table'
 
     # List public tables
-    pg_list_public_tables = PostGISDBPublicTablesIdentifier(
+    pg_list_tables = PostGISDBTablesIdentifier(
         connection_remote_admin_dev, 
-        list_tables=[tbl_dummy_name]
+        selected_schemas=connection_remote_admin_dev.default_schema,
+        selected_tables=[tbl_dummy_name]
     )
 
     # Load a dummy table
-    engine = pg_list_public_tables.get_pg_connection().get_sql_alchemy_engine()
+    engine = pg_list_tables.get_pg_connection().get_sql_alchemy_engine()
     with engine.connect() as conn:
-        SAMPLE_GDF_SAFE.to_postgis(tbl_dummy_name, conn, if_exists='replace')
+        SAMPLE_GDF_SAFE.to_postgis(tbl_dummy_name, conn, schema = connection_remote_admin_dev.default_schema, if_exists='replace')
 
     # Backup selected tables to gpkg 
     db_backup_creator = PostGISDBBackupGPK(
-        dest_gpkg = HERE / "backuptest.gpkg", 
-        pg_tables_identifier = pg_list_public_tables,
+        dest_gpkg = f'"{HERE / "backuptest.gpkg"}"', 
+        pg_tables_identifier = pg_list_tables,
         overwrite=True
     )
 
@@ -206,7 +210,7 @@ def test_backup_to_gpkg_dev_roundtrip(connection_remote_admin_dev):
 
     # Teardown
     # Drop table - prod
-    creds = pg_list_public_tables.get_pg_connection().get_credentials()
+    creds = pg_list_tables.get_pg_connection().get_credentials()
     with connect(**creds) as conn:
         cur = conn.cursor()
         cur.execute(sql.SQL('DROP TABLE IF EXISTS %s' % tbl_dummy_name))
@@ -216,10 +220,10 @@ def test_backup_to_gpkg_dev_roundtrip(connection_remote_admin_dev):
     # Reload back  to SAME DB
     db_backup_creator.gpkg_to_postgis(overwrite_pg_tbl = False)
  
-    assert tbl_dummy_name in pg_list_public_tables.get_df_tables().tablename.values 
+    assert tbl_dummy_name in pg_list_tables.get_df_tables().tablename.values 
 
     # Drop table - dev
-    creds = pg_list_public_tables.get_pg_connection().get_credentials()
+    creds = pg_list_tables.get_pg_connection().get_credentials()
     with connect(**creds) as conn:
         cur = conn.cursor()
         cur.execute(sql.SQL('DROP TABLE IF EXISTS %s' % tbl_dummy_name))
@@ -230,4 +234,7 @@ def test_backup_to_gpkg_dev_roundtrip(connection_remote_admin_dev):
 
 if __name__ == '__main__':
 
-    test_backup_to_gpkg()
+    test_backup_to_gpkg_dev_prod(
+        PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "aws" / "prod" / ".env"),
+        PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "aws" /  "dev" / ".env")
+    )
