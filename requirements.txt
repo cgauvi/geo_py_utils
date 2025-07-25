@@ -12,7 +12,7 @@ rtree
 unicodedata2
 xyzservices
 python-geohash
-sqlalchemy>=1.0.0,<2
+sqlalchemy>=2
 snowflake-connector-python
 flake8
 python-dotenv

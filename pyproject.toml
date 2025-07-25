@@ -15,7 +15,7 @@ rtree= {version ="*"}
 unicodedata2= {version ="*"}
 python-geohash= {version ="*"}
 shapely= {version ="*"}
-sqlalchemy= {version =">=1.0.0,<2", python = ">=3.6.dev0"}
+sqlalchemy= {version =">=2", python = ">=3.6.dev0"}
 snowflake-connector-python= {version ="*"}
 python-dotenv= {version ="*"}
 geopandas= {version ="*"}
@@ -29,7 +29,7 @@ Unidecode =  {version ="*"}
 
 [tool.poetry.extras]
 notebooks=["seaborn" , "matplotlib", "folium", "mapclassify", "contextily", "xyzservices"]
-dev=['pytest','flake8','pyproject-flake8']
+dev=['pytest','flake8','pyproject-flake8', 'geoalchemy2']
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -44,8 +44,11 @@ testpaths = ["tests"]
 addopts =  "-v -m 'not requires_local_pg_connection and not requires_remote_pg_connection_prod and not requires_remote_pg_connection_dev and not requires_remote_pg_connection_sfkl_interactivity and not requires_remote_sfkl_interactivity and not requires_remote_sfkl_ae' "
 markers =[
     "requires_local_pg_connection: requires a local postgis db set up. Probably with docker and probably accepting connections on 80:5432 or 80:5052.",
-    "requires_remote_pg_connection_prod: requires a remote postgis db set up accepting connections on gcp:dev:5432",
-    "requires_remote_pg_connection_dev: requires a remote postgis db set up accepting connections on gcp:prod:5432",
+    "requires_remote_pg_connection_prod: requires a remote postgis db set up accepting connections on aws:dev:5432",
+    "requires_remote_pg_connection_prod_ro : requires a remote postgis db set up accepting connections on aws:prod:5432 with a read only user",
+    "requires_remote_pg_connection_dev_ro :  requires a remote postgis db set up accepting connections on aws:dev:5432 with a read only user",
+    "requires_remote_pg_connection_prod_dev: requires a remote postgis db set up accepting connections on aws:dev:5432 AND aws:prod:5432",
+    "requires_remote_pg_connection_dev: requires a remote postgis db set up accepting connections on aws:prod:5432",
     "requires_remote_pg_connection_sfkl_interactivity:  requires a remote postgis db + sfkl interactive external browser auth USE `-s`  ",
     "requires_remote_sfkl_interactivity: requires ability to propagate sso conenction in external browser",
     "requires_remote_sfkl_ae: requires ability to connect to sfkl from ae",
@@ -55,9 +58,9 @@ markers =[
     ]
 
 [tool.flake8]
-    max-complexity = 10
-    max-line-length = 100
-    ignore = [
+max-complexity = 10
+max-line-length = 100
+ignore = [
         "W291",
         "W292",
         "W293",
@@ -73,7 +76,7 @@ markers =[
         "E251",
         "E261",
         "E303"
-    ]
-    select = ["F"]
+]
+select = ["F"]
 
 
