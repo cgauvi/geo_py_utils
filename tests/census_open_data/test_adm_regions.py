@@ -19,7 +19,7 @@ from geo_py_utils.census_open_data.open_data import (
 DICT_CHECK_NUM_RECORDS = {
             DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_METRO: 2,
             DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MRC: 106,
-            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI: 1346,
+            DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_MUNI: 1347,
             DownloadQcAdmBoundaries.QC_PROV_ADM_BOUND_ARROND: 41
     }
 

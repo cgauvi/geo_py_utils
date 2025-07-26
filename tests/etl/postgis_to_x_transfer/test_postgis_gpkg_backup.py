@@ -93,7 +93,7 @@ def test_backup_to_gpkg_dev_prod(connection_remote_admin_prod, connection_remote
 
     # Backup selected tables to gpkg 
     db_backup_creator = PostGISDBBackupGPK(
-        dest_gpkg = f'"{HERE / "backuptest.gpkg"}"', 
+        dest_gpkg = HERE / "backuptest.gpkg", 
         pg_tables_identifier = pg_list_tables,
         overwrite=True
     )
@@ -148,7 +148,7 @@ def test_backup_to_gpkg_prod_roundtrip(connection_remote_admin_prod):
 
     # Backup selected tables to gpkg 
     db_backup_creator = PostGISDBBackupGPK(
-        dest_gpkg = f'"{HERE / "backuptest.gpkg"}"', 
+        dest_gpkg = HERE / "backuptest.gpkg", 
         pg_tables_identifier = pg_list_tables,
         overwrite=True
     )
@@ -201,7 +201,7 @@ def test_backup_to_gpkg_dev_roundtrip(connection_remote_admin_dev):
 
     # Backup selected tables to gpkg 
     db_backup_creator = PostGISDBBackupGPK(
-        dest_gpkg = f'"{HERE / "backuptest.gpkg"}"', 
+        dest_gpkg = HERE / "backuptest.gpkg", 
         pg_tables_identifier = pg_list_tables,
         overwrite=True
     )

@@ -46,7 +46,7 @@ def test_conn_str(connection_remote_admin_dev):
     conn = connection_remote_admin_dev
     dict_str=conn.get_credentials()
 
-    assert pg_create_ogr2ogr_str(**dict_str) == f' \"PG:host={dict_str["host"]} dbname={dict_str["database"]} user={dict_str["user"]} password={dict_str["password"]} port={dict_str["port"]}\" ' 
+    assert pg_create_ogr2ogr_str(**dict_str)  == f"PG:'host={dict_str['host']} dbname={dict_str['database']} user={dict_str['user']} password={dict_str['password']} port={dict_str['port']}'"
     assert pg_create_connection_str(**dict_str) == f'postgresql://{dict_str["user"]}:{dict_str["password"]}@{dict_str["host"]}:{str(dict_str["port"])}/{dict_str["database"]}'
 
 

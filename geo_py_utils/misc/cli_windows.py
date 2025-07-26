@@ -46,7 +46,7 @@ def ogr2ogr_windows_wrapper(orig_ogr_cmd: str):
         if path_ogr_powershell is None or len(path_ogr_powershell) == 0:
             raise RuntimeError('Fatal error! could not run (get-command ogr2ogr).Path')
         orig_ogr_cmd_stripped = re.sub('ogr2ogr', '', orig_ogr_cmd, count=1,flags=re.IGNORECASE)
-        cmd = f'{path_ogr_powershell} {orig_ogr_cmd_stripped}'
+        cmd = f'& "{path_ogr_powershell}" {orig_ogr_cmd_stripped}' # & is the call operator in powershell. "" the command ensures it wont break in case of white space
     else:
         cmd = orig_ogr_cmd
 

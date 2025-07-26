@@ -57,7 +57,7 @@ def pg_create_ogr2ogr_str(
 
     
 
-    return f" PG:'host={host} dbname={database} user={user} password={password} port={port}' "
+    return f"PG:'host={host} dbname={database} user={user} password={password} port={port}'"
 
 
 def pg_create_engine(

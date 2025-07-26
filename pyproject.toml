@@ -41,7 +41,11 @@ pythonpath = [
   "."
 ]
 testpaths = ["tests"]
-addopts =  "-v -m 'not requires_local_pg_connection and not requires_remote_pg_connection_prod and not requires_remote_pg_connection_dev and not requires_remote_pg_connection_sfkl_interactivity and not requires_remote_sfkl_interactivity and not requires_remote_sfkl_ae' "
+addopts =  """
+-v 
+-m ' not requires_local_pg_connection and not requires_remote_pg_connection_prod and not requires_remote_pg_connection_prod_ro and not requires_remote_pg_connection_dev_ro and not requires_remote_pg_connection_prod_dev and  not requires_remote_pg_connection_dev and not requires_remote_pg_connection_sfkl_interactivity and not requires_remote_sfkl_interactivity and not requires_remote_sfkl_ae and not windows_specific and not linux_specific'
+"""
+
 markers =[
     "requires_local_pg_connection: requires a local postgis db set up. Probably with docker and probably accepting connections on 80:5432 or 80:5052.",
     "requires_remote_pg_connection_prod: requires a remote postgis db set up accepting connections on aws:dev:5432",

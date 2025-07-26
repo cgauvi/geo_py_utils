@@ -191,7 +191,7 @@ class Url_to_spatialite(Url_to_db):
         if self.target_projection is not None:
             cmd += f"-t_srs EPSG:{self.target_projection}" 
 
-        cmd  +=  f" {dest} {source} "\
+        cmd  +=  f' "{dest}" "{source}" '\
             f" -nln {self.table_name}" \
             " -lco ENCODING=UTF-8 " 
         
