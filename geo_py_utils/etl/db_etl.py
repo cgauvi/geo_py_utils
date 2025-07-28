@@ -191,7 +191,7 @@ class Url_to_spatialite(Url_to_db):
         if self.target_projection is not None:
             cmd += f"-t_srs EPSG:{self.target_projection}" 
 
-        cmd  +=  f" {dest} {source} "\
+        cmd  +=  f' "{dest}" "{source}" '\
             f" -nln {self.table_name}" \
             " -lco ENCODING=UTF-8 " 
         
@@ -304,7 +304,8 @@ class Url_to_postgis(Url_to_db):
             user = self.user, 
             password = self.password , 
             host = self.host, 
-            port = self.port
+            port = self.port,
+            schema=self.schema
         )  
 
 

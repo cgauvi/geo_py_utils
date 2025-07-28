@@ -4,7 +4,7 @@ from pathlib import Path, PurePosixPath, WindowsPath
 import sys
 
 from geo_py_utils.etl.postgis.db_utils import pg_create_ogr2ogr_str
-from geo_py_utils.misc.cli_runner import CLIRunner
+from geo_py_utils.misc.cli_windows import ogr2ogr_windows_wrapper
 
 # Logger
 logger = logging.getLogger(__file__)
@@ -66,7 +66,7 @@ class LoadGPKGPostgis:
         source =  WindowsPath(self.gpkg_name) if 'win' in sys.platform else PurePosixPath(self.gpkg_name)
         dest = WindowsPath(self.ogr2ogr_dest_connection_str) if 'win' in sys.platform else PurePosixPath(self.ogr2ogr_dest_connection_str)
 
-        cmd += fr" {dest} {source} " 
+        cmd += fr' "{dest}" {source} ' # quote both 
 
         # Additional commands 
         cmd += " -lco ENCODING=UTF-8 " 
@@ -98,7 +98,7 @@ class LoadGPKGPostgis:
         # Actual system call
         logger.info(ogr_cmd)
         
-        CLIRunner(use_bash=False).run_cmd(ogr_cmd)
+        ogr2ogr_windows_wrapper(ogr_cmd)
 
         logger.info(f"Successfully uploaded entire gpkg {self.gpkg_name} to {self.host}:{self.port}/{self.postgis_db_name}")
 

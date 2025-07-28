@@ -46,7 +46,7 @@ The project has been tested by installing geopandas through `conda`. The rest of
 
 ```bash
 # Tested for python [3.9, 3.10, 3.11] X [Windows ubuntu]
-conda create --name geo_py_utils python=3.10 geopandas psycopg2 python-geohash
+conda create --name geo_py_utils python=3.10 geopandas libgdal-pg python-geohash "pandas<=2.0.3"
 conda activate geo_py_utils
 python -m pip install --upgrade pip
 python -m pip install "geo_py_utils @ git+https://git@github.com/LaCapitale/geo_py_utils.git"
@@ -95,3 +95,18 @@ To be on the safe side, explicitely exclude markers when there are many E.g.:
 `pytest tests/ -m 'requires_remote_pg_connection_prod and not requires_remote_pg_connection_dev'` to run the postgis backup tests on workbench which has access to the prod db, but not the dev db.
 
  
+To run all tests (including all the database intergration tests) locally on windows : 
+
+```{bash}
+test_ops=" requires_remote_pg_connection_prod or 
+    requires_remote_pg_connection_prod_dev or 
+    requires_remote_pg_connection_dev or 
+    requires_remote_pg_connection_sfkl_interactivity or 
+   requires_remote_sfkl_interactivity or 
+    windows_specific
+"
+singleline=$(echo "$test_ops" | tr '\n' ' ')
+pytest tests/ -m  "$singleline"
+```
+
+consider adding "linux_specific or  requires_remote_sfkl_ae  " for inux ae and "    requires_remote_pg_connection_prod_ro or requires_remote_pg_connection_dev_ro or " if there is a read only user on the pg dbs. " requires_local_pg_connection" if using a local docker image

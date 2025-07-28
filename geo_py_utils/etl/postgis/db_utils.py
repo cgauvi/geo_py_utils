@@ -57,7 +57,7 @@ def pg_create_ogr2ogr_str(
 
     
 
-    return f' "PG:host={host} dbname={database} user={user} password={password} port={port}" '
+    return f"PG:'host={host} dbname={database} user={user} password={password} port={port}'"
 
 
 def pg_create_engine(
@@ -123,7 +123,8 @@ def pg_create_db(database: str,
                 user: str,
                 password: str, 
                 host: str,
-                port: str):
+                port: str,
+                schema: str = 'public'):
     """Create a pg db + enable postgis extension 
 
     Sets user as owner
@@ -151,23 +152,21 @@ def pg_create_db(database: str,
 
             #Preparing query to create a database - make sure it is a POSTGIS DB
             session.\
-                execute(f"""
-                CREATE database {database} 
-                WITH 
-                    OWNER = {user}
-                    ENCODING = 'UTF8'
-                    CONNECTION LIMIT = -1;
-                """)
+                execute(
+  
+                        f"""
+                    CREATE database {schema}.{database} 
+                    WITH 
+                        OWNER = {user}
+                        ENCODING = 'UTF8'
+                        CONNECTION LIMIT = -1;
+                    """
+                )
 
 
         # Connect on the correct newlys created db 
         with engine_db_specific.connect() as conn:
-
-            conn.\
-                    execute("""
-                    CREATE EXTENSION IF NOT EXISTS postgis
-                    """
-                )
+            conn.execute(  " CREATE EXTENSION IF NOT EXISTS postgis " ) 
 
 
         logger.info(f"Successfully created postgres db {database} & enabled postigs extension")
@@ -212,7 +211,7 @@ def pg_list_tables(engine: sqlalchemy.engine.base.Engine, database: str, schema:
 
 
   
-def pg_drop_table(engine: sqlalchemy.engine.base.Engine, database: str, tbl_name: str):
+def pg_drop_table(engine: sqlalchemy.engine.base.Engine, database: str, tbl_name: str, schema:str='public'):
     """Drop a table in a postgres db if it exists.
 
     Args:
@@ -228,9 +227,9 @@ def pg_drop_table(engine: sqlalchemy.engine.base.Engine, database: str, tbl_name
 
     with engine.connect() as conn:
         try:
-            conn.execute(f"DROP TABLE if exists {tbl_name}")
+            conn.execute(f"DROP TABLE if exists {schema}.{tbl_name}")
         except Exception as e:
-            logger.warning(f"Warning! Failed to drop table {tbl_name} - {e}" )
+            logger.warning(f"Warning! Failed to drop table {schema}.{tbl_name} - {e}" )
 
 
 def pg_sql_to_df( engine: sqlalchemy.engine.base.Engine, 
@@ -284,6 +283,14 @@ def pg_create_extension(engine: sqlalchemy.engine.base.Engine):
     with engine.connect() as conn:
         conn.execute('CREATE EXTENSION IF NOT EXISTS postgis;')
 
+
+def pg_create_schema(
+        engine: sqlalchemy.engine.base.Engine,
+        schema: str
+    ):
+
+    with engine.connect() as conn:
+        conn.execute(f'CREATE SCHEMA IF NOT EXISTS  {schema};')
 
 def pg_is_spatial_index_enabled(engine: sqlalchemy.engine.base.Engine,
                             tbl_name: str, 

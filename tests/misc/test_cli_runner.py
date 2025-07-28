@@ -34,7 +34,7 @@ def test_gitbash_catch_exception():
     if 'win' in sys.platform:
         try:
             error_script_path = Path(path.dirname(__file__ )) / 'error.sh'
-            CLIRunner(use_bash=True, capture_std_err=True).run_cmd(PurePosixPath(error_script_path))
+            CLIRunner(use_bash=True, capture_std_err=True).run_cmd(f'"{PurePosixPath(error_script_path)}"') # need to quote the path so it works with white space
         except Exception as e :
             print('This will fail because the error.sh scripts returns an error')
             assert  "error: Failure!" in str(e)
@@ -46,14 +46,14 @@ def test_gitbash_capture_stdout_windows():
  
         success_script_path = Path(path.dirname(__file__ )) / 'success.sh'
 
-        cli_results = CLIRunner(use_bash=True, capture_std_out=True).run_cmd(PurePosixPath(success_script_path))
+        cli_results = CLIRunner(use_bash=True, capture_std_out=True).run_cmd(f'"{PurePosixPath(success_script_path)}"') 
 
         str_return = json.loads(str(cli_results))['out'] # dict_return is a json string
         assert str_return.strip() == 'Success!'
 
         assert str_return.strip() == cli_results.out.strip(), 'Dataclass field `out` shuld be the same as the json content'
 
-        assert CLIRunner(use_bash=True).run_cmd(PurePosixPath(success_script_path)) is None
+        assert CLIRunner(use_bash=True).run_cmd(f'"{PurePosixPath(success_script_path)}"') is None
 
 
 
@@ -84,4 +84,4 @@ def test_multiline_statement_works_os_agnostic():
        
 
 if __name__ == '__main__':
-    test_multiline_statement_works_os_agnostic()
+    test_gitbash_catch_exception()

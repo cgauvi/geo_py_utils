@@ -50,7 +50,7 @@ class PostGISDBConnection:
     
     def get_sql_alchemy_engine(self):
 
-        creds_with_default_schema = self.get_credentials()
+        creds_with_default_schema = self.get_credentials().copy()
         if self.default_schema:
             creds_with_default_schema.update({'default_schema': f'{self.default_schema}' } )
 
