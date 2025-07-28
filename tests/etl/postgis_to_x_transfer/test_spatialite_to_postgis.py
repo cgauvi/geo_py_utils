@@ -1,4 +1,3 @@
-from os.path import exists
 import pytest
 import logging
 import numpy as np

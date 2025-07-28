@@ -115,7 +115,7 @@ class LoadPostgis2Postgis:
                 self.tables_to_transfer = [self.tables_to_transfer]
 
             if set(self.tables_to_transfer) == set(['spatial_ref_sys']):
-                raise RuntimeError(f'Fatal error! Only specified spatial_ref_sys to transfer! ')
+                raise RuntimeError('Fatal error! Only specified spatial_ref_sys to transfer! ')
 
             orig_tables = self.tables_to_transfer
             desired_num_tables_to_transfer = len(self.tables_to_transfer)
