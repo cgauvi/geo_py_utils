@@ -1,3 +1,10 @@
+================== 
+
+geo_py_utils 2.0.0
+
+- major:
+    * fixed sqlalchemy >= 2 and pandas > 2.0.3
+
 
 ================== 
 

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "geo_py_utils"
-version = "1.12.2"
+version = "2.0.0"
 description = "Python functions for generic geospatial manipulations"
 authors = ["Charles Gauvin"]
 
@@ -15,13 +15,13 @@ rtree= {version ="*"}
 unicodedata2= {version ="*"}
 python-geohash= {version ="*"}
 shapely= {version ="*"}
-sqlalchemy= {version ="<2", python = ">=3.6.dev0"}
+sqlalchemy= {version =">=2", python = ">=3.6.dev0"}
 snowflake-connector-python= {version ="*"}
 python-dotenv= {version ="*"}
 geopandas= {version ="*"}
 pygeos={version=">=0.14"}
 pyogrio={version="*"}
-pandas= {version ="<=2.0.3"}
+pandas= {version =">2.0.3"}
 pyproj= {version ="*"}
 munkres= {version ="*"}
 oscrypto = {version ="*"}

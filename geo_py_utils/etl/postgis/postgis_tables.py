@@ -3,6 +3,7 @@ import collections
 import logging
 import pandas as pd
 from typing import List
+from sqlalchemy import text
 
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
 
@@ -67,8 +68,8 @@ class PostGISDBTablesIdentifier:
          
         # Read in tables
         engine = self.pg_connect.get_sql_alchemy_engine()
-        with engine.connect() as conn:
-            df_tables = pd.read_sql(query, conn)
+        with engine.begin() as conn:
+            df_tables = pd.read_sql(text(query), conn)
 
         # Anti join on views
         if exclude_views:
@@ -166,8 +167,8 @@ class PostGISDBTablesIdentifier:
 
         # Read in results
         engine = self.pg_connect.get_sql_alchemy_engine()
-        with engine.connect() as conn:
-            df_results = pd.read_sql(query, conn)
+        with engine.begin() as conn:
+            df_results = pd.read_sql(text(query), conn)
 
         return df_results
 

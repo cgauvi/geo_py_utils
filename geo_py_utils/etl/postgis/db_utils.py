@@ -5,7 +5,7 @@ import pandas as pd
 from typing import Union, List
 import logging
 from sqlalchemy.exc import OperationalError
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__file__)
@@ -110,8 +110,8 @@ def pg_db_exists(engine: sqlalchemy.engine.base.Engine, database: str) -> bool:
     # Trying to connect to non-existent db raises OperationalError
     # https://stackoverflow.com/questions/15062208/how-to-search-for-the-existence-of-a-database-with-sqlalchemy
     try:
-        with engine.connect() as conn:
-            df_results = pd.read_sql(query_exists, conn)
+        with engine.begin() as conn:
+            df_results = pd.read_sql(text(query_exists), conn)
         db_exists = df_results.shape[0] > 0
     except OperationalError:
         logger.info(f'{database} does not seem to exist')
@@ -145,7 +145,7 @@ def pg_create_db(database: str,
 
         # Conenct to generic posrgres db
         engine_generic = create_engine(f'postgresql://{user}:{password}@{host}:{str(port)}/postgres')
-        with engine_generic.connect() as conn:
+        with engine_generic.begin() as conn:
 
             session = sessionmaker(bind=engine_generic)()
             session.connection().connection.set_isolation_level(0)
@@ -153,7 +153,7 @@ def pg_create_db(database: str,
             #Preparing query to create a database - make sure it is a POSTGIS DB
             session.\
                 execute(
-  
+                    text(
                         f"""
                     CREATE database {schema}.{database} 
                     WITH 
@@ -162,11 +162,12 @@ def pg_create_db(database: str,
                         CONNECTION LIMIT = -1;
                     """
                 )
+                )
 
 
         # Connect on the correct newlys created db 
-        with engine_db_specific.connect() as conn:
-            conn.execute(  " CREATE EXTENSION IF NOT EXISTS postgis " ) 
+        with engine_db_specific.begin() as conn:
+            conn.execute(  text(" CREATE EXTENSION IF NOT EXISTS postgis " ) )
 
 
         logger.info(f"Successfully created postgres db {database} & enabled postigs extension")
@@ -202,8 +203,8 @@ def pg_list_tables(engine: sqlalchemy.engine.base.Engine, database: str, schema:
     if schema:
         query += f" AND schemaname = '{schema}' "
 
-    with engine.connect() as conn:
-        df_results = pd.read_sql(query, conn)
+    with engine.begin() as conn:
+        df_results = pd.read_sql(text(query), conn)
 
     return df_results.tablename.values
 
@@ -225,9 +226,9 @@ def pg_drop_table(engine: sqlalchemy.engine.base.Engine, database: str, tbl_name
         logger.info(f'Not running pg_drop_table {database} does not exist')
         return 
 
-    with engine.connect() as conn:
+    with engine.begin() as conn:
         try:
-            conn.execute(f"DROP TABLE if exists {schema}.{tbl_name}")
+            conn.execute(text(f"DROP TABLE if exists {schema}.{tbl_name}"))
         except Exception as e:
             logger.warning(f"Warning! Failed to drop table {schema}.{tbl_name} - {e}" )
 
@@ -248,11 +249,11 @@ def pg_sql_to_df( engine: sqlalchemy.engine.base.Engine,
         Union[ pd.DataFrame, gpd.GeoDataFrame]: _description_
     """
 
-    with engine.connect() as conn:
+    with engine.begin() as conn:
         if is_spatial:
-            df= gpd.read_postgis(query, conn, **kwargs)
+            df= gpd.read_postgis(text(query), conn, **kwargs)
         else:
-            df = pd.read_sql(query, conn, **kwargs)
+            df = pd.read_sql(text(query), conn, **kwargs)
         
 
     return df
@@ -280,8 +281,8 @@ def pg_get_table_rows(engine: sqlalchemy.engine.base.Engine, tbl_name: str) -> i
 
 def pg_create_extension(engine: sqlalchemy.engine.base.Engine):
 
-    with engine.connect() as conn:
-        conn.execute('CREATE EXTENSION IF NOT EXISTS postgis;')
+    with engine.begin() as conn:
+        conn.execute(text('CREATE EXTENSION IF NOT EXISTS postgis;'))
 
 
 def pg_create_schema(
@@ -289,8 +290,8 @@ def pg_create_schema(
         schema: str
     ):
 
-    with engine.connect() as conn:
-        conn.execute(f'CREATE SCHEMA IF NOT EXISTS  {schema};')
+    with engine.begin() as conn:
+        conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS  {schema};'))
 
 def pg_is_spatial_index_enabled(engine: sqlalchemy.engine.base.Engine,
                             tbl_name: str, 

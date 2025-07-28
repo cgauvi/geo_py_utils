@@ -12,6 +12,7 @@
 
 import pytest
 import pandas as pd
+from sqlalchemy import text
 
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
 from geo_py_utils.constants import ProjectPaths
@@ -42,9 +43,9 @@ def connection_remote_aws_dev(p=ProjectPaths.CONFIG_PATH / 'postgis' / "aws" / "
     yield connector
 
     # Teardown
-    with connector.get_sql_alchemy_engine().connect()  as conn:
+    with connector.get_sql_alchemy_engine().begin()  as conn:
         for tbl_name, gdf in TBLS.items():
-            conn.execute(f'DROP TABLE IF EXISTS {tbl_name}')
+            conn.execute(text(f'DROP TABLE IF EXISTS {tbl_name}'))
 
 
 @pytest.fixture
@@ -53,16 +54,16 @@ def connection_remote_aws_prod(p=ProjectPaths.CONFIG_PATH / 'postgis' / "aws" / 
     connector = PostGISDBConnection(p)
 
     # Clean slate
-    with connector.get_sql_alchemy_engine().connect()  as conn:
+    with connector.get_sql_alchemy_engine().begin()  as conn:
         for tbl_name, _ in TBLS.items():
-            conn.execute(f'DROP TABLE IF EXISTS {tbl_name}')
+            conn.execute(text(f'DROP TABLE IF EXISTS {tbl_name}'))
 
     yield connector
 
     # Teardown
-    with connector.get_sql_alchemy_engine().connect()  as conn:
+    with connector.get_sql_alchemy_engine().begin()  as conn:
         for tbl_name, _ in TBLS.items():
-            conn.execute(f'DROP TABLE IF EXISTS {tbl_name}')
+            conn.execute(text(f'DROP TABLE IF EXISTS {tbl_name}'))
   
 
 @pytest.mark.requires_remote_pg_connection_prod_dev
