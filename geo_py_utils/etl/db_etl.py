@@ -304,7 +304,8 @@ class Url_to_postgis(Url_to_db):
             user = self.user, 
             password = self.password , 
             host = self.host, 
-            port = self.port
+            port = self.port,
+            schema=self.schema
         )  
 
 

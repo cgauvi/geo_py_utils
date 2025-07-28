@@ -114,6 +114,9 @@ class LoadPostgis2Postgis:
             if not isinstance(self.tables_to_transfer, list):
                 self.tables_to_transfer = [self.tables_to_transfer]
 
+            if set(self.tables_to_transfer) == set(['spatial_ref_sys']):
+                raise RuntimeError(f'Fatal error! Only specified spatial_ref_sys to transfer! ')
+
             orig_tables = self.tables_to_transfer
             desired_num_tables_to_transfer = len(self.tables_to_transfer)
 
@@ -124,6 +127,9 @@ class LoadPostgis2Postgis:
                 logger.warning(f'Warning! requested transfer of {orig_tables} - only {existing_src_tables} exist')
         else:
             self.tables_to_transfer = pg_list_tables(self.src_engine, self.src_database, self.src_default_schema)
+            logger.warning('Warning! will transfer all tables!')
+            
+            
 
         existing_dest_tables = pg_list_tables(self.dest_engine, self.dest_database, self.dest_default_schema)
 
@@ -138,6 +144,7 @@ class LoadPostgis2Postgis:
         
         # Cast to set and make sure we don't have system tables 
         self.tables_to_transfer = set(self.tables_to_transfer).difference(set(['spatial_ref_sys']))
+
 
 
     def _ogr2ogr(self):
