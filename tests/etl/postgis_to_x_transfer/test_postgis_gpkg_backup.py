@@ -88,7 +88,7 @@ def test_backup_to_gpkg_dev_prod(connection_remote_admin_prod, connection_remote
 
     # Load a dummy table
     engine = pg_list_tables.get_pg_connection().get_sql_alchemy_engine()
-    with engine.begin() as conn:
+    with engine.connect() as conn:
         SAMPLE_GDF_SAFE.to_postgis(tbl_dummy_name, conn, schema = connection_remote_admin_prod.default_schema, if_exists='replace')
 
     # Backup selected tables to gpkg 

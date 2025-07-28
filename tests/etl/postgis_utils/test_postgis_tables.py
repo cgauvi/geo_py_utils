@@ -90,6 +90,6 @@ def test_list_topology_geo_cols(connection_remote_prod_ro):
 if __name__ == '__main__':
 
     # prod
-    test_list_default_schema_tables_dev(
-        PostGISDBConnection(ProjectPaths.CONFIG_PATH  / 'postgis' /'aws' / "prod" / ".env")
+    test_list_default_schema_geo_cols(
+        PostGISDBConnection(ProjectPaths.CONFIG_PATH  / 'postgis' /'aws' / "dev" / ".env")
     )
