@@ -46,7 +46,7 @@ The project has been tested by installing geopandas through `conda`. The rest of
 
 ```bash
 # Tested for python [3.9, 3.10, 3.11] X [Windows ubuntu]
-conda create --name geo_py_utils python=3.10 geopandas libgdal-pg python-geohash "pandas<=2.0.3"
+conda create --name geo_py_utils python=3.10 geopandas libgdal-pg python-geohash "
 conda activate geo_py_utils
 python -m pip install --upgrade pip
 python -m pip install "geo_py_utils @ git+https://git@github.com/LaCapitale/geo_py_utils.git"

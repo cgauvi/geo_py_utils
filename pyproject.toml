@@ -21,7 +21,7 @@ python-dotenv= {version ="*"}
 geopandas= {version ="*"}
 pygeos={version=">=0.14"}
 pyogrio={version="*"}
-pandas= {version ="*"}
+pandas= {version ="<=2.0.3"}
 pyproj= {version ="*"}
 munkres= {version ="*"}
 oscrypto = {version ="*"}
