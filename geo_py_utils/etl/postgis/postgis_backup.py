@@ -8,7 +8,7 @@ import sys
 from geo_py_utils.etl.postgis.postgis_tables import PostGISDBTablesIdentifier
 from geo_py_utils.etl.postgis.postgis_connection import PostGISDBConnection
 from geo_py_utils.etl.postgis.db_utils import pg_create_ogr2ogr_str
-from geo_py_utils.misc.cli_runner import CLIRunner
+from geo_py_utils.misc.cli_windows import ogr2ogr_windows_wrapper
 
 # Logger
 logger = logging.getLogger(__file__)
@@ -90,7 +90,7 @@ class PostGISDBBackupGPK(PostGISDBBackup):
         # Actual system call
         cmd_pg_gpkg = self._get_common_cmd_gpkg_to_pg(overwrite_pg_tbl = overwrite_pg_tbl)
 
-        CLIRunner(use_bash=False).run_cmd(cmd_pg_gpkg)
+        ogr2ogr_windows_wrapper(cmd_pg_gpkg)
 
         logger.info("Successfully completed reload of gpkg -> postgis!")
 
@@ -116,7 +116,7 @@ class PostGISDBBackupGPK(PostGISDBBackup):
         source =  WindowsPath(self.dest_gpkg) if 'win' in sys.platform else PurePosixPath(self.dest_gpkg)
         dest = WindowsPath(self.ogr2ogr_dest_connection_str) if 'win' in sys.platform else PurePosixPath(self.ogr2ogr_dest_connection_str)
 
-        cmd += fr" {dest} {source}  " 
+        cmd += fr' {dest} "{source}"  ' 
 
         # Additional commands 
         cmd += " -lco ENCODING=UTF-8 " 
@@ -174,7 +174,7 @@ class PostGISDBBackupGPK(PostGISDBBackup):
         source =  WindowsPath(self.ogr2ogr_src_connection_str) if 'win' in sys.platform else PurePosixPath(self.ogr2ogr_src_connection_str)
         dest = WindowsPath(self.dest_gpkg) if 'win' in sys.platform else PurePosixPath(self.dest_gpkg)
 
-        cmd += fr" {dest} {source} " 
+        cmd += fr' "{dest}" {source} ' 
 
         # Additional commands 
         cmd += " -lco ENCODING=UTF-8 " 
@@ -205,7 +205,7 @@ class PostGISDBBackupGPK(PostGISDBBackup):
                         Running {cmd_tbl}
                         """)
 
-            CLIRunner(use_bash=False).run_cmd(cmd_tbl)
+            ogr2ogr_windows_wrapper(cmd_tbl)
 
 
 

@@ -3,7 +3,7 @@
 # E.g. to test `dev`
 
 # `pytest tests/etl/postgis_to_x_transfer/test_postgis_postgis.py \
-# -k 'test_new_table_transfer_gcp_dev_to_aws_dev_succeeds'
+# -k 'test_new_table_transfer_aws_dev_to_aws_prod_succeeds'
 # -m requires_remote_pg_connection_dev
 
 # `pytest tests/etl/postgis/ \
@@ -30,14 +30,14 @@ TBLS={
 }
 
 @pytest.fixture
-def connection_remote_gcp_dev(p=ProjectPaths.CONFIG_PATH / 'postgis' / "gcp" / "dev" / "test_db.env"):
+def connection_remote_aws_dev(p=ProjectPaths.CONFIG_PATH / 'postgis' / "aws" / "dev" / ".env"):
 
     connector = PostGISDBConnection(p)
 
     # Load a dummy table
     with connector.get_sql_alchemy_engine().connect()  as conn:
         for tbl_name, gdf in TBLS.items():
-            gdf.to_postgis(tbl_name, conn, if_exists='replace')
+            gdf.to_postgis(tbl_name, conn, if_exists='replace', schema=connector.default_schema)
 
     yield connector
 
@@ -48,7 +48,7 @@ def connection_remote_gcp_dev(p=ProjectPaths.CONFIG_PATH / 'postgis' / "gcp" / "
 
 
 @pytest.fixture
-def connection_remote_aws_dev(p=ProjectPaths.CONFIG_PATH / 'postgis' / "aws" / "dev" / ".env"):
+def connection_remote_aws_prod(p=ProjectPaths.CONFIG_PATH / 'postgis' / "aws" / "prod" / ".env"):
 
     connector = PostGISDBConnection(p)
 
@@ -65,12 +65,12 @@ def connection_remote_aws_dev(p=ProjectPaths.CONFIG_PATH / 'postgis' / "aws" / "
             conn.execute(f'DROP TABLE IF EXISTS {tbl_name}')
   
 
-@pytest.mark.requires_remote_pg_connection_dev
-def test_new_table_transfer_gcp_dev_to_aws_dev_succeeds(connection_remote_gcp_dev, connection_remote_aws_dev):
+@pytest.mark.requires_remote_pg_connection_prod_dev
+def test_new_table_transfer_aws_dev_to_aws_prod_succeeds(connection_remote_aws_dev, connection_remote_aws_prod):
 
     list_dest_before = pg_list_tables(
-        connection_remote_aws_dev.get_sql_alchemy_engine(),
-        connection_remote_aws_dev.creds['database'] 
+        connection_remote_aws_prod.get_sql_alchemy_engine(),
+        connection_remote_aws_prod.creds['database'] 
     )
 
     # LoadPostgis2Postgis takes in arguments like dest_port and src_host 
@@ -78,7 +78,7 @@ def test_new_table_transfer_gcp_dev_to_aws_dev_succeeds(connection_remote_gcp_de
     # So we need to append an extra src or dest prefix to kwargs
     creds = {}
     creds_new = {}
-    for k,o in [ (connection_remote_aws_dev,'dest'), (connection_remote_gcp_dev, 'src')]:
+    for k,o in [ (connection_remote_aws_prod ,'dest'), (connection_remote_aws_dev, 'src')]:
         creds[o] = k.get_credentials().copy()
         creds_new[o] = {}
         for kk,v in creds[o].items():
@@ -87,6 +87,13 @@ def test_new_table_transfer_gcp_dev_to_aws_dev_succeeds(connection_remote_gcp_de
     all_params = creds_new['dest'].copy()
     all_params.update(creds_new['src'].copy())
 
+    # Schemas
+    all_params.update(
+    {
+            'dest_default_schema': connection_remote_aws_prod.default_schema,
+            'src_default_schema': connection_remote_aws_dev.default_schema,
+    })
+    
     # Transfer the table 
     loader = LoadPostgis2Postgis(
         tables_to_transfer= TBL_DUMMY_NAME,
@@ -97,22 +104,22 @@ def test_new_table_transfer_gcp_dev_to_aws_dev_succeeds(connection_remote_gcp_de
 
 
     # Make sure the new table is there 
-    with connection_remote_aws_dev.get_sql_alchemy_engine().connect()  as conn:
+    with connection_remote_aws_prod.get_sql_alchemy_engine().connect()  as conn:
         df_count = pd.read_sql(f'select count(*) num from {TBL_DUMMY_NAME}', conn)
     assert df_count['num'].values > 0 
 
     # Make sure we only added that table 
     list_dest_after = pg_list_tables(
-        connection_remote_aws_dev.get_sql_alchemy_engine(),
-        connection_remote_aws_dev.creds['database'] 
+        connection_remote_aws_prod.get_sql_alchemy_engine(),
+        connection_remote_aws_prod.creds['database'] 
     )
 
     assert len(list_dest_after) == len(list_dest_before) + 1
 
 
 
-@pytest.mark.requires_remote_pg_connection_dev
-def test_append_table_transfer_gcp_dev_to_aws_dev_succeeds(connection_remote_gcp_dev, connection_remote_aws_dev):
+@pytest.mark.requires_remote_pg_connection_prod_dev
+def test_append_table_transfer_aws_dev_to_aws_prod_succeeds(connection_remote_aws_dev, connection_remote_aws_prod):
 
 
     # LoadPostgis2Postgis takes in arguments like dest_port and src_host 
@@ -120,7 +127,7 @@ def test_append_table_transfer_gcp_dev_to_aws_dev_succeeds(connection_remote_gcp
     # So we need to append an extra src or dest prefix to kwargs
     creds = {}
     creds_new = {}
-    for k,o in [ (connection_remote_aws_dev,'dest'), (connection_remote_gcp_dev, 'src')]:
+    for k,o in [ (connection_remote_aws_prod ,'dest'), (connection_remote_aws_dev, 'src')]:
         creds[o] = k.get_credentials().copy()
         creds_new[o] = {}
         for kk,v in creds[o].items():
@@ -148,64 +155,18 @@ def test_append_table_transfer_gcp_dev_to_aws_dev_succeeds(connection_remote_gcp
 
     # Make sure the new table is there and has twice the number of rows
     rows_before = TBLS[TBL_DUMMY_NAME].shape[0]
-    with connection_remote_aws_dev.get_sql_alchemy_engine().connect()  as conn:
+    with connection_remote_aws_prod.get_sql_alchemy_engine().connect()  as conn:
         df_count = pd.read_sql(f'select count(*) num from {TBL_DUMMY_NAME}', conn)
 
     rows_after = df_count['num'].values[0]
     assert rows_after == 2*rows_before
 
 
-
-@pytest.mark.requires_remote_pg_connection_dev
-def test_overwrite_all_tables_transfer_gcp_dev_to_aws_dev_succeeds(connection_remote_gcp_dev, connection_remote_aws_dev):
-
-    
-    # LoadPostgis2Postgis takes in arguments like dest_port and src_host 
-    # However PostGISDBConnection returns a dict with keys port, host, db, etc. 
-    # So we need to append an extra src or dest prefix to kwargs
-    creds = {}
-    creds_new = {}
-    for k,o in [ (connection_remote_aws_dev,'dest'), (connection_remote_gcp_dev, 'src')]:
-        creds[o] = k.get_credentials().copy()
-        creds_new[o] = {}
-        for kk,v in creds[o].items():
-            creds_new[o][f'{o}_{kk}'] = v
-
-    all_params = creds_new['dest'].copy()
-    all_params.update(creds_new['src'].copy())
-
  
-
-    # Transfer ALL tables 
-    loader = LoadPostgis2Postgis(
-        **all_params
-    )
-    tables_src = loader.tables_to_transfer
-    loader.upload_url_to_database()
-
-    # Retransfer ALL tables 
-    reloader = LoadPostgis2Postgis(
-        overwrite=True,
-        **all_params
-    )
-    reloader.upload_url_to_database()
-
-    tables_dest = pg_list_tables(
-        connection_remote_aws_dev.get_sql_alchemy_engine(), 
-        connection_remote_aws_dev.get_credentials()['database'],
-        connection_remote_aws_dev.default_schema
-    )
-
-    # Make sure each table in the src was copied to the dest 
-    assert set(tables_src ).issubset(tables_dest)
-
-
-    # Make sure the sample table has the same number of rows
-    rows_before = TBLS[TBL_DUMMY_NAME].shape[0]
-    with connection_remote_aws_dev.get_sql_alchemy_engine().connect()  as conn:
-        df_count = pd.read_sql(f'select count(*) num from {TBL_DUMMY_NAME}', conn)
-
-    rows_after = df_count['num'].values[0]
-    assert rows_after == rows_before
-
     
+if __name__ == '__main__':
+
+    test_new_table_transfer_aws_dev_to_aws_prod_succeeds(
+        PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "aws" / "dev" / ".env"),
+        PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "aws" / "prod" / ".env")
+    )

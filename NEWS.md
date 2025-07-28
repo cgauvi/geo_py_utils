@@ -1,6 +1,15 @@
 
 ================== 
 
+geo_py_utils 1.12.2
+
+- patch:
+    * fixed sqlalchemy < 1.4.5 and pandas <= 2.0.3
+    * fixes for schemas in postgis db utils
+    * debugging tests
+
+================== 
+
 geo_py_utils 1.12.1
 
 - patch:

@@ -1,4 +1,3 @@
-from os.path import exists
 import pytest
 import logging
 import numpy as np
@@ -17,7 +16,7 @@ from geo_py_utils.utilities_testing.spatialite_io import upload_qc_neigh_test_db
 
 @pytest.fixture
 def connection_remote_admin_dev():
-    return PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "gcp" / "dev" / ".env")
+    return PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "aws" / "dev" / ".env")
 
 
 @pytest.mark.requires_remote_pg_connection_dev
@@ -33,9 +32,7 @@ def test_spatialite_to_postgis_remote(connection_remote_admin_dev):
 
     # Make sure the spatialite db exists
     # Also make sure the geo table exists
-    if (not exists(QcCityTestData.SPATIAL_LITE_DB_PATH)) or \
-        (not QcCityTestData.SPATIAL_LITE_TBL_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH)) :
-        upload_qc_neigh_test_db(promote_to_multi=False)
+    upload_qc_neigh_test_db(promote_to_multi=False, overwrite=True)
 
     # Make sure the regular (non-geo) table exists
     if not QcCityTestData.SQL_LITE_TBL_CSV_QC in list_tables(QcCityTestData.SPATIAL_LITE_DB_PATH):
@@ -47,7 +44,8 @@ def test_spatialite_to_postgis_remote(connection_remote_admin_dev):
         user=dict_str['user'],
         password=dict_str['password'],
         host=dict_str['host'],
-        port=dict_str['port']
+        port=dict_str['port'],
+        default_schema=conn.default_schema
     )
     
     # Check if DB exists and create if not
@@ -57,7 +55,8 @@ def test_spatialite_to_postgis_remote(connection_remote_admin_dev):
                     user=dict_str['user'],
                     password=dict_str['password'],
                     host=dict_str['host'],
-                    port=dict_str['port'])
+                    port=dict_str['port'],
+                    schema=conn.default_schema)
 
     # Drop geo table if exists
     if QcCityTestData.SPATIAL_LITE_TBL_QC in pg_list_tables(engine, dict_str['database']):
@@ -73,7 +72,7 @@ def test_spatialite_to_postgis_remote(connection_remote_admin_dev):
         port=dict_str['port'],
         user=dict_str['user'],
         password=dict_str['password'],
-        schema='public',
+        schema=conn.default_schema,
         promote_to_multi=False,
         overwrite=True
         )
@@ -94,7 +93,7 @@ def test_spatialite_to_postgis_remote(connection_remote_admin_dev):
         port=dict_str['port'],
         user=dict_str['user'],
         password=dict_str['password'],
-        schema='public',
+        schema=conn.default_schema,
         promote_to_multi=False,
         overwrite=True
         )
@@ -109,3 +108,8 @@ def test_spatialite_to_postgis_remote(connection_remote_admin_dev):
      # Teardown
     if QcCityTestData.SQL_LITE_TBL_CSV_QC in pg_list_tables(engine, dict_str['database']):
         pg_drop_table(engine, dict_str['database'], QcCityTestData.SQL_LITE_TBL_CSV_QC)
+
+
+if __name__ == '__main__':
+
+    test_spatialite_to_postgis_remote(PostGISDBConnection(ProjectPaths.CONFIG_PATH / 'postgis' / "aws" / "dev" / ".env"))

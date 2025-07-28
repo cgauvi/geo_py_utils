@@ -13,7 +13,7 @@ from geo_py_utils.utilities_testing.data import SAMPLE_GDF
 
 TEST_SFKL_TBL_NAME = 'TEST_SHP_WRITE_SFKL_NEIGH'
 PATH_SFKL_CONFIG = ProjectPaths.CONFIG_PATH / 'snowflake' / 'extbrowser' / ".env"
-PATH_POSTGIS_CONFIG = ProjectPaths.CONFIG_PATH / 'postgis' / 'gcp' / 'dev' / ".env"
+PATH_POSTGIS_CONFIG = ProjectPaths.CONFIG_PATH / 'postgis' / 'aws' / 'dev' / ".env"
 SFKL_GEO_COL_NAME='GEOGRAPHY'
 
 def create_gdf():
@@ -44,7 +44,9 @@ def test_transfer_sfkl_postgis():
         user= creds_dict['user'],
         password= creds_dict['password'],
         port= creds_dict['port'],
-        postgis_tbl_name=TEST_SFKL_TBL_NAME
+        postgis_db_name= creds_dict['database'],
+        postgis_tbl_name=TEST_SFKL_TBL_NAME,
+        schema=pg_db_conn.default_schema
     )
 
     db_transfer.upload_url_to_database()
