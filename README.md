@@ -1,6 +1,6 @@
-
+ 
 <!-- badges: start -->
-[![pytest](https://github.com/LaCapitale/geo_py_utils/actions/workflows/tests.yaml/badge.svg)](https://github.com/LaCapitale/geo_py_utils/actions/workflows/tests.yaml)
+[![pytest](https://github.com/cgauvi/geo_py_utils/actions/workflows/tests.yaml/badge.svg)](https://github.com/cgauvi/geo_py_utils/actions/workflows/tests.yaml)
 <!-- badges: end -->
 
 
@@ -49,23 +49,13 @@ The project has been tested by installing geopandas through `conda`. The rest of
 conda create --name geo_py_utils python=3.10 geopandas libgdal-pg python-geohash "
 conda activate geo_py_utils
 python -m pip install --upgrade pip
-python -m pip install "geo_py_utils @ git+https://git@github.com/LaCapitale/geo_py_utils.git"
+python -m pip install "geo_py_utils @ git+https://github.com/cgauvi/geo_py_utils.git"
 ```
 
 *Note*: to install with conda locally, try `conda config --set ssl_verify false`
 
-### Installing the Anaconda package SnowflakeWrapper (optional)
 
-[Old anaconda 5.6.0]
-```bash
-conda install -c https://ae.int.beneva.ca/repository/conda/custom-package snowflakewrapper=3.0.14
-```
-[New anaconda 5.7.1]
-```bash
-conda install -c https://anaconda.int.beneva.ca/repository/conda/custom-package snowflakewrapper=4.0.2
-```
-
-### Installing on anaconda enterprise (purely with conda to avoid pip & conda conflicts)
+### Installing purely with conda to avoid pip & conda conflicts
 
 ```bash
 packages="$(cat requirements.txt | sed ':a;N;$!ba;s/\n/ /g')"
@@ -79,9 +69,9 @@ conda install $packages
 
 ### Details 
 
-- It is possible to install extra optional dependencies. For instance if running notebooks and trying to plot/map/visualize results, it will be referable to run `python -m pip install  "geo_py_utils[notebooks] @ git+ssh://git@github.com/LaCapitale/geo_py_utils.git"` to install all required packages. 
-- It is also possible to select a specific version rather than taking the latest; for instance by using `"git+ssh://git@github.com/LaCapitale/geo_py_utils.git@v0.7.1"`.
-- Also note that `poetry` can be used as a drop-in replacement for `pip`: `poetry add "geo_py_utils[notebooks] @ git+ssh://git@github.com/LaCapitale/geo_py_utils.git@v0.7.1"`
+- It is possible to install extra optional dependencies. For instance if running notebooks and trying to plot/map/visualize results, it will be referable to run `python -m pip install  "geo_py_utils[notebooks] @ git+ssh://git@github.com/cgauvi/geo_py_utils.git"` to install all required packages. 
+- It is also possible to select a specific version rather than taking the latest; for instance by using `"git+ssh://git@github.com/cgauvi/geo_py_utils.git@v0.7.1"`.
+- Also note that `poetry` can be used as a drop-in replacement for `pip`: `poetry add "geo_py_utils[notebooks] @ git+ssh://git@github.com/cgauvi/geo_py_utils.git@v0.7.1"`
 
 
 ## Testing
